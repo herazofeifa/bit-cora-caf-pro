@@ -934,3 +934,182 @@ export function evaluateReservationExpirations(): void {
   });
   if (changed) emit();
 }
+
+// ───────────── Quality samples ─────────────
+
+export interface CreateQualitySampleInput {
+  lot_id: string;
+  sampled_at?: string;
+  cupper?: string | null;
+  score?: number | null;
+  moisture_pct?: number | null;
+  water_activity?: number | null;
+  density?: number | null;
+  screen_size?: string | null;
+  primary_defects?: number | null;
+  secondary_defects?: number | null;
+  color?: string | null;
+  smell?: string | null;
+  tasting_notes?: string | null;
+  defects?: string | null;
+  status: import("@/types/domain").QualitySampleStatus;
+  notes?: string | null;
+  photo_urls?: string[];
+  attachment_urls?: string[];
+}
+
+if (!(state as State & { qualitySamples?: import("@/types/domain").QualitySample[] }).qualitySamples) {
+  (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples = [
+    ...mockDb.qualitySamples,
+  ];
+}
+
+export function getQualitySamples(): import("@/types/domain").QualitySample[] {
+  return (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples;
+}
+
+export function useQualitySamples() {
+  return useStore((s) => (s as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples ?? []);
+}
+
+function applyQualityToLot(lotId: string, status: import("@/types/domain").QualitySampleStatus): void {
+  const lot = state.lots.find((l) => l.id === lotId);
+  if (!lot) return;
+  const patch: Partial<import("@/types/domain").Lot> = {};
+  switch (status) {
+    case "aprobado":
+      patch.quality_status = "aprobado";
+      if (lot.commercial_state === "bloqueado_calidad" || lot.commercial_state === "bloqueado_revision") {
+        patch.commercial_state = "libre";
+      }
+      break;
+    case "bloqueado":
+      patch.quality_status = "observado";
+      patch.commercial_state = "bloqueado_calidad";
+      patch.qty_blocked_kg = lot.qty_current_kg;
+      patch.qty_free_kg = 0;
+      raiseAlert({
+        lot_id: lotId,
+        phase_instance_id: null,
+        threshold_key: `quality:blocked:${lotId}`,
+        severity: "warning",
+        title: "Lote bloqueado por calidad",
+        message: `${lot.lot_code} fue bloqueado por revisión de calidad.`,
+      });
+      break;
+    case "rechazado":
+      patch.quality_status = "rechazado";
+      patch.commercial_state = "descartado";
+      patch.qty_blocked_kg = lot.qty_current_kg;
+      patch.qty_free_kg = 0;
+      raiseAlert({
+        lot_id: lotId,
+        phase_instance_id: null,
+        threshold_key: `quality:rejected:${lotId}`,
+        severity: "danger",
+        title: "Lote rechazado",
+        message: `${lot.lot_code} fue rechazado en evaluación de calidad.`,
+      });
+      break;
+    case "requiere_reproceso":
+      patch.quality_status = "observado";
+      patch.commercial_state = "bloqueado_revision";
+      raiseAlert({
+        lot_id: lotId,
+        phase_instance_id: null,
+        threshold_key: `quality:reprocess:${lotId}`,
+        severity: "warning",
+        title: "Lote requiere reproceso",
+        message: `${lot.lot_code} requiere reproceso según calidad.`,
+      });
+      break;
+    case "pendiente":
+    case "sin_evaluar":
+      patch.quality_status = "sin_evaluar";
+      raiseAlert({
+        lot_id: lotId,
+        phase_instance_id: null,
+        threshold_key: `quality:pending:${lotId}`,
+        severity: "info",
+        title: "Calidad pendiente",
+        message: `${lot.lot_code} tiene una muestra pendiente de aprobación.`,
+      });
+      break;
+    default:
+      break;
+  }
+  if (Object.keys(patch).length) patchLot(lotId, patch);
+}
+
+export function createQualitySample(input: CreateQualitySampleInput): import("@/types/domain").QualitySample {
+  const sample: import("@/types/domain").QualitySample = {
+    id: uid("q"),
+    lot_id: input.lot_id,
+    sampled_at: input.sampled_at ?? nowIso(),
+    cupper: input.cupper ?? null,
+    score: input.score ?? null,
+    moisture_pct: input.moisture_pct ?? null,
+    water_activity: input.water_activity ?? null,
+    density: input.density ?? null,
+    screen_size: input.screen_size ?? null,
+    primary_defects: input.primary_defects ?? null,
+    secondary_defects: input.secondary_defects ?? null,
+    color: input.color ?? null,
+    smell: input.smell ?? null,
+    tasting_notes: input.tasting_notes ?? null,
+    defects: input.defects ?? null,
+    status: input.status,
+    notes: input.notes ?? null,
+    photo_urls: input.photo_urls ?? [],
+    attachment_urls: input.attachment_urls ?? [],
+  };
+  const list = getQualitySamples();
+  (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples = [sample, ...list];
+
+  if (input.moisture_pct != null) {
+    const lot = state.lots.find((l) => l.id === input.lot_id);
+    if (lot) patchLot(lot.id, { current_moisture: input.moisture_pct });
+    if (input.moisture_pct > 12.5 || input.moisture_pct < 9) {
+      raiseAlert({
+        lot_id: input.lot_id,
+        phase_instance_id: null,
+        threshold_key: `quality:moisture:${sample.id}`,
+        severity: "warning",
+        title: "Humedad fuera de rango",
+        message: `Muestra con humedad ${input.moisture_pct}% (rango ideal 9–12.5%).`,
+      });
+    }
+  }
+  if (input.water_activity != null && input.water_activity > 0.6) {
+    raiseAlert({
+      lot_id: input.lot_id,
+      phase_instance_id: null,
+      threshold_key: `quality:aw:${sample.id}`,
+      severity: "warning",
+      title: "Actividad de agua alta",
+      message: `Aw ${input.water_activity} > 0.6. Riesgo microbiológico.`,
+    });
+  }
+  applyQualityToLot(input.lot_id, input.status);
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "quality_samples",
+    entity_id: sample.id,
+    action: "create",
+    diff: { lot_id: sample.lot_id, status: sample.status, score: sample.score },
+  });
+  emit();
+  return sample;
+}
+
+export function updateQualitySampleStatus(id: string, status: import("@/types/domain").QualitySampleStatus): void {
+  const list = getQualitySamples();
+  const sample = list.find((s) => s.id === id);
+  if (!sample) return;
+  (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples = list.map((s) =>
+    s.id === id ? { ...s, status } : s,
+  );
+  applyQualityToLot(sample.lot_id, status);
+  emit();
+}
