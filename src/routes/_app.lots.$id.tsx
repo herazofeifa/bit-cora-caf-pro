@@ -239,28 +239,83 @@ function BackLink() {
   );
 }
 
-function QuickActions() {
-  const actions = [
-    { label: "Humedad", icon: Droplet },
-    { label: "Variable", icon: Beaker },
-    { label: "Mover fase", icon: Move },
-    { label: "Merma", icon: Trash2 },
-    { label: "Reservar", icon: ClipboardList },
-    { label: "Dividir", icon: GitBranch },
-    { label: "Mezclar", icon: Plus },
-    { label: "Ajustar", icon: Package },
-    { label: "Ficha pública", icon: QrCode },
-  ];
+function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | null }) {
+  const navigate = useNavigate();
+  const [moistureOpen, setMoistureOpen] = useState(false);
+  const [varOpen, setVarOpen] = useState(false);
+  const [wasteOpen, setWasteOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+
+  const isRunning = phase?.status === "running";
+  const isPaused = phase?.status === "paused";
+
   return (
-    <div className="mt-5 -mx-1 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-      {actions.map((a) => (
-        <Button key={a.label} variant="secondary" size="sm" className="shrink-0">
-          <a.icon className="h-3.5 w-3.5 mr-1.5" /> {a.label}
+    <>
+      <div className="mt-5 -mx-1 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setMoistureOpen(true)}>
+          <Droplet className="h-3.5 w-3.5 mr-1.5" /> Humedad
         </Button>
-      ))}
-    </div>
+        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setVarOpen(true)}>
+          <Beaker className="h-3.5 w-3.5 mr-1.5" /> Variable
+        </Button>
+        {phase && isRunning && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shrink-0"
+            onClick={() => { pausePhase(phase.id); toast.success("Fase pausada"); }}
+          >
+            <Pause className="h-3.5 w-3.5 mr-1.5" /> Pausar fase
+          </Button>
+        )}
+        {phase && isPaused && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shrink-0"
+            onClick={() => { resumePhase(phase.id); toast.success("Fase reanudada"); }}
+          >
+            <Play className="h-3.5 w-3.5 mr-1.5" /> Reanudar
+          </Button>
+        )}
+        {phase && (
+          <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setFinishOpen(true)}>
+            <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Finalizar fase
+          </Button>
+        )}
+        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setWasteOpen(true)}>
+          <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Merma
+        </Button>
+        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => navigate({ to: "/reservations" })}>
+          <ClipboardList className="h-3.5 w-3.5 mr-1.5" /> Reservar
+        </Button>
+        <Button variant="secondary" size="sm" className="shrink-0" disabled>
+          <GitBranch className="h-3.5 w-3.5 mr-1.5" /> Dividir
+        </Button>
+        <Button variant="secondary" size="sm" className="shrink-0" disabled>
+          <Plus className="h-3.5 w-3.5 mr-1.5" /> Mezclar
+        </Button>
+        <Button variant="secondary" size="sm" className="shrink-0" disabled>
+          <Package className="h-3.5 w-3.5 mr-1.5" /> Ajustar
+        </Button>
+        <Button variant="secondary" size="sm" className="shrink-0" disabled>
+          <QrCode className="h-3.5 w-3.5 mr-1.5" /> Ficha pública
+        </Button>
+      </div>
+
+      <RegisterMoistureDialog open={moistureOpen} onOpenChange={setMoistureOpen} lot={lot} />
+      <RegisterVariableDialog open={varOpen} onOpenChange={setVarOpen} lot={lot} />
+      <RegisterWasteDialog open={wasteOpen} onOpenChange={setWasteOpen} lot={lot} />
+      {phase && (
+        <FinishPhaseDialog open={finishOpen} onOpenChange={setFinishOpen} lot={lot} phase={phase} />
+      )}
+    </>
   );
 }
+
+// "Move" icon kept for compatibility with old imports
+const _movePlaceholder = Move;
+void _movePlaceholder;
 
 // ───────────── Resumen tab ─────────────
 
