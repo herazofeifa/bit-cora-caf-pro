@@ -174,8 +174,11 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Próxima fase</span>
-              <span className="font-medium">{nextPhaseName ?? "Por definir"}</span>
+              <span className="font-medium">{nextPhaseName ?? transition.next_phase_name ?? "Por definir"}</span>
             </div>
+            {transition.warnings.map((w) => (
+              <p key={w} className="text-[11px] text-warning-foreground mt-1">{w}</p>
+            ))}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Duración real</span>
               <span className="font-medium">{fmtMinutes(elapsed)}</span>
