@@ -277,8 +277,8 @@ function MoistureWizard({ onExit }: { onExit: () => void }) {
           </Button>
         )}
         {step === 3 && (
-          <Button onClick={handleConfirm} className="min-w-[160px]">
-            Guardar humedad
+          <Button onClick={handleConfirm} disabled={saving} className="min-w-[160px]">
+            {saving ? "Guardando…" : "Guardar humedad"}
           </Button>
         )}
         {step === 4 && (
