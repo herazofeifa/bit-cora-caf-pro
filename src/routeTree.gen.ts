@@ -29,6 +29,8 @@ import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
 import { Route as AppFreeCoffeeRouteImport } from './routes/_app.free-coffee'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppAuditRouteImport } from './routes/_app.audit'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as PublicLotCodeRouteImport } from './routes/public.lot.$code'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
 import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
@@ -136,6 +138,16 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
 const PublicLotCodeRoute = PublicLotCodeRouteImport.update({
   id: '/public/lot/$code',
   path: '/public/lot/$code',
@@ -177,6 +189,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/alerts': typeof AppAlertsRoute
+  '/audit': typeof AppAuditRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
   '/free-coffee': typeof AppFreeCoffeeRoute
@@ -205,6 +219,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/alerts': typeof AppAlertsRoute
+  '/audit': typeof AppAuditRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
   '/free-coffee': typeof AppFreeCoffeeRoute
@@ -235,6 +251,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/_app/alerts': typeof AppAlertsRoute
+  '/_app/audit': typeof AppAuditRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/free-coffee': typeof AppFreeCoffeeRoute
@@ -265,6 +283,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/onboarding'
+    | '/alerts'
+    | '/audit'
     | '/customers'
     | '/dashboard'
     | '/free-coffee'
@@ -293,6 +313,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/onboarding'
+    | '/alerts'
+    | '/audit'
     | '/customers'
     | '/dashboard'
     | '/free-coffee'
@@ -322,6 +344,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/onboarding'
+    | '/_app/alerts'
+    | '/_app/audit'
     | '/_app/customers'
     | '/_app/dashboard'
     | '/_app/free-coffee'
@@ -497,6 +521,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alerts': {
+      id: '/_app/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/public/lot/$code': {
       id: '/public/lot/$code'
       path: '/public/lot/$code'
@@ -611,6 +649,8 @@ const AppVariablesRouteWithChildren = AppVariablesRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAlertsRoute: typeof AppAlertsRoute
+  AppAuditRoute: typeof AppAuditRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFreeCoffeeRoute: typeof AppFreeCoffeeRoute
@@ -630,6 +670,8 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAlertsRoute: AppAlertsRoute,
+  AppAuditRoute: AppAuditRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFreeCoffeeRoute: AppFreeCoffeeRoute,
@@ -660,13 +702,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

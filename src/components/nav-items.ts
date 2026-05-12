@@ -15,6 +15,8 @@ import {
   BarChart3,
   GitBranch,
   Settings,
+  Bell,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +42,8 @@ export const navItems: NavItem[] = [
   { to: "/quality", label: "Calidad", icon: Award },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
   { to: "/traceability", label: "Trazabilidad", icon: GitBranch },
+  { to: "/alerts", label: "Alertas", icon: Bell },
+  { to: "/audit", label: "Auditoría", icon: ScrollText },
   { to: "/settings", label: "Ajustes", icon: Settings },
 ];
 
