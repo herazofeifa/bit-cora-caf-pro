@@ -526,13 +526,142 @@ function ProcesoTab({ lot }: { lot: Lot }) {
 
 // ───────────── Variables tab ─────────────
 
-function VariablesTab({ lot }: { lot: Lot }) {
-  const moistures = mockDb.moistureLogs
-    .filter((m) => m.lot_id === lot.id)
-    .sort((a, b) => +new Date(a.measured_at) - +new Date(b.measured_at));
-  const variables = mockDb.variableLogs.filter((v) => v.lot_id === lot.id);
+interface VarSeriesPoint { ts: number; date: string; value: number }
+interface VarChartConfig {
+  key: string;
+  title: string;
+  unit: string | null;
+  ideal_min: number | null;
+  ideal_max: number | null;
+  data: VarSeriesPoint[];
+}
 
-  if (moistures.length === 0 && variables.length === 0) {
+function VariablesTab({ lot }: { lot: Lot }) {
+  const moistureLogs = useStore((s) => s.moistureLogs);
+  const variableLogs = useStore((s) => s.variableLogs);
+  const wasteLogs = useStore((s) => s.wasteLogs);
+  const definitions = useStore((s) => s.variableDefinitions);
+
+  const lotMoistures = useMemo(
+    () =>
+      moistureLogs
+        .filter((m) => m.lot_id === lot.id)
+        .sort((a, b) => +new Date(a.measured_at) - +new Date(b.measured_at)),
+    [moistureLogs, lot.id],
+  );
+  const lotVarLogs = useMemo(
+    () => variableLogs.filter((v) => v.lot_id === lot.id),
+    [variableLogs, lot.id],
+  );
+  const lotWastes = useMemo(
+    () =>
+      wasteLogs
+        .filter((w) => w.lot_id === lot.id)
+        .sort((a, b) => +new Date(a.registered_at) - +new Date(b.registered_at)),
+    [wasteLogs, lot.id],
+  );
+
+  const seriesByDef = useMemo(() => {
+    const map = new Map<string, VarSeriesPoint[]>();
+    for (const v of lotVarLogs) {
+      if (v.value_number == null) continue;
+      const arr = map.get(v.variable_id) ?? [];
+      arr.push({
+        ts: +new Date(v.measured_at),
+        date: new Date(v.measured_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
+        value: v.value_number,
+      });
+      map.set(v.variable_id, arr);
+    }
+    for (const arr of map.values()) arr.sort((a, b) => a.ts - b.ts);
+    return map;
+  }, [lotVarLogs]);
+
+  const charts = useMemo<VarChartConfig[]>(() => {
+    const out: VarChartConfig[] = [];
+    if (lotMoistures.length > 0) {
+      out.push({
+        key: "humedad",
+        title: "Humedad",
+        unit: "%",
+        ideal_min: 10,
+        ideal_max: 12,
+        data: lotMoistures.map((m) => ({
+          ts: +new Date(m.measured_at),
+          date: new Date(m.measured_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
+          value: m.moisture_pct,
+        })),
+      });
+    }
+    const featured = ["v-temp-masa", "v-temp-tanque", "v-ph", "v-brix", "v-peso"];
+    for (const id of featured) {
+      const def = definitions.find((d) => d.id === id);
+      const data = seriesByDef.get(id) ?? [];
+      if (!def || data.length === 0) continue;
+      out.push({
+        key: id,
+        title: def.name,
+        unit: def.unit,
+        ideal_min: def.ideal_min,
+        ideal_max: def.ideal_max,
+        data,
+      });
+    }
+    if (lotWastes.length > 0) {
+      let acc = 0;
+      out.push({
+        key: "merma",
+        title: "Merma acumulada",
+        unit: "kg",
+        ideal_min: null,
+        ideal_max: null,
+        data: lotWastes.map((w) => {
+          acc += w.qty_kg;
+          return {
+            ts: +new Date(w.registered_at),
+            date: new Date(w.registered_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
+            value: Math.round(acc * 100) / 100,
+          };
+        }),
+      });
+    }
+    return out;
+  }, [lotMoistures, seriesByDef, definitions, lotWastes]);
+
+  // Build "latest values" rows
+  const latestRows = useMemo(() => {
+    const rows: { name: string; unit: string | null; value: string; ts: string; phase: string | null; tone: "success" | "warning" | "danger" | "neutral" }[] = [];
+    if (lotMoistures.length > 0) {
+      const last = lotMoistures[lotMoistures.length - 1];
+      const tone = last.moisture_pct > 12 ? "warning" : last.moisture_pct < 10 ? "warning" : "success";
+      rows.push({ name: "Humedad", unit: "%", value: `${last.moisture_pct}`, ts: fmtDateTime(last.measured_at), phase: null, tone });
+    }
+    const byVar = new Map<string, typeof lotVarLogs[number]>();
+    for (const v of [...lotVarLogs].sort((a, b) => +new Date(a.measured_at) - +new Date(b.measured_at))) {
+      byVar.set(v.variable_id, v);
+    }
+    for (const [vid, v] of byVar.entries()) {
+      const def = definitions.find((d) => d.id === vid);
+      if (!def) continue;
+      let tone: "success" | "warning" | "danger" | "neutral" = "neutral";
+      const val = v.value_number;
+      if (val != null && (def.ideal_min != null || def.ideal_max != null)) {
+        const out = (def.ideal_min != null && val < def.ideal_min) || (def.ideal_max != null && val > def.ideal_max);
+        tone = out ? "warning" : "success";
+      }
+      rows.push({
+        name: def.name,
+        unit: def.unit,
+        value: val != null ? String(val) : (v.value_text ?? "—"),
+        ts: fmtDateTime(v.measured_at),
+        phase: null,
+        tone,
+      });
+    }
+    return rows;
+  }, [lotMoistures, lotVarLogs, definitions]);
+
+  if (charts.length === 0 && latestRows.length === 0) {
     return (
       <EmptyState
         icon={Beaker}
@@ -543,74 +672,103 @@ function VariablesTab({ lot }: { lot: Lot }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {moistures.length > 0 && (
+    <div className="space-y-4">
+      {/* Latest values table */}
+      {latestRows.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Droplet className="h-4 w-4 text-primary" /> Humedad
+              <Thermometer className="h-4 w-4 text-primary" /> Últimos valores
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={moistures.map((m) => ({
-                  date: new Date(m.measured_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
-                  value: m.moisture_pct,
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="date" fontSize={10} stroke="var(--muted-foreground)" />
-                  <YAxis fontSize={10} stroke="var(--muted-foreground)" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2} dot />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="overflow-x-auto -mx-3">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="py-1.5 px-3">Variable</th>
+                    <th className="py-1.5 px-3 text-right">Valor</th>
+                    <th className="py-1.5 px-3">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestRows.map((r) => (
+                    <tr key={r.name} className="border-t border-border/40">
+                      <td className="py-2 px-3 font-medium">{r.name}</td>
+                      <td className="py-2 px-3 text-right">
+                        <StatusBadge status={r.tone}>
+                          {r.value}{r.unit ? ` ${r.unit}` : ""}
+                        </StatusBadge>
+                      </td>
+                      <td className="py-2 px-3 text-muted-foreground text-xs whitespace-nowrap">{r.ts}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <ul className="mt-3 space-y-1 text-xs">
-              {moistures.slice(-3).reverse().map((m) => (
-                <li key={m.id} className="flex justify-between text-muted-foreground">
-                  <span>{fmtDateTime(m.measured_at)}</span>
-                  <span className="font-medium text-foreground">{m.moisture_pct}%</span>
-                </li>
-              ))}
-            </ul>
           </CardContent>
         </Card>
       )}
 
-      {variables.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Thermometer className="h-4 w-4 text-primary" /> Variables registradas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm">
-              {variables.map((v) => {
-                const def = mockDb.variableDefinitions.find((d) => d.id === v.variable_id);
-                return (
-                  <li key={v.id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
-                    <div>
-                      <div className="font-medium">{def?.name ?? "Variable"}</div>
-                      <div className="text-xs text-muted-foreground">{fmtDateTime(v.measured_at)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">
-                        {v.value_number != null ? `${v.value_number}${def?.unit ? ` ${def.unit}` : ""}` : v.value_text}
-                      </div>
-                      {v.notes && <div className="text-[10px] text-muted-foreground">{v.notes}</div>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      {/* Mini-charts grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {charts.map((c) => <MiniChartCard key={c.key} cfg={c} />)}
+      </div>
     </div>
   );
 }
+
+function MiniChartCard({ cfg }: { cfg: VarChartConfig }) {
+  const min = cfg.data.reduce((a, b) => Math.min(a, b.value), Infinity);
+  const max = cfg.data.reduce((a, b) => Math.max(a, b.value), -Infinity);
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center justify-between text-base">
+          <span>{cfg.title}</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {cfg.unit ? `(${cfg.unit})` : ""}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-40">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={cfg.data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" fontSize={10} stroke="var(--muted-foreground)" />
+              <YAxis fontSize={10} stroke="var(--muted-foreground)" domain={["auto", "auto"]} />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
+              {cfg.ideal_min != null && (
+                <ReferenceLine y={cfg.ideal_min} stroke="var(--success)" strokeDasharray="3 3" />
+              )}
+              {cfg.ideal_max != null && (
+                <ReferenceLine y={cfg.ideal_max} stroke="var(--success)" strokeDasharray="3 3" />
+              )}
+              <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2} dot />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>Mín {Number.isFinite(min) ? min : "—"}{cfg.unit ? ` ${cfg.unit}` : ""}</span>
+          <span>Máx {Number.isFinite(max) ? max : "—"}{cfg.unit ? ` ${cfg.unit}` : ""}</span>
+          {(cfg.ideal_min != null || cfg.ideal_max != null) && (
+            <span>Ideal {cfg.ideal_min ?? "—"} - {cfg.ideal_max ?? "—"}</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 
 // ───────────── Inventario tab ─────────────
 
