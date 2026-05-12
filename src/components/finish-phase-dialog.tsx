@@ -83,6 +83,7 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideAcknowledged, setOverrideAcknowledged] = useState(false);
 
+  const transition = useMemo(() => validatePhaseTransition(phase.id), [phase.id]);
   const dryingNeedsMoisture = isDryingPhase && !moisture && lot.current_moisture == null;
   const blockingMissing = missingRequired.length > 0;
   const needsOverride = blockingMissing || dryingNeedsMoisture;
