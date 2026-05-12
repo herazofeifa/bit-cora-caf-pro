@@ -879,7 +879,7 @@ function CalidadTab({ lot }: { lot: Lot }) {
               </div>
               <div className="text-right">
                 <div className="font-display text-2xl font-semibold">{s.score ?? "—"}</div>
-                <StatusBadge status={qualityTone(s.status)}>{qualityStatusLabel[s.status]}</StatusBadge>
+                <StatusBadge status={sampleStatusTone(s.status)}>{sampleStatusLabel[s.status]}</StatusBadge>
               </div>
             </div>
             {s.notes && <p className="mt-2 text-sm">{s.notes}</p>}
