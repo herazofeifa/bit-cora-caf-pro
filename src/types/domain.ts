@@ -130,9 +130,13 @@ export interface Unit {
 
 // ───────────── Harvest & lots ─────────────
 
+export type HarvestKind = "harvest" | "intake";
+
 export interface HarvestTicket {
   id: UUID;
   organization_id: UUID;
+  /** "harvest" = recolección en campo. "intake" = recibo en beneficio. */
+  kind: HarvestKind;
   farm_id: UUID;
   parcel_id: UUID | null;
   producer_name: string | null;
@@ -150,8 +154,8 @@ export interface HarvestTicket {
   conversion_factor_to_kg: number | null;
   /** "configured" | "weighed" | "estimated" | "pending" */
   conversion_basis: "configured" | "weighed" | "estimated" | "pending";
-  maturity_level: "verde" | "pintón" | "maduro" | "sobremaduro" | "mezcla" | null;
-  impurity_level: "baja" | "media" | "alta" | null;
+  maturity_level: string | null;
+  impurity_level: string | null;
   green_pct: number | null;
   overripe_pct: number | null;
   notes: string | null;

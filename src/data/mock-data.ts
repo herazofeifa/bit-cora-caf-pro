@@ -115,6 +115,7 @@ export const harvestTickets: HarvestTicket[] = [
   {
     id: "ht-1",
     organization_id: ORG,
+    kind: "harvest",
     farm_id: "farm-1",
     parcel_id: "p-1",
     producer_name: "Paco Rodríguez",
@@ -140,6 +141,7 @@ export const harvestTickets: HarvestTicket[] = [
   {
     id: "ht-2",
     organization_id: ORG,
+    kind: "intake",
     farm_id: "farm-3",
     parcel_id: "p-5",
     producer_name: "Familia Jiménez",
