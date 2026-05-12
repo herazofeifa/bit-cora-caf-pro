@@ -79,6 +79,12 @@ function ProcessControlPage() {
   const lots = useStore((s) => s.lots);
   const phases = useStore((s) => s.phases);
 
+  useEffect(() => {
+    evaluateTimeAlertsForActivePhases();
+    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   const active = useMemo(() => {
     return lots
       .filter((l) => l.commercial_state !== "vendido")
