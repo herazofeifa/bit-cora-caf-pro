@@ -120,6 +120,15 @@ function fmtDate(iso: string): string {
 function LotDetailPage() {
   const { id } = useParams({ from: "/_app/lots/$id" });
   const lot = useStore((s) => s.lots.find((l) => l.id === id));
+  const phase = useStore((s) =>
+    lot ? s.phases.find((p) => p.id === lot.current_phase_id) : undefined,
+  );
+
+  useEffect(() => {
+    evaluateTimeAlertsForActivePhases();
+    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   if (!lot) {
     return (
@@ -136,14 +145,7 @@ function LotDetailPage() {
 
   const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
   const parcel = mockDb.parcels.find((p) => p.id === lot.parcel_id);
-  const phase = useStore((s) => s.phases.find((p) => p.id === lot.current_phase_id));
   const available = calcAvailableKg(lot);
-
-  useEffect(() => {
-    evaluateTimeAlertsForActivePhases();
-    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
-    return () => clearInterval(t);
-  }, []);
 
   return (
     <div className="pb-20">

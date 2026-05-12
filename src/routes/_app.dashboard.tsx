@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
   Activity,
@@ -76,6 +76,7 @@ const PHASE_GROUPS: { key: string; label: string; match: RegExp; icon: typeof Sp
 function DashboardPage() {
   const { lots, reservations, customers, alerts, processPhaseInstances, processInstances, harvestTickets } = mockDb;
   const org = mockDb.organizations[0];
+  const navigate = useNavigate();
 
   // ───── Metrics ─────
   const totals = useMemo(() => {
@@ -168,8 +169,8 @@ function DashboardPage() {
         title: `Registrar humedad del lote ${lot1.friendly_name}`,
         description: `Humedad actual ${lot1.current_moisture}%${days ? ` · día ${days} de secado` : ""}.`,
         buttons: [
-          { label: "Registrar humedad", onClick: () => toast("Registrar humedad", { description: "Próximamente" }) },
-          { label: "Ver lote", variant: "outline", onClick: () => toast("Ver lote", { description: lot1.lot_code }) },
+          { label: "Registrar humedad", onClick: () => navigate({ to: "/lots/$id", params: { id: lot1.id } }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot1.id } }) },
         ],
       });
     }
@@ -187,8 +188,8 @@ function DashboardPage() {
         title: `Finalizar fermentación del lote ${lot4.friendly_name}`,
         description: hours ? `Lleva ${hours} h en fermentación anaeróbica. Revisar pH y mover fase.` : "Revisar fermentación.",
         buttons: [
-          { label: "Mover fase", onClick: () => toast("Mover fase", { description: "Próximamente" }) },
-          { label: "Posponer", variant: "outline", onClick: () => toast("Pospuesto", { description: "Te recordaremos mañana" }) },
+          { label: "Mover fase", onClick: () => navigate({ to: "/lots/$id", params: { id: lot4.id } }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot4.id } }) },
         ],
       });
     }
@@ -206,8 +207,8 @@ function DashboardPage() {
         title: `Confirmar reserva de ${cust.name}`,
         description: `${formatKg(res.qty_kg)} reservados de ${lot2.friendly_name}.`,
         buttons: [
-          { label: "Ver reserva", onClick: () => toast("Ver reserva", { description: cust.name }) },
-          { label: "Posponer", variant: "outline", onClick: () => toast("Pospuesto") },
+          { label: "Ver reserva", onClick: () => navigate({ to: "/reservations" }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot2.id } }) },
         ],
       });
     }
@@ -223,7 +224,7 @@ function DashboardPage() {
         title: `Lote ${lot3.friendly_name} está listo para negociar`,
         description: `${formatKg(calcAvailableKg(lot3))} de ${lot3.variety} disponibles.`,
         buttons: [
-          { label: "Ver lote", onClick: () => toast("Ver lote", { description: lot3.lot_code }) },
+          { label: "Ver lote", onClick: () => navigate({ to: "/lots/$id", params: { id: lot3.id } }) },
         ],
       });
     }
