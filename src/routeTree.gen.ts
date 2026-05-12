@@ -26,6 +26,7 @@ import { Route as AppLotsRouteImport } from './routes/_app.lots'
 import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
 import { Route as AppIntakeRouteImport } from './routes/_app.intake'
 import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
+import { Route as AppFreeCoffeeRouteImport } from './routes/_app.free-coffee'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
@@ -119,6 +120,11 @@ const AppHarvestRoute = AppHarvestRouteImport.update({
   path: '/harvest',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFreeCoffeeRoute = AppFreeCoffeeRouteImport.update({
+  id: '/free-coffee',
+  path: '/free-coffee',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/free-coffee': typeof AppFreeCoffeeRoute
   '/harvest': typeof AppHarvestRouteWithChildren
   '/intake': typeof AppIntakeRouteWithChildren
   '/inventory': typeof AppInventoryRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/free-coffee': typeof AppFreeCoffeeRoute
   '/harvest': typeof AppHarvestRouteWithChildren
   '/intake': typeof AppIntakeRouteWithChildren
   '/inventory': typeof AppInventoryRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/free-coffee': typeof AppFreeCoffeeRoute
   '/_app/harvest': typeof AppHarvestRouteWithChildren
   '/_app/intake': typeof AppIntakeRouteWithChildren
   '/_app/inventory': typeof AppInventoryRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/customers'
     | '/dashboard'
+    | '/free-coffee'
     | '/harvest'
     | '/intake'
     | '/inventory'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/customers'
     | '/dashboard'
+    | '/free-coffee'
     | '/harvest'
     | '/intake'
     | '/inventory'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/free-coffee'
     | '/_app/harvest'
     | '/_app/intake'
     | '/_app/inventory'
@@ -451,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHarvestRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/free-coffee': {
+      id: '/_app/free-coffee'
+      path: '/free-coffee'
+      fullPath: '/free-coffee'
+      preLoaderRoute: typeof AppFreeCoffeeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -574,6 +593,7 @@ const AppVariablesRouteWithChildren = AppVariablesRoute._addFileChildren(
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppFreeCoffeeRoute: typeof AppFreeCoffeeRoute
   AppHarvestRoute: typeof AppHarvestRouteWithChildren
   AppIntakeRoute: typeof AppIntakeRouteWithChildren
   AppInventoryRoute: typeof AppInventoryRoute
@@ -592,6 +612,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppFreeCoffeeRoute: AppFreeCoffeeRoute,
   AppHarvestRoute: AppHarvestRouteWithChildren,
   AppIntakeRoute: AppIntakeRouteWithChildren,
   AppInventoryRoute: AppInventoryRoute,

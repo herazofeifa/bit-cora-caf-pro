@@ -4,12 +4,20 @@ import type {
   Alert,
   AlertSeverity,
   AuditLogEntry,
+  CommercialState,
+  Customer,
+  CustomerType,
   HarvestTicket,
   Lot,
   MoistureLog,
+  MovementType,
   PhaseStatus,
+  PhysicalState,
   ProcessPhaseInstance,
   ProcessType,
+  Reservation,
+  ReservationStatus,
+  StockMovement,
   VariableDefinition,
   VariableLog,
   WasteLog,
@@ -26,6 +34,9 @@ interface State {
   moistureLogs: MoistureLog[];
   wasteLogs: WasteLog[];
   alerts: Alert[];
+  customers: Customer[];
+  reservations: Reservation[];
+  stockMovements: StockMovement[];
 }
 
 const state: State = {
@@ -38,6 +49,9 @@ const state: State = {
   moistureLogs: [...mockDb.moistureLogs],
   wasteLogs: [...mockDb.wasteLogs],
   alerts: [...mockDb.alerts],
+  customers: [...mockDb.customers],
+  reservations: [...mockDb.reservations],
+  stockMovements: [...mockDb.stockMovements],
 };
 
 const listeners = new Set<() => void>();
@@ -591,3 +605,290 @@ export function evaluateTimeAlertsForActivePhases(): void {
 }
 
 export type PhaseStatusType = PhaseStatus;
+
+// ───────────── Customers ─────────────
+
+export interface CreateCustomerInput {
+  name: string;
+  type: CustomerType;
+  contact_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  country?: string | null;
+  notes?: string | null;
+}
+
+export function createCustomer(input: CreateCustomerInput): Customer {
+  const customer: Customer = {
+    id: uid("cust"),
+    organization_id: "org-1",
+    name: input.name,
+    type: input.type,
+    contact_name: input.contact_name ?? null,
+    phone: input.phone ?? null,
+    email: input.email ?? null,
+    country: input.country ?? null,
+    notes: input.notes ?? null,
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
+  state.customers = [customer, ...state.customers];
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "customers",
+    entity_id: customer.id,
+    action: "create",
+    diff: { name: customer.name, type: customer.type },
+  });
+  emit();
+  return customer;
+}
+
+export function updateCustomer(id: string, patch: Partial<CreateCustomerInput>): void {
+  state.customers = state.customers.map((c) =>
+    c.id === id ? { ...c, ...patch, updated_at: nowIso() } : c,
+  );
+  pushAudit({ organization_id: "org-1", actor_id: "user-1", entity: "customers", entity_id: id, action: "update", diff: patch as Record<string, unknown> });
+  emit();
+}
+
+export function deleteCustomer(id: string): void {
+  const used = state.reservations.some((r) => r.customer_id === id && (r.status === "reservada" || r.status === "activa" || r.status === "confirmada"));
+  if (used) throw new Error("No se puede eliminar: el cliente tiene reservas activas.");
+  state.customers = state.customers.filter((c) => c.id !== id);
+  pushAudit({ organization_id: "org-1", actor_id: "user-1", entity: "customers", entity_id: id, action: "delete", diff: null });
+  emit();
+}
+
+// ───────────── Stock movements ─────────────
+
+export interface CreateStockMovementInput {
+  lot_id: string;
+  movement_type: MovementType;
+  qty_kg: number;
+  qty_original?: number | null;
+  qty_original_unit?: string | null;
+  uom_original_id?: string | null;
+  from_state?: PhysicalState | null;
+  to_state?: PhysicalState | null;
+  from_location?: string | null;
+  to_location?: string | null;
+  reason?: string | null;
+  notes?: string | null;
+  reference_id?: string | null;
+}
+
+const ADJUST_REQUIRES_REASON: MovementType[] = ["ajuste", "merma", "descarte"];
+
+export function createStockMovement(input: CreateStockMovementInput): StockMovement {
+  const lot = state.lots.find((l) => l.id === input.lot_id);
+  if (!lot) throw new Error("Lote no encontrado.");
+  if (input.qty_kg <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+  if (ADJUST_REQUIRES_REASON.includes(input.movement_type) && !(input.reason && input.reason.trim())) {
+    throw new Error("Este movimiento requiere una justificación.");
+  }
+
+  // Rules
+  if (input.movement_type === "venta") {
+    if (lot.commercial_state === "bloqueado_humedad" || lot.commercial_state === "bloqueado_calidad" || lot.commercial_state === "bloqueado_revision") {
+      throw new Error("No se puede vender café bloqueado.");
+    }
+    const available = Math.max(0, lot.qty_current_kg - lot.qty_blocked_kg - lot.qty_reserved_kg - lot.qty_committed_kg - lot.stock_safety_kg);
+    if (input.qty_kg > available + lot.qty_reserved_kg) throw new Error("Cantidad mayor al inventario disponible.");
+  }
+
+  // Apply effects on lot
+  const patch: Partial<Lot> = {};
+  switch (input.movement_type) {
+    case "entrada":
+    case "ingreso":
+      patch.qty_current_kg = lot.qty_current_kg + input.qty_kg;
+      break;
+    case "salida":
+    case "merma":
+    case "descarte":
+    case "muestra":
+      if (input.qty_kg > lot.qty_current_kg) throw new Error("No se permite inventario negativo.");
+      patch.qty_current_kg = lot.qty_current_kg - input.qty_kg;
+      break;
+    case "venta":
+      if (input.qty_kg > lot.qty_current_kg) throw new Error("No se permite inventario negativo.");
+      patch.qty_current_kg = lot.qty_current_kg - input.qty_kg;
+      patch.qty_sold_kg = lot.qty_sold_kg + input.qty_kg;
+      patch.commercial_state = patch.qty_current_kg === 0 ? "vendido" : "vendido_parcial";
+      break;
+    case "ajuste":
+      // signed: qty_kg can be negative if reason indicates so; here treat as absolute new current via reason
+      patch.qty_current_kg = Math.max(0, lot.qty_current_kg + input.qty_kg);
+      break;
+    case "transferencia":
+      if (input.to_location) patch.current_location = input.to_location;
+      break;
+    case "transformacion":
+      if (input.to_state) patch.physical_state = input.to_state;
+      break;
+    case "reproceso":
+      if (input.to_state) patch.physical_state = input.to_state;
+      break;
+    default:
+      break;
+  }
+  if (Object.keys(patch).length) {
+    const newCurrent = patch.qty_current_kg ?? lot.qty_current_kg;
+    patch.qty_free_kg = Math.max(0, newCurrent - lot.qty_blocked_kg - lot.qty_reserved_kg - lot.qty_committed_kg - lot.stock_safety_kg);
+    patchLot(lot.id, patch);
+  }
+
+  const mov: StockMovement = {
+    id: uid("sm"),
+    lot_id: input.lot_id,
+    movement_type: input.movement_type,
+    qty_kg: input.qty_kg,
+    qty_original: input.qty_original ?? null,
+    qty_original_unit: input.qty_original_unit ?? null,
+    uom_original_id: input.uom_original_id ?? null,
+    from_state: input.from_state ?? null,
+    to_state: input.to_state ?? null,
+    from_location: input.from_location ?? lot.current_location,
+    to_location: input.to_location ?? null,
+    reason: input.reason ?? null,
+    notes: input.notes ?? null,
+    reference_id: input.reference_id ?? null,
+    created_by: "user-1",
+    created_at: nowIso(),
+  };
+  state.stockMovements = [mov, ...state.stockMovements];
+  pushAudit({ organization_id: "org-1", actor_id: "user-1", entity: "stock_movements", entity_id: mov.id, action: "create", diff: { type: mov.movement_type, qty_kg: mov.qty_kg, lot_id: mov.lot_id } });
+  emit();
+  return mov;
+}
+
+export function adjustInventory(lotId: string, deltaKg: number, reason: string): StockMovement {
+  return createStockMovement({ lot_id: lotId, movement_type: "ajuste", qty_kg: deltaKg, reason });
+}
+
+// ───────────── Reservations ─────────────
+
+export interface CreateReservationInput {
+  lot_id: string;
+  customer_id: string;
+  qty_kg: number;
+  qty_original?: number | null;
+  qty_original_unit?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  expires_at?: string | null;
+  notes?: string | null;
+}
+
+function availableForReservation(lot: Lot): number {
+  return Math.max(0, lot.qty_current_kg - lot.qty_blocked_kg - lot.qty_reserved_kg - lot.qty_committed_kg - lot.stock_safety_kg);
+}
+
+export function createReservation(input: CreateReservationInput): Reservation {
+  const lot = state.lots.find((l) => l.id === input.lot_id);
+  if (!lot) throw new Error("Lote no encontrado.");
+  if (input.qty_kg <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+  if (lot.commercial_state === "bloqueado_humedad" || lot.commercial_state === "bloqueado_calidad" || lot.commercial_state === "bloqueado_revision") {
+    throw new Error("No se puede reservar café bloqueado.");
+  }
+  if (input.qty_kg > availableForReservation(lot)) {
+    throw new Error("No hay inventario suficiente disponible para reservar.");
+  }
+  const res: Reservation = {
+    id: uid("res"),
+    organization_id: "org-1",
+    lot_id: input.lot_id,
+    customer_id: input.customer_id,
+    qty_kg: input.qty_kg,
+    qty_original: input.qty_original ?? null,
+    qty_original_unit: input.qty_original_unit ?? null,
+    price: input.price ?? null,
+    currency: input.currency ?? null,
+    status: "reservada",
+    reserved_at: nowIso(),
+    expires_at: input.expires_at ?? null,
+    delivered_at: null,
+    notes: input.notes ?? null,
+  };
+  state.reservations = [res, ...state.reservations];
+  patchLot(lot.id, {
+    qty_reserved_kg: lot.qty_reserved_kg + input.qty_kg,
+    qty_free_kg: Math.max(0, lot.qty_free_kg - input.qty_kg),
+    commercial_state: lot.commercial_state === "libre" || lot.commercial_state === "disponible" ? "reservado" : lot.commercial_state,
+  });
+  createStockMovement({ lot_id: lot.id, movement_type: "reserva", qty_kg: input.qty_kg, reason: `Reserva ${res.id}`, reference_id: res.id });
+  emit();
+  return res;
+}
+
+function isActiveStatus(s: ReservationStatus): boolean {
+  return s === "reservada" || s === "activa" || s === "confirmada";
+}
+
+export function confirmReservation(id: string): void {
+  state.reservations = state.reservations.map((r) =>
+    r.id === id && isActiveStatus(r.status) ? { ...r, status: "confirmada" } : r,
+  );
+  emit();
+}
+
+export function cancelReservation(id: string, reason?: string): void {
+  const res = state.reservations.find((r) => r.id === id);
+  if (!res) return;
+  if (!isActiveStatus(res.status)) throw new Error("Solo se pueden cancelar reservas activas.");
+  state.reservations = state.reservations.map((r) => (r.id === id ? { ...r, status: "cancelada" } : r));
+  const lot = state.lots.find((l) => l.id === res.lot_id);
+  if (lot) {
+    patchLot(lot.id, {
+      qty_reserved_kg: Math.max(0, lot.qty_reserved_kg - res.qty_kg),
+      qty_free_kg: lot.qty_free_kg + res.qty_kg,
+    });
+    createStockMovement({ lot_id: lot.id, movement_type: "liberacion_reserva", qty_kg: res.qty_kg, reason: reason ?? `Cancelación reserva ${res.id}`, reference_id: res.id });
+  }
+  emit();
+}
+
+export function deliverReservation(id: string, notes?: string): void {
+  const res = state.reservations.find((r) => r.id === id);
+  if (!res) return;
+  if (!isActiveStatus(res.status)) throw new Error("Solo se pueden entregar reservas activas.");
+  const lot = state.lots.find((l) => l.id === res.lot_id);
+  if (!lot) return;
+  // release reservation, then sell
+  patchLot(lot.id, {
+    qty_reserved_kg: Math.max(0, lot.qty_reserved_kg - res.qty_kg),
+    qty_free_kg: lot.qty_free_kg + res.qty_kg,
+  });
+  createStockMovement({ lot_id: lot.id, movement_type: "venta", qty_kg: res.qty_kg, reason: notes ?? `Entrega reserva ${res.id}`, reference_id: res.id, to_location: "cliente" });
+  state.reservations = state.reservations.map((r) =>
+    r.id === id ? { ...r, status: "entregada", delivered_at: nowIso() } : r,
+  );
+  emit();
+}
+
+export function evaluateReservationExpirations(): void {
+  let changed = false;
+  const now = Date.now();
+  state.reservations = state.reservations.map((r) => {
+    if (!isActiveStatus(r.status) || !r.expires_at) return r;
+    const exp = new Date(r.expires_at).getTime();
+    if (exp < now) {
+      changed = true;
+      return { ...r, status: "vencida" };
+    }
+    if (exp - now < 1000 * 60 * 60 * 24 * 3) {
+      raiseAlert({
+        lot_id: r.lot_id,
+        phase_instance_id: null,
+        threshold_key: `reservation:near_expiry:${r.id}`,
+        severity: "warning",
+        title: "Reserva por vencer",
+        message: `Reserva ${r.id} vence en menos de 3 días.`,
+      });
+    }
+    return r;
+  });
+  if (changed) emit();
+}
