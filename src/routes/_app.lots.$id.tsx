@@ -58,6 +58,8 @@ import {
   physicalStateTone,
   qualityStatusLabel,
   qualityTone,
+  sampleStatusLabel,
+  sampleStatusTone,
 } from "@/lib/helpers";
 import type { Lot, ProcessPhaseInstance, ProcessType } from "@/types/domain";
 import {
