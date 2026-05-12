@@ -289,6 +289,33 @@ export function resumePhase(phaseId: string): void {
   emit();
 }
 
+export interface PhaseTransitionCheck {
+  ok: boolean;
+  warnings: string[];
+  blockers: string[];
+  next_phase_name: string | null;
+}
+
+/**
+ * Validate the move from the current phase to the next phase, using the
+ * legacy template phase order linked to the lot's process instance.
+ */
+export function validatePhaseTransition(phaseId: string): PhaseTransitionCheck {
+  const phase = findPhase(phaseId);
+  if (!phase) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const instance = mockDb.processInstances.find((p) => p.id === phase.process_instance_id);
+  if (!instance?.template_id) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const tpls = mockDb.processTemplatePhases
+    .filter((t) => t.template_id === instance.template_id)
+    .sort((a, b) => a.order_index - b.order_index);
+  const idx = tpls.findIndex((t) => t.id === phase.template_phase_id);
+  if (idx < 0) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const nextTpl = tpls[idx + 1] ?? null;
+  const warnings: string[] = [];
+  if (!nextTpl) warnings.push("Esta es la última fase del proceso. Al finalizar, el lote queda disponible.");
+  return { ok: true, warnings, blockers: [], next_phase_name: nextTpl?.name ?? null };
+}
+
 export function finishPhase(input: {
   phase_id: string;
   lot_id: string;
@@ -314,6 +341,12 @@ export function finishPhase(input: {
       elapsed_minutes: elapsedMinutes(p),
     },
   });
+  // Resolve any open time alerts tied to this phase
+  state.alerts = state.alerts.map((a) =>
+    a.phase_instance_id === input.phase_id && a.status === "open"
+      ? { ...a, status: "resolved", resolved_at: nowIso() }
+      : a,
+  );
   emit();
 }
 
