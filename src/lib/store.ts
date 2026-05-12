@@ -1,18 +1,39 @@
 import { useSyncExternalStore } from "react";
 import { mockDb } from "@/data/mock-data";
-import type { AuditLogEntry, HarvestTicket, Lot, ProcessType } from "@/types/domain";
+import type {
+  AuditLogEntry,
+  HarvestTicket,
+  Lot,
+  MoistureLog,
+  PhaseStatus,
+  ProcessPhaseInstance,
+  ProcessType,
+  VariableDefinition,
+  VariableLog,
+  WasteLog,
+} from "@/types/domain";
 import { generateLotCode } from "@/lib/helpers";
 
 interface State {
   harvestTickets: HarvestTicket[];
   lots: Lot[];
   audit: AuditLogEntry[];
+  phases: ProcessPhaseInstance[];
+  variableLogs: VariableLog[];
+  variableDefinitions: VariableDefinition[];
+  moistureLogs: MoistureLog[];
+  wasteLogs: WasteLog[];
 }
 
 const state: State = {
   harvestTickets: [...mockDb.harvestTickets],
   lots: [...mockDb.lots],
   audit: [],
+  phases: [...mockDb.processPhaseInstances],
+  variableLogs: [...mockDb.variableLogs],
+  variableDefinitions: [...mockDb.variableDefinitions],
+  moistureLogs: [...mockDb.moistureLogs],
+  wasteLogs: [...mockDb.wasteLogs],
 };
 
 const listeners = new Set<() => void>();
