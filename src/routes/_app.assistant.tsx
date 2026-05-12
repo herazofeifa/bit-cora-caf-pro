@@ -123,6 +123,7 @@ function MoistureWizard({ onExit }: { onExit: () => void }) {
   const [lotId, setLotId] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Solo lotes que tiene sentido medir (no vendidos / descartados).
   const candidates = useMemo(
@@ -153,13 +154,20 @@ function MoistureWizard({ onExit }: { onExit: () => void }) {
   };
 
   const handleConfirm = () => {
-    if (!selectedLot) return;
+    if (!selectedLot || saving) return;
     const num = Number(value.replace(",", "."));
-    logMoisture({ lot_id: selectedLot.id, moisture_pct: num });
-    const msg = buildMoistureMessage(selectedLot, num);
-    setSavedMessage(msg);
-    setStep(4);
-    toast.success("Humedad registrada");
+    setSaving(true);
+    try {
+      logMoisture({ lot_id: selectedLot.id, moisture_pct: num });
+      const msg = buildMoistureMessage(selectedLot, num);
+      setSavedMessage(msg);
+      setStep(4);
+      toast.success("Humedad registrada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
