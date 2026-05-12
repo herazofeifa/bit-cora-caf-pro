@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { mockDb } from "@/data/mock-data";
-import { useStore, useLotPublicProfile, getLotPublicProfile } from "@/lib/store";
+import { useStore, useLotPublicProfile } from "@/lib/store";
 import {
   calcAvailableKg,
   formatKg,
@@ -27,6 +27,7 @@ import {
   qualityTone,
   phaseDurationDays,
 } from "@/lib/helpers";
+import type { Lot, LotPublicProfile } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 
