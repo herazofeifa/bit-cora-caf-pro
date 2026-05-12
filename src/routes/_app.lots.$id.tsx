@@ -133,8 +133,14 @@ function LotDetailPage() {
 
   const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
   const parcel = mockDb.parcels.find((p) => p.id === lot.parcel_id);
-  const phase = mockDb.processPhaseInstances.find((p) => p.id === lot.current_phase_id);
+  const phase = useStore((s) => s.phases.find((p) => p.id === lot.current_phase_id));
   const available = calcAvailableKg(lot);
+
+  useEffect(() => {
+    evaluateTimeAlertsForActivePhases();
+    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <div className="pb-20">
