@@ -139,6 +139,14 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
     });
 
     if (status === "overdue") {
+      raiseAlert({
+        lot_id: lot.id,
+        phase_instance_id: phase.id,
+        threshold_key: `phase:closed_overdue:${phase.id}`,
+        severity: "warning",
+        title: `${phase.name} cerrada fuera de tiempo`,
+        message: `${lot.lot_code}: real ${elapsed} min vs. esperado ${expected} min.`,
+      });
       toast.warning("Fase finalizada fuera del tiempo esperado");
     } else {
       toast.success("Fase finalizada");
