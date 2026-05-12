@@ -176,7 +176,7 @@ function LotDetailPage() {
           </StatusBadge>
         </div>
 
-        <QuickActions />
+        <QuickActions lot={lot} phase={phase ?? null} />
       </div>
 
       <Tabs defaultValue="resumen" className="w-full">
