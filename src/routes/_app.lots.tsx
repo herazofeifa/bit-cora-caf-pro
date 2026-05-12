@@ -272,8 +272,8 @@ function LotsPage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon={Boxes}
-          title="Sin resultados"
-          description="Ajusta tu búsqueda o filtros para encontrar lotes."
+          title="Cuando registres una cosecha, vas a poder crear tu primer lote"
+          description="Probá ajustar la búsqueda o empezá una cosecha desde el asistente."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
