@@ -154,8 +154,8 @@ export interface HarvestTicket {
   conversion_factor_to_kg: number | null;
   /** "configured" | "weighed" | "estimated" | "pending" */
   conversion_basis: "configured" | "weighed" | "estimated" | "pending";
-  maturity_level: "verde" | "pintón" | "maduro" | "sobremaduro" | "mezcla" | null;
-  impurity_level: "baja" | "media" | "alta" | null;
+  maturity_level: string | null;
+  impurity_level: string | null;
   green_pct: number | null;
   overripe_pct: number | null;
   notes: string | null;
