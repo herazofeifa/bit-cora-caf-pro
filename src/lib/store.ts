@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { mockDb } from "@/data/mock-data";
 import type {
+  Alert,
+  AlertSeverity,
   AuditLogEntry,
   HarvestTicket,
   Lot,
@@ -23,6 +25,7 @@ interface State {
   variableDefinitions: VariableDefinition[];
   moistureLogs: MoistureLog[];
   wasteLogs: WasteLog[];
+  alerts: Alert[];
 }
 
 const state: State = {
@@ -34,6 +37,7 @@ const state: State = {
   variableDefinitions: [...mockDb.variableDefinitions],
   moistureLogs: [...mockDb.moistureLogs],
   wasteLogs: [...mockDb.wasteLogs],
+  alerts: [...mockDb.alerts],
 };
 
 const listeners = new Set<() => void>();
@@ -285,6 +289,33 @@ export function resumePhase(phaseId: string): void {
   emit();
 }
 
+export interface PhaseTransitionCheck {
+  ok: boolean;
+  warnings: string[];
+  blockers: string[];
+  next_phase_name: string | null;
+}
+
+/**
+ * Validate the move from the current phase to the next phase, using the
+ * legacy template phase order linked to the lot's process instance.
+ */
+export function validatePhaseTransition(phaseId: string): PhaseTransitionCheck {
+  const phase = findPhase(phaseId);
+  if (!phase) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const instance = mockDb.processInstances.find((p) => p.id === phase.process_instance_id);
+  if (!instance?.template_id) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const tpls = mockDb.processTemplatePhases
+    .filter((t) => t.template_id === instance.template_id)
+    .sort((a, b) => a.order_index - b.order_index);
+  const idx = tpls.findIndex((t) => t.id === phase.template_phase_id);
+  if (idx < 0) return { ok: true, warnings: [], blockers: [], next_phase_name: null };
+  const nextTpl = tpls[idx + 1] ?? null;
+  const warnings: string[] = [];
+  if (!nextTpl) warnings.push("Esta es la última fase del proceso. Al finalizar, el lote queda disponible.");
+  return { ok: true, warnings, blockers: [], next_phase_name: nextTpl?.name ?? null };
+}
+
 export function finishPhase(input: {
   phase_id: string;
   lot_id: string;
@@ -310,6 +341,12 @@ export function finishPhase(input: {
       elapsed_minutes: elapsedMinutes(p),
     },
   });
+  // Resolve any open time alerts tied to this phase
+  state.alerts = state.alerts.map((a) =>
+    a.phase_instance_id === input.phase_id && a.status === "open"
+      ? { ...a, status: "resolved", resolved_at: nowIso() }
+      : a,
+  );
   emit();
 }
 
@@ -429,6 +466,128 @@ export function createVariableDefinition(input: Omit<VariableDefinition, "id" | 
   state.variableDefinitions.unshift(def);
   emit();
   return def;
+}
+
+export function updateVariableDefinition(id: string, patch: Partial<Omit<VariableDefinition, "id" | "organization_id" | "is_default">>): void {
+  state.variableDefinitions = state.variableDefinitions.map((d) =>
+    d.id === id ? { ...d, ...patch } : d,
+  );
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "variable_definitions",
+    entity_id: id,
+    action: "update",
+    diff: patch as Record<string, unknown>,
+  });
+  emit();
+}
+
+export function deactivateVariableDefinition(id: string): void {
+  state.variableDefinitions = state.variableDefinitions.filter((d) => d.id !== id);
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "variable_definitions",
+    entity_id: id,
+    action: "delete",
+    diff: null,
+  });
+  emit();
+}
+
+// ───────────── Alerts ─────────────
+
+export function raiseAlert(input: {
+  lot_id: string | null;
+  phase_instance_id: string | null;
+  threshold_key: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+}): Alert | null {
+  // dedupe by threshold key + lot + phase, only when status open
+  const existing = state.alerts.find(
+    (a) =>
+      a.threshold_key === input.threshold_key &&
+      a.lot_id === input.lot_id &&
+      a.phase_instance_id === input.phase_instance_id &&
+      a.status === "open",
+  );
+  if (existing) return null;
+  const alert: Alert = {
+    id: uid("a"),
+    organization_id: "org-1",
+    lot_id: input.lot_id,
+    phase_instance_id: input.phase_instance_id,
+    threshold_key: input.threshold_key,
+    severity: input.severity,
+    status: "open",
+    title: input.title,
+    message: input.message,
+    created_at: nowIso(),
+    resolved_at: null,
+  };
+  state.alerts = [alert, ...state.alerts];
+  emit();
+  return alert;
+}
+
+export function acknowledgeAlert(id: string): void {
+  state.alerts = state.alerts.map((a) =>
+    a.id === id ? { ...a, status: "acknowledged" } : a,
+  );
+  emit();
+}
+
+/**
+ * Walk all running phases and create time-based alerts when elapsed crosses
+ * the expected/max thresholds. Idempotent thanks to threshold_key dedupe.
+ */
+export function evaluateTimeAlertsForActivePhases(): void {
+  let changed = false;
+  for (const p of state.phases) {
+    if (p.status !== "running" || !p.expected_minutes) continue;
+    const lot = state.lots.find((l) => l.current_phase_id === p.id);
+    if (!lot) continue;
+    const el = elapsedMinutes(p);
+    const exp = p.expected_minutes;
+    const tryRaise = (key: string, sev: AlertSeverity, title: string, msg: string) => {
+      const before = state.alerts.length;
+      raiseAlert({
+        lot_id: lot.id,
+        phase_instance_id: p.id,
+        threshold_key: key,
+        severity: sev,
+        title,
+        message: msg,
+      });
+      if (state.alerts.length !== before) changed = true;
+    };
+    if (el > exp * 1.25) {
+      tryRaise(
+        `phase:critical:${p.id}`,
+        "danger",
+        `${p.name} muy atrasada`,
+        `${lot.lot_code}: ${Math.round(el)} min vs. ${exp} esperados (>125%).`,
+      );
+    } else if (el > exp) {
+      tryRaise(
+        `phase:overdue:${p.id}`,
+        "warning",
+        `${p.name} fuera de tiempo`,
+        `${lot.lot_code} superó la duración esperada de ${exp} min.`,
+      );
+    } else if (el > exp * 0.85) {
+      tryRaise(
+        `phase:near:${p.id}`,
+        "info",
+        `${p.name} cerca del límite`,
+        `${lot.lot_code} a ${Math.round((el / exp) * 100)}% del tiempo esperado.`,
+      );
+    }
+  }
+  if (changed) emit();
 }
 
 export type PhaseStatusType = PhaseStatus;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Activity,
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   elapsedMinutes,
+  evaluateTimeAlertsForActivePhases,
   pausePhase,
   resumePhase,
   timeStatus,
@@ -77,6 +78,12 @@ const STATUS_LABEL: Record<TimeStatus, string> = {
 function ProcessControlPage() {
   const lots = useStore((s) => s.lots);
   const phases = useStore((s) => s.phases);
+
+  useEffect(() => {
+    evaluateTimeAlertsForActivePhases();
+    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   const active = useMemo(() => {
     return lots

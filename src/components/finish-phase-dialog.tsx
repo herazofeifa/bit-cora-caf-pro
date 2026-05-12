@@ -22,8 +22,10 @@ import {
   logMoisture,
   logVariable,
   logWaste,
+  raiseAlert,
   timeStatus,
   useStore,
+  validatePhaseTransition,
 } from "@/lib/store";
 import type { Lot, ProcessPhaseInstance } from "@/types/domain";
 
@@ -81,6 +83,7 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideAcknowledged, setOverrideAcknowledged] = useState(false);
 
+  const transition = useMemo(() => validatePhaseTransition(phase.id), [phase.id]);
   const dryingNeedsMoisture = isDryingPhase && !moisture && lot.current_moisture == null;
   const blockingMissing = missingRequired.length > 0;
   const needsOverride = blockingMissing || dryingNeedsMoisture;
@@ -136,6 +139,14 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
     });
 
     if (status === "overdue") {
+      raiseAlert({
+        lot_id: lot.id,
+        phase_instance_id: phase.id,
+        threshold_key: `phase:closed_overdue:${phase.id}`,
+        severity: "warning",
+        title: `${phase.name} cerrada fuera de tiempo`,
+        message: `${lot.lot_code}: real ${elapsed} min vs. esperado ${expected} min.`,
+      });
       toast.warning("Fase finalizada fuera del tiempo esperado");
     } else {
       toast.success("Fase finalizada");
@@ -163,8 +174,11 @@ export function FinishPhaseDialog({ open, onOpenChange, lot, phase, nextPhaseNam
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Próxima fase</span>
-              <span className="font-medium">{nextPhaseName ?? "Por definir"}</span>
+              <span className="font-medium">{nextPhaseName ?? transition.next_phase_name ?? "Por definir"}</span>
             </div>
+            {transition.warnings.map((w) => (
+              <p key={w} className="text-[11px] text-warning-foreground mt-1">{w}</p>
+            ))}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Duración real</span>
               <span className="font-medium">{fmtMinutes(elapsed)}</span>
