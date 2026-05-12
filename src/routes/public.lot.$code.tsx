@@ -336,7 +336,3 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// helper for typing PublicLotContent without importing Lot type explicitly
-function selectLot(s: { lots: { id: string; lot_code: string }[] }) {
-  return s.lots[0];
-}
