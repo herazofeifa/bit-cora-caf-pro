@@ -221,7 +221,7 @@ function TemplateCard({
               <DropdownMenuItem asChild disabled={tpl.is_default}>
                 <Link
                   to="/processes/custom-builder"
-                  search={{ from: tpl.id, mode: "edit" } as never}
+                  search={{ from: tpl.id, mode: "edit" as const }}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
                   {tpl.is_default ? "Editar (bloqueado)" : "Editar"}
