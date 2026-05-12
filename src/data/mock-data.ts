@@ -470,8 +470,8 @@ export const qualitySamples: QualitySample[] = [
 ];
 
 export const alerts: Alert[] = [
-  { id: "a-1", organization_id: ORG, lot_id: "lot-1", severity: "warning", status: "open", title: "Humedad alta", message: "Humedad 16% en día 12 de secado. Revisar volteo.", created_at: "2026-05-11T08:30:00Z", resolved_at: null },
-  { id: "a-2", organization_id: ORG, lot_id: "lot-5", severity: "info", status: "open", title: "Pesaje pendiente", message: "Recibo HT-2 pendiente de confirmar kg por fanega.", created_at: "2026-05-02T19:00:00Z", resolved_at: null },
+  { id: "a-1", organization_id: ORG, lot_id: "lot-1", phase_instance_id: "ph-1", threshold_key: "moisture:high", severity: "warning", status: "open", title: "Humedad alta", message: "Humedad 16% en día 12 de secado. Revisar volteo.", created_at: "2026-05-11T08:30:00Z", resolved_at: null },
+  { id: "a-2", organization_id: ORG, lot_id: "lot-5", phase_instance_id: null, threshold_key: "intake:pending", severity: "info", status: "open", title: "Pesaje pendiente", message: "Recibo HT-2 pendiente de confirmar kg por fanega.", created_at: "2026-05-02T19:00:00Z", resolved_at: null },
 ];
 
 // Convenience lookup map for IDs → entities (handy for UI)
