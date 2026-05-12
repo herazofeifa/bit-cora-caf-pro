@@ -27,6 +27,8 @@ import { Route as AppIntakeRouteImport } from './routes/_app.intake'
 import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
+import { Route as AppHarvestNewRouteImport } from './routes/_app.harvest.new'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -117,6 +119,16 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIntakeNewRoute = AppIntakeNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppIntakeRoute,
+} as any)
+const AppHarvestNewRoute = AppHarvestNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppHarvestRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,8 +136,8 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
-  '/harvest': typeof AppHarvestRoute
-  '/intake': typeof AppIntakeRoute
+  '/harvest': typeof AppHarvestRouteWithChildren
+  '/intake': typeof AppIntakeRouteWithChildren
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRoute
   '/process-control': typeof AppProcessControlRoute
@@ -136,6 +148,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
   '/waste': typeof AppWasteRoute
+  '/harvest/new': typeof AppHarvestNewRoute
+  '/intake/new': typeof AppIntakeNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -143,8 +157,8 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
-  '/harvest': typeof AppHarvestRoute
-  '/intake': typeof AppIntakeRoute
+  '/harvest': typeof AppHarvestRouteWithChildren
+  '/intake': typeof AppIntakeRouteWithChildren
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRoute
   '/process-control': typeof AppProcessControlRoute
@@ -155,6 +169,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
   '/waste': typeof AppWasteRoute
+  '/harvest/new': typeof AppHarvestNewRoute
+  '/intake/new': typeof AppIntakeNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -164,8 +180,8 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/harvest': typeof AppHarvestRoute
-  '/_app/intake': typeof AppIntakeRoute
+  '/_app/harvest': typeof AppHarvestRouteWithChildren
+  '/_app/intake': typeof AppIntakeRouteWithChildren
   '/_app/inventory': typeof AppInventoryRoute
   '/_app/lots': typeof AppLotsRoute
   '/_app/process-control': typeof AppProcessControlRoute
@@ -176,6 +192,8 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/traceability': typeof AppTraceabilityRoute
   '/_app/waste': typeof AppWasteRoute
+  '/_app/harvest/new': typeof AppHarvestNewRoute
+  '/_app/intake/new': typeof AppIntakeNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,6 +215,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/traceability'
     | '/waste'
+    | '/harvest/new'
+    | '/intake/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -216,6 +236,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/traceability'
     | '/waste'
+    | '/harvest/new'
+    | '/intake/new'
   id:
     | '__root__'
     | '/'
@@ -236,6 +258,8 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/traceability'
     | '/_app/waste'
+    | '/_app/harvest/new'
+    | '/_app/intake/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -373,14 +397,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/intake/new': {
+      id: '/_app/intake/new'
+      path: '/new'
+      fullPath: '/intake/new'
+      preLoaderRoute: typeof AppIntakeNewRouteImport
+      parentRoute: typeof AppIntakeRoute
+    }
+    '/_app/harvest/new': {
+      id: '/_app/harvest/new'
+      path: '/new'
+      fullPath: '/harvest/new'
+      preLoaderRoute: typeof AppHarvestNewRouteImport
+      parentRoute: typeof AppHarvestRoute
+    }
   }
 }
+
+interface AppHarvestRouteChildren {
+  AppHarvestNewRoute: typeof AppHarvestNewRoute
+}
+
+const AppHarvestRouteChildren: AppHarvestRouteChildren = {
+  AppHarvestNewRoute: AppHarvestNewRoute,
+}
+
+const AppHarvestRouteWithChildren = AppHarvestRoute._addFileChildren(
+  AppHarvestRouteChildren,
+)
+
+interface AppIntakeRouteChildren {
+  AppIntakeNewRoute: typeof AppIntakeNewRoute
+}
+
+const AppIntakeRouteChildren: AppIntakeRouteChildren = {
+  AppIntakeNewRoute: AppIntakeNewRoute,
+}
+
+const AppIntakeRouteWithChildren = AppIntakeRoute._addFileChildren(
+  AppIntakeRouteChildren,
+)
 
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
-  AppHarvestRoute: typeof AppHarvestRoute
-  AppIntakeRoute: typeof AppIntakeRoute
+  AppHarvestRoute: typeof AppHarvestRouteWithChildren
+  AppIntakeRoute: typeof AppIntakeRouteWithChildren
   AppInventoryRoute: typeof AppInventoryRoute
   AppLotsRoute: typeof AppLotsRoute
   AppProcessControlRoute: typeof AppProcessControlRoute
@@ -396,8 +458,8 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
-  AppHarvestRoute: AppHarvestRoute,
-  AppIntakeRoute: AppIntakeRoute,
+  AppHarvestRoute: AppHarvestRouteWithChildren,
+  AppIntakeRoute: AppIntakeRouteWithChildren,
   AppInventoryRoute: AppInventoryRoute,
   AppLotsRoute: AppLotsRoute,
   AppProcessControlRoute: AppProcessControlRoute,
