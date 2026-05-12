@@ -466,16 +466,30 @@ export const stockMovements: StockMovement[] = [
 ];
 
 export const wasteLogs: WasteLog[] = [
-  { id: "w-1", lot_id: "lot-1", qty_kg: 34.2, reason: "Pérdida por secado", phase_instance_id: "ph-1", registered_at: "2026-05-10T08:00:00Z", created_by: "user-1", notes: null },
+  { id: "w-1", lot_id: "lot-1", waste_type: "perdida_secado", qty_kg: 34.2, qty_original: null, qty_original_unit: null, destination: "compost", reason: "Pérdida por secado", phase_instance_id: "ph-1", responsible_user_id: "user-1", photo_url: null, registered_at: "2026-05-10T08:00:00Z", created_by: "user-1", notes: null },
 ];
 
 export const reservations: Reservation[] = [
   { id: "res-1", organization_id: ORG, lot_id: "lot-2", customer_id: "cust-1", qty_kg: 80, qty_original: null, qty_original_unit: null, price: 8.5, currency: "USD/lb", status: "reservada", reserved_at: "2026-04-28T10:00:00Z", expires_at: "2026-06-15T00:00:00Z", delivered_at: null, notes: "Reserva para microlote." },
 ];
 
+const QS_BASE = {
+  moisture_pct: null as number | null,
+  water_activity: null as number | null,
+  density: null as number | null,
+  screen_size: null as string | null,
+  primary_defects: null as number | null,
+  secondary_defects: null as number | null,
+  color: null as string | null,
+  smell: null as string | null,
+  tasting_notes: null as string | null,
+  photo_urls: [] as string[],
+  attachment_urls: [] as string[],
+};
+
 export const qualitySamples: QualitySample[] = [
-  { id: "q-1", lot_id: "lot-2", sampled_at: "2026-04-27T09:00:00Z", cupper: "Ana Vargas", score: 86.5, notes: "Dulzor a panela, miel, durazno.", defects: null, status: "aprobado" },
-  { id: "q-2", lot_id: "lot-3", sampled_at: "2026-04-02T09:00:00Z", cupper: "Luis Mora", score: 84, notes: "Limpio, balanceado.", defects: null, status: "aprobado" },
+  { ...QS_BASE, id: "q-1", lot_id: "lot-2", sampled_at: "2026-04-27T09:00:00Z", cupper: "Ana Vargas", score: 86.5, moisture_pct: 11.4, primary_defects: 0, secondary_defects: 2, color: "Verde azulado", tasting_notes: "Dulzor a panela, miel, durazno.", notes: null, defects: null, status: "aprobado" },
+  { ...QS_BASE, id: "q-2", lot_id: "lot-3", sampled_at: "2026-04-02T09:00:00Z", cupper: "Luis Mora", score: 84, moisture_pct: 10.8, tasting_notes: "Limpio, balanceado.", notes: null, defects: null, status: "aprobado" },
 ];
 
 export const alerts: Alert[] = [
