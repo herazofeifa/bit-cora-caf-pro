@@ -76,6 +76,7 @@ const PHASE_GROUPS: { key: string; label: string; match: RegExp; icon: typeof Sp
 function DashboardPage() {
   const { lots, reservations, customers, alerts, processPhaseInstances, processInstances, harvestTickets } = mockDb;
   const org = mockDb.organizations[0];
+  const navigate = useNavigate();
 
   // ───── Metrics ─────
   const totals = useMemo(() => {
