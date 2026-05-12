@@ -512,6 +512,28 @@ export interface Alert {
   resolved_at: ISODateTime | null;
 }
 
+// ───────────── Public profile (privacy-controlled lot story) ─────────────
+
+export interface LotPublicProfile {
+  lot_id: UUID;
+  /** Whether the lot is published publicly at all. */
+  is_public: boolean;
+  /** Optional short narrative shown in the public ficha. */
+  short_story: string | null;
+  /** Free-form tasting notes (overrides QC notes if set). */
+  tasting_notes: string | null;
+  /** Optional photo URLs visible publicly. */
+  photo_urls: string[];
+  /** Per-field privacy toggles. true = visible publicly. */
+  show_availability: boolean;
+  show_moisture: boolean;
+  show_quality: boolean;
+  show_tasting_notes: boolean;
+  show_photos: boolean;
+  show_process_details: boolean;
+  updated_at: ISODateTime;
+}
+
 export interface AuditLogEntry {
   id: UUID;
   organization_id: UUID;
