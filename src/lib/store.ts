@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { mockDb } from "@/data/mock-data";
 import type {
+  Alert,
+  AlertSeverity,
   AuditLogEntry,
   HarvestTicket,
   Lot,
@@ -23,6 +25,7 @@ interface State {
   variableDefinitions: VariableDefinition[];
   moistureLogs: MoistureLog[];
   wasteLogs: WasteLog[];
+  alerts: Alert[];
 }
 
 const state: State = {
@@ -34,6 +37,7 @@ const state: State = {
   variableDefinitions: [...mockDb.variableDefinitions],
   moistureLogs: [...mockDb.moistureLogs],
   wasteLogs: [...mockDb.wasteLogs],
+  alerts: [...mockDb.alerts],
 };
 
 const listeners = new Set<() => void>();
