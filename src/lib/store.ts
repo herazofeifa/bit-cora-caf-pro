@@ -435,19 +435,33 @@ export function logMoisture(input: {
   return log;
 }
 
-export function logWaste(input: {
+export interface LogWasteInput {
   lot_id: string;
   qty_kg: number;
   reason: string;
+  waste_type?: import("@/types/domain").WasteType;
+  destination?: import("@/types/domain").WasteDestination;
+  qty_original?: number | null;
+  qty_original_unit?: string | null;
   phase_instance_id?: string | null;
+  responsible_user_id?: string | null;
+  photo_url?: string | null;
   notes?: string | null;
-}): WasteLog {
+}
+
+export function logWaste(input: LogWasteInput): WasteLog {
   const log: WasteLog = {
     id: uid("w"),
     lot_id: input.lot_id,
+    waste_type: input.waste_type ?? "otro",
     qty_kg: input.qty_kg,
+    qty_original: input.qty_original ?? null,
+    qty_original_unit: input.qty_original_unit ?? null,
+    destination: input.destination ?? "descarte",
     reason: input.reason,
     phase_instance_id: input.phase_instance_id ?? null,
+    responsible_user_id: input.responsible_user_id ?? "user-1",
+    photo_url: input.photo_url ?? null,
     registered_at: nowIso(),
     created_by: "user-1",
     notes: input.notes ?? null,
@@ -457,6 +471,34 @@ export function logWaste(input: {
   if (lot) {
     const newCurrent = Math.max(0, lot.qty_current_kg - input.qty_kg);
     patchLot(input.lot_id, { qty_current_kg: newCurrent, qty_free_kg: Math.max(0, lot.qty_free_kg - input.qty_kg) });
+    // Also append a stock movement so the lot history reflects it.
+    const movType: import("@/types/domain").MovementType =
+      input.waste_type === "muestra" ? "muestra"
+      : input.waste_type === "descarte" ? "descarte"
+      : input.waste_type === "reproceso" ? "reproceso"
+      : input.waste_type === "ajuste" ? "ajuste"
+      : "merma";
+    state.stockMovements = [
+      {
+        id: uid("sm"),
+        lot_id: input.lot_id,
+        movement_type: movType,
+        qty_kg: input.qty_kg,
+        qty_original: input.qty_original ?? null,
+        qty_original_unit: input.qty_original_unit ?? null,
+        uom_original_id: null,
+        from_state: lot.physical_state,
+        to_state: null,
+        from_location: lot.current_location,
+        to_location: input.destination ?? null,
+        reason: input.reason,
+        notes: input.notes ?? null,
+        reference_id: log.id,
+        created_by: "user-1",
+        created_at: nowIso(),
+      },
+      ...state.stockMovements,
+    ];
   }
   pushAudit({
     organization_id: "org-1",
@@ -464,7 +506,7 @@ export function logWaste(input: {
     entity: "waste_logs",
     entity_id: log.id,
     action: "create",
-    diff: { qty_kg: log.qty_kg, reason: log.reason },
+    diff: { qty_kg: log.qty_kg, reason: log.reason, waste_type: log.waste_type, destination: log.destination },
   });
   emit();
   return log;
