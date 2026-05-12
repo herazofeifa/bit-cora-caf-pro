@@ -17,6 +17,7 @@ import {
   Settings,
   Bell,
   ScrollText,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { to: "/dashboard", label: "Inicio", icon: Home },
+  { to: "/assistant", label: "Asistente", icon: Sparkles },
   { to: "/harvest", label: "Cosecha", icon: Sprout },
   { to: "/intake", label: "Recibos", icon: PackageOpen },
   { to: "/lots", label: "Lotes", icon: Boxes },
