@@ -423,9 +423,14 @@ export interface Reservation {
   lot_id: UUID;
   customer_id: UUID;
   qty_kg: number;
+  qty_original: number | null;
+  qty_original_unit: string | null;
+  price: number | null;
+  currency: string | null;
   status: ReservationStatus;
   reserved_at: ISODateTime;
   expires_at: ISODateTime | null;
+  delivered_at: ISODateTime | null;
   notes: string | null;
 }
 
