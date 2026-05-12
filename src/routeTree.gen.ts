@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppWasteRouteImport } from './routes/_app.waste'
+import { Route as AppVariablesRouteImport } from './routes/_app.variables'
 import { Route as AppTraceabilityRouteImport } from './routes/_app.traceability'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReservationsRouteImport } from './routes/_app.reservations'
@@ -54,6 +55,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppWasteRoute = AppWasteRouteImport.update({
   id: '/waste',
   path: '/waste',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVariablesRoute = AppVariablesRouteImport.update({
+  id: '/variables',
+  path: '/variables',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTraceabilityRoute = AppTraceabilityRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/reservations': typeof AppReservationsRoute
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
+  '/variables': typeof AppVariablesRoute
   '/waste': typeof AppWasteRoute
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/reservations': typeof AppReservationsRoute
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
+  '/variables': typeof AppVariablesRoute
   '/waste': typeof AppWasteRoute
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/_app/reservations': typeof AppReservationsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/traceability': typeof AppTraceabilityRoute
+  '/_app/variables': typeof AppVariablesRoute
   '/_app/waste': typeof AppWasteRoute
   '/_app/harvest/new': typeof AppHarvestNewRoute
   '/_app/intake/new': typeof AppIntakeNewRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/reservations'
     | '/settings'
     | '/traceability'
+    | '/variables'
     | '/waste'
     | '/harvest/new'
     | '/intake/new'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/reservations'
     | '/settings'
     | '/traceability'
+    | '/variables'
     | '/waste'
     | '/harvest/new'
     | '/intake/new'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/_app/reservations'
     | '/_app/settings'
     | '/_app/traceability'
+    | '/_app/variables'
     | '/_app/waste'
     | '/_app/harvest/new'
     | '/_app/intake/new'
@@ -329,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/waste'
       fullPath: '/waste'
       preLoaderRoute: typeof AppWasteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/variables': {
+      id: '/_app/variables'
+      path: '/variables'
+      fullPath: '/variables'
+      preLoaderRoute: typeof AppVariablesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/traceability': {
@@ -514,6 +533,7 @@ interface AppRouteChildren {
   AppReservationsRoute: typeof AppReservationsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTraceabilityRoute: typeof AppTraceabilityRoute
+  AppVariablesRoute: typeof AppVariablesRoute
   AppWasteRoute: typeof AppWasteRoute
 }
 
@@ -531,6 +551,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReservationsRoute: AppReservationsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTraceabilityRoute: AppTraceabilityRoute,
+  AppVariablesRoute: AppVariablesRoute,
   AppWasteRoute: AppWasteRoute,
 }
 
