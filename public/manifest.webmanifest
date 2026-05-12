@@ -1,0 +1,10 @@
+{
+  "name": "Bitácora Café Pro",
+  "short_name": "Bitácora Café",
+  "description": "Tu bitácora digital de campo y beneficio",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f7f3ea",
+  "theme_color": "#5a8a4f",
+  "icons": []
+}
