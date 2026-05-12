@@ -207,8 +207,8 @@ function DashboardPage() {
         title: `Confirmar reserva de ${cust.name}`,
         description: `${formatKg(res.qty_kg)} reservados de ${lot2.friendly_name}.`,
         buttons: [
-          { label: "Ver reserva", onClick: () => toast("Ver reserva", { description: cust.name }) },
-          { label: "Posponer", variant: "outline", onClick: () => toast("Pospuesto") },
+          { label: "Ver reserva", onClick: () => navigate({ to: "/reservations" }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot2.id } }) },
         ],
       });
     }
