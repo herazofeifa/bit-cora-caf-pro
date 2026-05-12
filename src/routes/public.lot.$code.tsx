@@ -170,7 +170,7 @@ function PublicLotContent({
         {/* Photos */}
         {profile.show_photos && profile.photo_urls.length > 0 && (
           <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-3">
-            {profile.photo_urls.map((src, i) => (
+            {profile.photo_urls.map((src: string, i: number) => (
               <div key={i} className="aspect-square overflow-hidden rounded-2xl border border-border bg-muted">
                 <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
               </div>
