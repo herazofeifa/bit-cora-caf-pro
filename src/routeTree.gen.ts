@@ -30,6 +30,7 @@ import { Route as AppFreeCoffeeRouteImport } from './routes/_app.free-coffee'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
+import { Route as AppAssistantRouteImport } from './routes/_app.assistant'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as PublicLotCodeRouteImport } from './routes/public.lot.$code'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
@@ -143,6 +144,11 @@ const AppAuditRoute = AppAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAlertsRoute = AppAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/alerts': typeof AppAlertsRoute
+  '/assistant': typeof AppAssistantRoute
   '/audit': typeof AppAuditRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/alerts': typeof AppAlertsRoute
+  '/assistant': typeof AppAssistantRoute
   '/audit': typeof AppAuditRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_app/alerts': typeof AppAlertsRoute
+  '/_app/assistant': typeof AppAssistantRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/alerts'
+    | '/assistant'
     | '/audit'
     | '/customers'
     | '/dashboard'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/alerts'
+    | '/assistant'
     | '/audit'
     | '/customers'
     | '/dashboard'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/_app/alerts'
+    | '/_app/assistant'
     | '/_app/audit'
     | '/_app/customers'
     | '/_app/dashboard'
@@ -528,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuditRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/assistant': {
+      id: '/_app/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/alerts': {
       id: '/_app/alerts'
       path: '/alerts'
@@ -650,6 +669,7 @@ const AppVariablesRouteWithChildren = AppVariablesRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAlertsRoute: typeof AppAlertsRoute
+  AppAssistantRoute: typeof AppAssistantRoute
   AppAuditRoute: typeof AppAuditRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -671,6 +691,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAlertsRoute: AppAlertsRoute,
+  AppAssistantRoute: AppAssistantRoute,
   AppAuditRoute: AppAuditRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -702,3 +723,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
