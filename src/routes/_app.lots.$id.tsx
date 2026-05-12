@@ -68,6 +68,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,
 } from "recharts";
 
 export const Route = createFileRoute("/_app/lots/$id")({
