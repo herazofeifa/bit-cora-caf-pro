@@ -224,7 +224,7 @@ function DashboardPage() {
         title: `Lote ${lot3.friendly_name} está listo para negociar`,
         description: `${formatKg(calcAvailableKg(lot3))} de ${lot3.variety} disponibles.`,
         buttons: [
-          { label: "Ver lote", onClick: () => toast("Ver lote", { description: lot3.lot_code }) },
+          { label: "Ver lote", onClick: () => navigate({ to: "/lots/$id", params: { id: lot3.id } }) },
         ],
       });
     }
