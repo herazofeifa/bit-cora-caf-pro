@@ -468,4 +468,126 @@ export function createVariableDefinition(input: Omit<VariableDefinition, "id" | 
   return def;
 }
 
+export function updateVariableDefinition(id: string, patch: Partial<Omit<VariableDefinition, "id" | "organization_id" | "is_default">>): void {
+  state.variableDefinitions = state.variableDefinitions.map((d) =>
+    d.id === id ? { ...d, ...patch } : d,
+  );
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "variable_definitions",
+    entity_id: id,
+    action: "update",
+    diff: patch as Record<string, unknown>,
+  });
+  emit();
+}
+
+export function deactivateVariableDefinition(id: string): void {
+  state.variableDefinitions = state.variableDefinitions.filter((d) => d.id !== id);
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "variable_definitions",
+    entity_id: id,
+    action: "delete",
+    diff: null,
+  });
+  emit();
+}
+
+// ───────────── Alerts ─────────────
+
+export function raiseAlert(input: {
+  lot_id: string | null;
+  phase_instance_id: string | null;
+  threshold_key: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+}): Alert | null {
+  // dedupe by threshold key + lot + phase, only when status open
+  const existing = state.alerts.find(
+    (a) =>
+      a.threshold_key === input.threshold_key &&
+      a.lot_id === input.lot_id &&
+      a.phase_instance_id === input.phase_instance_id &&
+      a.status === "open",
+  );
+  if (existing) return null;
+  const alert: Alert = {
+    id: uid("a"),
+    organization_id: "org-1",
+    lot_id: input.lot_id,
+    phase_instance_id: input.phase_instance_id,
+    threshold_key: input.threshold_key,
+    severity: input.severity,
+    status: "open",
+    title: input.title,
+    message: input.message,
+    created_at: nowIso(),
+    resolved_at: null,
+  };
+  state.alerts = [alert, ...state.alerts];
+  emit();
+  return alert;
+}
+
+export function acknowledgeAlert(id: string): void {
+  state.alerts = state.alerts.map((a) =>
+    a.id === id ? { ...a, status: "acknowledged" } : a,
+  );
+  emit();
+}
+
+/**
+ * Walk all running phases and create time-based alerts when elapsed crosses
+ * the expected/max thresholds. Idempotent thanks to threshold_key dedupe.
+ */
+export function evaluateTimeAlertsForActivePhases(): void {
+  let changed = false;
+  for (const p of state.phases) {
+    if (p.status !== "running" || !p.expected_minutes) continue;
+    const lot = state.lots.find((l) => l.current_phase_id === p.id);
+    if (!lot) continue;
+    const el = elapsedMinutes(p);
+    const exp = p.expected_minutes;
+    const tryRaise = (key: string, sev: AlertSeverity, title: string, msg: string) => {
+      const before = state.alerts.length;
+      raiseAlert({
+        lot_id: lot.id,
+        phase_instance_id: p.id,
+        threshold_key: key,
+        severity: sev,
+        title,
+        message: msg,
+      });
+      if (state.alerts.length !== before) changed = true;
+    };
+    if (el > exp * 1.25) {
+      tryRaise(
+        `phase:critical:${p.id}`,
+        "danger",
+        `${p.name} muy atrasada`,
+        `${lot.lot_code}: ${Math.round(el)} min vs. ${exp} esperados (>125%).`,
+      );
+    } else if (el > exp) {
+      tryRaise(
+        `phase:overdue:${p.id}`,
+        "warning",
+        `${p.name} fuera de tiempo`,
+        `${lot.lot_code} superó la duración esperada de ${exp} min.`,
+      );
+    } else if (el > exp * 0.85) {
+      tryRaise(
+        `phase:near:${p.id}`,
+        "info",
+        `${p.name} cerca del límite`,
+        `${lot.lot_code} a ${Math.round((el / exp) * 100)}% del tiempo esperado.`,
+      );
+    }
+  }
+  if (changed) emit();
+}
+
 export type PhaseStatusType = PhaseStatus;
