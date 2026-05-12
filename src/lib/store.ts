@@ -1114,3 +1114,305 @@ export function updateQualitySampleStatus(id: string, status: import("@/types/do
   applyQualityToLot(sample.lot_id, status);
   emit();
 }
+
+// ───────────── Lot public profiles (privacy-controlled) ─────────────
+
+const publicProfiles: Record<string, LotPublicProfile> = {};
+
+function defaultPublicProfile(lotId: string): LotPublicProfile {
+  return {
+    lot_id: lotId,
+    is_public: true,
+    short_story: null,
+    tasting_notes: null,
+    photo_urls: [],
+    show_availability: false,
+    show_moisture: true,
+    show_quality: true,
+    show_tasting_notes: true,
+    show_photos: true,
+    show_process_details: true,
+    updated_at: nowIso(),
+  };
+}
+
+export function getLotPublicProfile(lotId: string): LotPublicProfile {
+  return publicProfiles[lotId] ?? defaultPublicProfile(lotId);
+}
+
+export function useLotPublicProfile(lotId: string): LotPublicProfile {
+  return useStore(() => publicProfiles[lotId] ?? defaultPublicProfile(lotId));
+}
+
+export function updateLotPublicProfile(
+  lotId: string,
+  patch: Partial<Omit<LotPublicProfile, "lot_id" | "updated_at">>,
+): LotPublicProfile {
+  const current = publicProfiles[lotId] ?? defaultPublicProfile(lotId);
+  const next: LotPublicProfile = { ...current, ...patch, updated_at: nowIso() };
+  publicProfiles[lotId] = next;
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "lot_public_profiles",
+    entity_id: lotId,
+    action: "update",
+    diff: patch as Record<string, unknown>,
+  });
+  emit();
+  return next;
+}
+
+// ───────────── Lot genealogy: split & merge ─────────────
+
+function suffixForChildIndex(i: number): string {
+  // 0 -> A, 1 -> B, ..., 25 -> Z, 26 -> AA
+  let s = "";
+  let n = i;
+  do {
+    s = String.fromCharCode(65 + (n % 26)) + s;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return s;
+}
+
+export interface SplitLotInput {
+  parent_lot_id: string;
+  parts: { qty_kg: number; friendly_name?: string | null; location?: string | null }[];
+  reason?: string | null;
+}
+
+/**
+ * Split a parent lot into N child lots. Child codes follow `<PARENT>-A`, `-B`, ...
+ * Parent inventory is reduced by the total split amount.
+ */
+export function splitLot(input: SplitLotInput): Lot[] {
+  const parent = state.lots.find((l) => l.id === input.parent_lot_id);
+  if (!parent) throw new Error("Lote padre no encontrado.");
+  const total = input.parts.reduce((a, b) => a + b.qty_kg, 0);
+  if (total <= 0) throw new Error("Cantidades inválidas.");
+  const available = parent.qty_current_kg - parent.qty_blocked_kg - parent.qty_reserved_kg - parent.qty_committed_kg;
+  if (total > available) throw new Error("No hay suficiente café libre en el lote padre para dividir.");
+
+  // Determine next suffix index based on existing children
+  const existingChildren = state.lots.filter((l) => l.parent_lot_id === parent.id);
+  const startIdx = existingChildren.length;
+
+  const created: Lot[] = [];
+  input.parts.forEach((part, i) => {
+    if (part.qty_kg <= 0) return;
+    const suffix = suffixForChildIndex(startIdx + i);
+    const child: Lot = {
+      ...parent,
+      id: uid("lot"),
+      lot_code: `${parent.lot_code}-${suffix}`,
+      friendly_name: part.friendly_name?.trim() || `${parent.friendly_name} (${suffix})`,
+      parent_lot_id: parent.id,
+      harvest_ticket_id: null,
+      process_instance_id: null,
+      current_phase_id: null,
+      qty_initial_kg: part.qty_kg,
+      qty_current_kg: part.qty_kg,
+      qty_blocked_kg: 0,
+      qty_reserved_kg: 0,
+      qty_committed_kg: 0,
+      qty_sold_kg: 0,
+      qty_free_kg: part.qty_kg,
+      stock_safety_kg: 0,
+      current_location: part.location ?? parent.current_location,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+    state.lots = [child, ...state.lots];
+    created.push(child);
+
+    state.stockMovements = [
+      {
+        id: uid("sm"),
+        lot_id: child.id,
+        movement_type: "transformacion",
+        qty_kg: part.qty_kg,
+        qty_original: null,
+        qty_original_unit: null,
+        uom_original_id: null,
+        from_state: parent.physical_state,
+        to_state: child.physical_state,
+        from_location: parent.current_location,
+        to_location: child.current_location,
+        reason: input.reason ?? `División desde ${parent.lot_code}`,
+        notes: null,
+        reference_id: parent.id,
+        created_by: "user-1",
+        created_at: nowIso(),
+      },
+      ...state.stockMovements,
+    ];
+  });
+
+  patchLot(parent.id, {
+    qty_current_kg: parent.qty_current_kg - total,
+    qty_free_kg: Math.max(0, parent.qty_free_kg - total),
+  });
+
+  state.stockMovements = [
+    {
+      id: uid("sm"),
+      lot_id: parent.id,
+      movement_type: "salida",
+      qty_kg: total,
+      qty_original: null,
+      qty_original_unit: null,
+      uom_original_id: null,
+      from_state: parent.physical_state,
+      to_state: null,
+      from_location: parent.current_location,
+      to_location: null,
+      reason: input.reason ?? `División en ${created.length} lotes`,
+      notes: null,
+      reference_id: created[0]?.id ?? null,
+      created_by: "user-1",
+      created_at: nowIso(),
+    },
+    ...state.stockMovements,
+  ];
+
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "lots",
+    entity_id: parent.id,
+    action: "update",
+    diff: { split_into: created.map((c) => c.lot_code), total_kg: total },
+  });
+  emit();
+  return created;
+}
+
+export interface MergeLotsInput {
+  source_lot_ids: string[];
+  /** kg to take from each source lot (parallel to source_lot_ids). */
+  qty_kg_per_source: number[];
+  friendly_name: string;
+  reason?: string | null;
+}
+
+/**
+ * Merge multiple parent lots into one new child lot. Stores the first source as
+ * `parent_lot_id` and records all sources via stock movements + audit.
+ */
+export function mergeLots(input: MergeLotsInput): Lot {
+  if (input.source_lot_ids.length < 2) throw new Error("Se requieren al menos 2 lotes para mezclar.");
+  if (input.source_lot_ids.length !== input.qty_kg_per_source.length)
+    throw new Error("Cantidades y lotes no coinciden.");
+  const sources = input.source_lot_ids.map((id) => {
+    const l = state.lots.find((x) => x.id === id);
+    if (!l) throw new Error(`Lote ${id} no encontrado.`);
+    return l;
+  });
+  const total = input.qty_kg_per_source.reduce((a, b) => a + b, 0);
+  if (total <= 0) throw new Error("Cantidad inválida.");
+  // Validate availability per source
+  sources.forEach((src, i) => {
+    const free = src.qty_current_kg - src.qty_blocked_kg - src.qty_reserved_kg - src.qty_committed_kg;
+    if (input.qty_kg_per_source[i] > free) throw new Error(`Lote ${src.lot_code} no tiene suficiente café libre.`);
+  });
+
+  const primary = sources[0];
+  const year = new Date().getFullYear();
+  const seq = nextLotSequence(primary.process_type, year);
+  const code = generateLotCode(primary.process_type, year, seq);
+
+  const merged: Lot = {
+    ...primary,
+    id: uid("lot"),
+    lot_code: code,
+    friendly_name: input.friendly_name,
+    parent_lot_id: primary.id,
+    harvest_ticket_id: null,
+    process_instance_id: null,
+    current_phase_id: null,
+    qty_initial_kg: total,
+    qty_current_kg: total,
+    qty_blocked_kg: 0,
+    qty_reserved_kg: 0,
+    qty_committed_kg: 0,
+    qty_sold_kg: 0,
+    qty_free_kg: total,
+    stock_safety_kg: 0,
+    commercial_state: "en_proceso",
+    quality_status: "sin_evaluar",
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
+  state.lots = [merged, ...state.lots];
+
+  // Reduce sources and add stock movements
+  sources.forEach((src, i) => {
+    const qty = input.qty_kg_per_source[i];
+    patchLot(src.id, {
+      qty_current_kg: src.qty_current_kg - qty,
+      qty_free_kg: Math.max(0, src.qty_free_kg - qty),
+    });
+    state.stockMovements = [
+      {
+        id: uid("sm"),
+        lot_id: src.id,
+        movement_type: "salida",
+        qty_kg: qty,
+        qty_original: null,
+        qty_original_unit: null,
+        uom_original_id: null,
+        from_state: src.physical_state,
+        to_state: null,
+        from_location: src.current_location,
+        to_location: null,
+        reason: input.reason ?? `Mezclado en ${merged.lot_code}`,
+        notes: null,
+        reference_id: merged.id,
+        created_by: "user-1",
+        created_at: nowIso(),
+      },
+      ...state.stockMovements,
+    ];
+  });
+
+  state.stockMovements = [
+    {
+      id: uid("sm"),
+      lot_id: merged.id,
+      movement_type: "entrada",
+      qty_kg: total,
+      qty_original: null,
+      qty_original_unit: null,
+      uom_original_id: null,
+      from_state: null,
+      to_state: merged.physical_state,
+      from_location: null,
+      to_location: merged.current_location,
+      reason: input.reason ?? `Mezcla de ${sources.map((s) => s.lot_code).join(", ")}`,
+      notes: null,
+      reference_id: primary.id,
+      created_by: "user-1",
+      created_at: nowIso(),
+    },
+    ...state.stockMovements,
+  ];
+
+  pushAudit({
+    organization_id: "org-1",
+    actor_id: "user-1",
+    entity: "lots",
+    entity_id: merged.id,
+    action: "create",
+    diff: {
+      merged_from: sources.map((s, i) => ({ code: s.lot_code, qty_kg: input.qty_kg_per_source[i] })),
+      total_kg: total,
+    },
+  });
+  emit();
+  return merged;
+}
+
+export function findLotByCode(code: string): Lot | undefined {
+  return state.lots.find((l) => l.lot_code.toLowerCase() === code.toLowerCase());
+}
