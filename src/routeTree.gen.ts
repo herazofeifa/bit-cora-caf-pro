@@ -28,6 +28,7 @@ import { Route as AppIntakeRouteImport } from './routes/_app.intake'
 import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
 import { Route as AppProcessesCustomBuilderRouteImport } from './routes/_app.processes.custom-builder'
 import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
 import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
@@ -127,6 +128,11 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppVariablesNewRoute = AppVariablesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppVariablesRoute,
+} as any)
 const AppProcessesCustomBuilderRoute =
   AppProcessesCustomBuilderRouteImport.update({
     id: '/custom-builder',
@@ -166,12 +172,13 @@ export interface FileRoutesByFullPath {
   '/reservations': typeof AppReservationsRoute
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
-  '/variables': typeof AppVariablesRoute
+  '/variables': typeof AppVariablesRouteWithChildren
   '/waste': typeof AppWasteRoute
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
   '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -190,12 +197,13 @@ export interface FileRoutesByTo {
   '/reservations': typeof AppReservationsRoute
   '/settings': typeof AppSettingsRoute
   '/traceability': typeof AppTraceabilityRoute
-  '/variables': typeof AppVariablesRoute
+  '/variables': typeof AppVariablesRouteWithChildren
   '/waste': typeof AppWasteRoute
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
   '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -216,12 +224,13 @@ export interface FileRoutesById {
   '/_app/reservations': typeof AppReservationsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/traceability': typeof AppTraceabilityRoute
-  '/_app/variables': typeof AppVariablesRoute
+  '/_app/variables': typeof AppVariablesRouteWithChildren
   '/_app/waste': typeof AppWasteRoute
   '/_app/harvest/new': typeof AppHarvestNewRoute
   '/_app/intake/new': typeof AppIntakeNewRoute
   '/_app/lots/$id': typeof AppLotsIdRoute
   '/_app/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/_app/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/intake/new'
     | '/lots/$id'
     | '/processes/custom-builder'
+    | '/variables/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/intake/new'
     | '/lots/$id'
     | '/processes/custom-builder'
+    | '/variables/new'
   id:
     | '__root__'
     | '/'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/_app/intake/new'
     | '/_app/lots/$id'
     | '/_app/processes/custom-builder'
+    | '/_app/variables/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -441,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/variables/new': {
+      id: '/_app/variables/new'
+      path: '/new'
+      fullPath: '/variables/new'
+      preLoaderRoute: typeof AppVariablesNewRouteImport
+      parentRoute: typeof AppVariablesRoute
+    }
     '/_app/processes/custom-builder': {
       id: '/_app/processes/custom-builder'
       path: '/custom-builder'
@@ -519,6 +538,18 @@ const AppProcessesRouteWithChildren = AppProcessesRoute._addFileChildren(
   AppProcessesRouteChildren,
 )
 
+interface AppVariablesRouteChildren {
+  AppVariablesNewRoute: typeof AppVariablesNewRoute
+}
+
+const AppVariablesRouteChildren: AppVariablesRouteChildren = {
+  AppVariablesNewRoute: AppVariablesNewRoute,
+}
+
+const AppVariablesRouteWithChildren = AppVariablesRoute._addFileChildren(
+  AppVariablesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -533,7 +564,7 @@ interface AppRouteChildren {
   AppReservationsRoute: typeof AppReservationsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTraceabilityRoute: typeof AppTraceabilityRoute
-  AppVariablesRoute: typeof AppVariablesRoute
+  AppVariablesRoute: typeof AppVariablesRouteWithChildren
   AppWasteRoute: typeof AppWasteRoute
 }
 
@@ -551,7 +582,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReservationsRoute: AppReservationsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTraceabilityRoute: AppTraceabilityRoute,
-  AppVariablesRoute: AppVariablesRoute,
+  AppVariablesRoute: AppVariablesRouteWithChildren,
   AppWasteRoute: AppWasteRoute,
 }
 
@@ -566,3 +597,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
