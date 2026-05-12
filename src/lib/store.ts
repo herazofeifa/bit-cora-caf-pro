@@ -4,12 +4,20 @@ import type {
   Alert,
   AlertSeverity,
   AuditLogEntry,
+  CommercialState,
+  Customer,
+  CustomerType,
   HarvestTicket,
   Lot,
   MoistureLog,
+  MovementType,
   PhaseStatus,
+  PhysicalState,
   ProcessPhaseInstance,
   ProcessType,
+  Reservation,
+  ReservationStatus,
+  StockMovement,
   VariableDefinition,
   VariableLog,
   WasteLog,
@@ -26,6 +34,9 @@ interface State {
   moistureLogs: MoistureLog[];
   wasteLogs: WasteLog[];
   alerts: Alert[];
+  customers: Customer[];
+  reservations: Reservation[];
+  stockMovements: StockMovement[];
 }
 
 const state: State = {
@@ -38,6 +49,9 @@ const state: State = {
   moistureLogs: [...mockDb.moistureLogs],
   wasteLogs: [...mockDb.wasteLogs],
   alerts: [...mockDb.alerts],
+  customers: [...mockDb.customers],
+  reservations: [...mockDb.reservations],
+  stockMovements: [...mockDb.stockMovements],
 };
 
 const listeners = new Set<() => void>();
