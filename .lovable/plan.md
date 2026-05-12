@@ -1,177 +1,89 @@
-# Plan: Bitácora Café Pro — App Shell
+# Cerrar pendientes del sistema de ejecución de procesos
 
-Construir la base visual y de navegación de una PWA mobile-first en español para productores de café y micro-beneficios. Sin lógica de negocio todavía: solo shell, diseño, navegación y pantallas vacías pulidas.
+Cubre los 7 puntos detectados como faltantes del prompt anterior, manteniendo la arquitectura actual (store en `src/lib/store.ts`, tipos en `src/types/`, rutas TanStack en `src/routes/`).
 
-## 1. Sistema de diseño (warm earth + soft green)
+## 1. Módulo `/variables` — Gestión de definiciones
 
-Actualizar `src/styles.css` con tokens semánticos en `oklch`:
+Nueva ruta `src/routes/_app.variables.tsx`:
+- Lista de variables agrupadas por categoría (calidad, proceso, ambiente, sensorial).
+- Filtros: categoría, fase asociada, tipo de valor, requerida sí/no, default vs custom.
+- Card por variable: nombre, unidad, tipo de valor, rango ideal, fases donde aplica, badge "Default" / "Personalizada".
+- Acciones: crear, editar (solo custom), activar/desactivar.
 
-- `--background`: crema cálido (warm off-white)
-- `--foreground`: marrón oscuro café
-- `--primary`: verde suave (hojas de cafeto)
-- `--secondary` / `--muted`: tonos tierra/beige
-- `--accent`: ámbar cálido
-- `--success`: verde sano
-- `--warning`: ámbar (advertencias suaves)
-- `--destructive`: rojo solo para riesgos reales
-- `--card`, `--border`, `--ring` armonizados
-- Radios redondeados (`--radius: 1rem`)
-- Sombra cálida `--shadow-soft`
-- Tipografía: display + body legibles (e.g. Fraunces / Inter via Google Fonts en `__root.tsx`)
-- Versión `.dark` consistente
+Nueva ruta `src/routes/_app.variables.new.tsx` (también reutilizada para edición vía query param `?id=`):
+- Form con: nombre, descripción, categoría, unidad, `value_type` (12 tipos), rango ideal min/max, fases asociadas (multi-select), requerida, opciones (para single/multi-select).
+- Validación con zod.
 
-Componentes base reutilizables en `src/components/`:
+Extensión del store: `createVariableDefinition`, `updateVariableDefinition`, `deactivateVariableDefinition`.
 
-- `StatusBadge` (verde / ámbar / rojo / neutral con etiquetas en español)
-- `EmptyState` (icono Lucide, título, descripción, CTA)
-- `PageHeader` (título grande, subtítulo, acción opcional)
-- `SectionCard` (card redondeada con buen espaciado)
-- `MetricCard` (para dashboard)
+## 2. Flujo standalone "Registrar variable"
 
-## 2. Estructura de navegación
+Nueva ruta `src/routes/_app.variables.log.tsx`:
+- Paso 1: seleccionar lote (buscador con código/variedad).
+- Paso 2: muestra fase activa del lote y la lista de variables — primero requeridas pendientes, luego opcionales.
+- Paso 3: input dinámico según `value_type` (reusa lógica de `RegisterVariableDialog`).
+- Guarda con timestamp + `lot_id` + `phase_instance_id` vía `logVariable` existente.
+- Punto de entrada: botón "Registrar variable" en dashboard quick actions y en `/process-control`.
 
-### Layout raíz (`src/routes/_app.tsx` como layout o wrapping en cada ruta)
+## 3. Charts por variable clave en detalle del lote
 
-Crear un layout que envuelva todas las rutas autenticadas:
+En `src/routes/_app.lots.$id.tsx` (tab "Variables"):
+- Reemplazar el chart genérico por una grilla de mini-charts, uno por variable numérica clave: humedad, temperatura, pH, Brix, peso, merma acumulada.
+- Cada chart: línea temporal + bandas sombreadas para rango ideal + marcadores de cambio de fase.
+- "Merma acumulada" se calcula sumando `waste_logs` en orden cronológico.
+- Si no hay datos para una variable → empty state pequeño "Sin lecturas aún" + botón "Registrar".
 
-- Sidebar fija en desktop (`md:` y arriba)
-- Bottom nav fija en mobile (`md:hidden`)
-- FAB "+ Registrar" flotante en mobile y desktop, abre un Sheet con acciones rápidas
-- `<Outlet />` para el contenido de la ruta
+## 4. Tabla "Últimos valores" + histórico por variable
 
-`/login` y `/onboarding` quedan FUERA del layout (pantallas full-screen).
+Sobre los charts, agregar una tabla compacta:
+- Columnas: variable, último valor + unidad, timestamp, fase en que se midió, indicador dentro/fuera de rango.
+- Click en fila expande historial completo de esa variable (tabla con todos los logs).
 
-### Sidebar desktop (`AppSidebar`)
+## 5. Validación de transición de fase según template
 
-Usa shadcn sidebar. Items con iconos Lucide:
+En `finishPhase` (store):
+- Resolver template + versión usada por el lote (`lot.process_template_id` + `process_version`).
+- Calcular siguiente fase en el orden definido.
+- Validar que `final_physical_state` de la fase actual coincida con `initial_physical_state` de la siguiente; si no, bloquear con mensaje claro o permitir con justificación (mismo patrón override que ya existe).
+- Al iniciar una nueva fase, validar también el orden: no permitir saltar fases marcadas como `is_required` sin override.
 
-- Inicio (`/dashboard`) — Home
-- Cosecha (`/harvest`) — Sprout
-- Recibos (`/intake`) — PackageOpen
-- Lotes (`/lots`) — Boxes
-- Procesos (`/processes`) — Workflow
-- Control de proceso (`/process-control`) — Activity
-- Inventario (`/inventory`) — Warehouse
-- Clientes (`/customers`) — Users
-- Reservas (`/reservations`) — BookmarkCheck
-- Mermas (`/waste`) — Trash2
-- Calidad (`/quality`) — Award
-- Reportes (`/reports`) — BarChart3
-- Trazabilidad (`/traceability`) — GitBranch
-- Ajustes (`/settings`) — Settings
+`FinishPhaseDialog` muestra "Siguiente fase: X" y los warnings de transición.
 
-Encabezado: logo + nombre "Bitácora Café Pro".
+## 6. Generación automática de alertas de tiempo
 
-### Bottom nav mobile (`MobileBottomNav`)
+Nuevo helper `evaluateTimeAlerts(phaseInstance, phaseDef)` en `src/lib/helpers.ts`:
+- Compara `elapsedMinutes` contra `expected_minutes` y `max_minutes` del `ProcessPhaseDef`.
+- Recorre `time_alerts` definidos en el template y genera registros en `alerts` cuando se cruza un umbral (sin duplicar: clave única `phase_instance_id + alert_threshold`).
 
-5 items grandes con icono + etiqueta corta:
+Disparo: 
+- Al cargar `/process-control` y `/lots/:id` evaluar alertas para fases activas (en `useEffect`).
+- Al pausar/reanudar/finalizar, re-evaluar.
 
-- Inicio → `/dashboard`
-- Cosecha → `/harvest`
-- Lotes → `/lots`
-- Inventario → `/inventory`
-- Más → abre Sheet con el resto de rutas
+Severidad mapeada con `alertSeverity` helper existente. Las alertas aparecen en dashboard "Qué requiere atención hoy" y en el tab Alertas del lote.
 
-Resaltar item activo usando `useRouterState`.
+## 7. Acción "Pausar / Reanudar fase" en `/lots/:id`
 
-### FAB "+ Registrar" (`QuickActionFab`)
+En el bloque de quick actions del detalle de lote:
+- Si fase actual `running` → botón "Pausar fase" (abre dialog con motivo opcional).
+- Si fase actual `paused` → botón "Reanudar fase".
+- Reusa `pausePhase` / `resumePhase` del store.
+- Mostrar estado actual de la fase (running/paused) con badge y, si paused, tiempo acumulado en pausa.
 
-Botón circular grande, color primary, esquina inferior derecha (sobre el bottom nav en mobile). Al tocar abre `Sheet` (mobile) / `Dialog` (desktop) con lista grande de acciones, cada una como botón ancho con icono:
+## Detalles técnicos
 
-- Nueva cosecha
-- Nuevo recibo
-- Crear lote
-- Registrar humedad
-- Registrar variable
-- Mover fase
-- Registrar merma
-- Reservar café
-- Registrar salida
+- **Tipos**: extender `Alert` con `phase_instance_id`, `threshold_key`. Sin cambios a `VariableDefinition` (ya tiene todos los campos).
+- **Store**: nuevas acciones listadas arriba; mantener pattern actual (Zustand-like en memoria).
+- **Routing**: 3 rutas nuevas — `_app.variables.tsx`, `_app.variables.new.tsx`, `_app.variables.log.tsx`. El plugin de Vite regenera `routeTree.gen.ts`.
+- **UI**: reusar `StatusBadge`, `EmptyState`, `PageHeader`, `MetricCard`. Charts con `recharts` ya instalado.
+- **Idioma**: español en toda la UI.
+- **Mobile-first**: cards apilables, charts con `ResponsiveContainer`, tabla histórica con scroll horizontal en móvil.
 
-Por ahora cada acción cierra el sheet y muestra un toast "Próximamente" (sin lógica todavía).
+## Orden de implementación
 
-## 3. Rutas y pantallas placeholder
-
-Crear un archivo por ruta en `src/routes/` siguiendo el convenio plano de TanStack:
-
-```
-src/routes/
-  __root.tsx (existente)
-  index.tsx (redirige a /dashboard)
-  login.tsx
-  onboarding.tsx
-  _app.tsx (layout con sidebar + bottom nav + FAB)
-  _app.dashboard.tsx
-  _app.harvest.tsx
-  _app.intake.tsx
-  _app.lots.tsx
-  _app.processes.tsx
-  _app.process-control.tsx
-  _app.inventory.tsx
-  _app.customers.tsx
-  _app.reservations.tsx
-  _app.waste.tsx
-  _app.quality.tsx
-  _app.reports.tsx
-  _app.traceability.tsx
-  _app.settings.tsx
-```
-
-Cada pantalla incluye:
-
-- `head()` con título y descripción en español específicos
-- `PageHeader` con título amigable y subtítulo
-- `EmptyState` con mensaje cálido (ej: "Aún no hay cosechas registradas. Toca + Registrar para empezar.")
-- En `dashboard`: grid de `MetricCard` placeholder (Cosecha activa, Lotes en proceso, Inventario disponible, Reservas) + `EmptyState` para gráfico (Recharts placeholder vacío)
-- En `lots`, `inventory`, `customers`: cards mobile + tabla simple desktop (ambas vacías con empty state)
-- En `quality`, `traceability`: layouts apropiados con empty state
-
-### Login (`/login`)
-
-Pantalla full-screen, mobile-first:
-
-- Logo + nombre app
-- Frase: "Tu bitácora digital de campo y beneficio"
-- Inputs grandes (correo, contraseña)
-- Botón grande "Entrar"
-- Link "¿Olvidaste tu contraseña?"
-- Sin lógica real (botón navega a `/onboarding` o `/dashboard`)
-
-### Onboarding (`/onboarding`)
-
-3 pasos con stepper visual:
-
-1. Bienvenida (nombre de la finca)
-2. Ubicación / variedad principal
-3. Listo para empezar
-
-Botones grandes "Siguiente" / "Atrás". Al terminar → `/dashboard`.
-
-## 4. PWA-ready
-
-- Añadir `<link rel="manifest">` en `__root.tsx` head
-- Crear `public/manifest.webmanifest` con nombre, colores, iconos placeholder
-- Meta theme-color cálido
-- Viewport ya configurado
-
-## 5. Consideraciones técnicas
-
-- Todo el texto UI en español
-- Iconos Lucide consistentes
-- Sin colores hardcodeados — solo tokens
-- Tipografía Google Fonts cargada vía `<link>` en `__root.tsx`
-- Toasts con `sonner` (ya en shadcn)
-- Sin Lovable Cloud todavía — la arquitectura queda lista para agregarlo después
-- Sin lógica de datos: todas las pantallas usan empty states
-
-## 6. Fuera de alcance (siguiente iteración)
-
-- Lovable Cloud / autenticación real
-- Modelos de datos y formularios funcionales
-- Lógica de cosecha, lotes, fases, inventario
-- Reportes con datos reales
-- Trazabilidad funcional
-
-## Resultado esperado
-
-Una PWA mobile-first navegable, con identidad visual cálida y agrícola, sidebar desktop, bottom nav mobile, FAB de registro rápido, y 16 pantallas placeholder pulidas con empty states claros — lista para empezar a conectar lógica de negocio en la siguiente fase.
+1. Extender tipos + store (variables CRUD, alertas de tiempo, validación de transición).
+2. Rutas `/variables` y `/variables/new`.
+3. Ruta `/variables/log` + botón en dashboard y process-control.
+4. Charts por variable + tabla de últimos valores en detalle de lote.
+5. Validación de transición en `FinishPhaseDialog`.
+6. Generación automática de alertas de tiempo + integración en dashboard.
+7. Pausar/Reanudar en detalle de lote.
