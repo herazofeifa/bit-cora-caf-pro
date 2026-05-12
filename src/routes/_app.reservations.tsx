@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmAction } from "@/components/confirm-action";
 import {
   Dialog,
   DialogContent,
@@ -170,25 +171,36 @@ function ReservationRow({ r, lotName, customerName }: { r: Reservation; lotName:
                 <CheckCircle2 className="size-4" /> Confirmar
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={() => {
+            <ConfirmAction
+              title="¿Entregar este café al cliente?"
+              description="Vas a registrar la entrega como una venta. Esta acción no se puede deshacer."
+              confirmLabel="Sí, entregar"
+              onConfirm={() => {
                 try { deliverReservation(r.id); toast.success("Entregada y registrada como venta"); }
                 catch (e) { toast.error((e as Error).message); }
               }}
-            >
-              <PackageCheck className="size-4" /> Entregar
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
+              trigger={
+                <Button size="sm">
+                  <PackageCheck className="size-4" /> Entregar
+                </Button>
+              }
+            />
+            <ConfirmAction
+              title="¿Cancelar la reserva?"
+              description="El café reservado quedará liberado y disponible para vender."
+              confirmLabel="Sí, cancelar reserva"
+              cancelLabel="Volver"
+              destructive
+              onConfirm={() => {
                 try { cancelReservation(r.id); toast.success("Reserva cancelada, café liberado"); }
                 catch (e) { toast.error((e as Error).message); }
               }}
-            >
-              <XCircle className="size-4" /> Cancelar
-            </Button>
+              trigger={
+                <Button size="sm" variant="ghost">
+                  <XCircle className="size-4" /> Cancelar
+                </Button>
+              }
+            />
           </div>
         )}
       </div>
