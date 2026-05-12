@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { Boxes, Search, Filter, X, MapPin, Droplet, AlertTriangle, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -102,6 +102,9 @@ function lastActivityDate(lot: Lot): string {
 }
 
 function LotsPage() {
+  const matchRoute = useMatchRoute();
+  const isDetail = matchRoute({ to: "/lots/$id" });
+  if (isDetail) return <Outlet />;
   const lots = useStore((s) => s.lots);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
