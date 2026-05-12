@@ -35,6 +35,7 @@ import {
   useStore,
 } from "@/lib/store";
 import { calcAvailableKg, formatKg, reservationStatusLabel } from "@/lib/helpers";
+import { PermissionGate } from "@/components/permission-gate";
 import type { Reservation, ReservationStatus } from "@/types/domain";
 
 export const Route = createFileRoute("/_app/reservations")({
@@ -102,12 +103,14 @@ function ReservationsPage() {
         title="Reservas"
         subtitle="Café apartado para tus clientes."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="size-4" /> Reservar café</Button>
-            </DialogTrigger>
-            <NewReservationDialog onClose={() => setOpen(false)} />
-          </Dialog>
+          <PermissionGate permission="reservation.create">
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="size-4" /> Reservar café</Button>
+              </DialogTrigger>
+              <NewReservationDialog onClose={() => setOpen(false)} />
+            </Dialog>
+          </PermissionGate>
         }
       />
 
