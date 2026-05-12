@@ -29,6 +29,7 @@ import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
+import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
 import { Route as AppProcessesCustomBuilderRouteImport } from './routes/_app.processes.custom-builder'
 import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
 import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
@@ -133,6 +134,11 @@ const AppVariablesNewRoute = AppVariablesNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AppVariablesRoute,
 } as any)
+const AppVariablesLogRoute = AppVariablesLogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => AppVariablesRoute,
+} as any)
 const AppProcessesCustomBuilderRoute =
   AppProcessesCustomBuilderRouteImport.update({
     id: '/custom-builder',
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
   '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRoutesByTo {
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
   '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRoutesById {
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/_app/intake/new': typeof AppIntakeNewRoute
   '/_app/lots/$id': typeof AppLotsIdRoute
   '/_app/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
+  '/_app/variables/log': typeof AppVariablesLogRoute
   '/_app/variables/new': typeof AppVariablesNewRoute
 }
 export interface FileRouteTypes {
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/intake/new'
     | '/lots/$id'
     | '/processes/custom-builder'
+    | '/variables/log'
     | '/variables/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,6 +292,7 @@ export interface FileRouteTypes {
     | '/intake/new'
     | '/lots/$id'
     | '/processes/custom-builder'
+    | '/variables/log'
     | '/variables/new'
   id:
     | '__root__'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/_app/intake/new'
     | '/_app/lots/$id'
     | '/_app/processes/custom-builder'
+    | '/_app/variables/log'
     | '/_app/variables/new'
   fileRoutesById: FileRoutesById
 }
@@ -460,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVariablesNewRouteImport
       parentRoute: typeof AppVariablesRoute
     }
+    '/_app/variables/log': {
+      id: '/_app/variables/log'
+      path: '/log'
+      fullPath: '/variables/log'
+      preLoaderRoute: typeof AppVariablesLogRouteImport
+      parentRoute: typeof AppVariablesRoute
+    }
     '/_app/processes/custom-builder': {
       id: '/_app/processes/custom-builder'
       path: '/custom-builder'
@@ -539,10 +558,12 @@ const AppProcessesRouteWithChildren = AppProcessesRoute._addFileChildren(
 )
 
 interface AppVariablesRouteChildren {
+  AppVariablesLogRoute: typeof AppVariablesLogRoute
   AppVariablesNewRoute: typeof AppVariablesNewRoute
 }
 
 const AppVariablesRouteChildren: AppVariablesRouteChildren = {
+  AppVariablesLogRoute: AppVariablesLogRoute,
   AppVariablesNewRoute: AppVariablesNewRoute,
 }
 
