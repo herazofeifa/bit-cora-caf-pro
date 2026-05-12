@@ -9,6 +9,7 @@ import type {
   CustomerType,
   HarvestTicket,
   Lot,
+  LotPublicProfile,
   MoistureLog,
   MovementType,
   PhaseStatus,
