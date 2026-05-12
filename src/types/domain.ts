@@ -388,6 +388,9 @@ export interface Alert {
   id: UUID;
   organization_id: UUID;
   lot_id: UUID | null;
+  phase_instance_id: UUID | null;
+  /** Stable key to avoid duplicates, e.g. `phase:overdue:1.0`. */
+  threshold_key: string | null;
   severity: AlertSeverity;
   status: AlertStatus;
   title: string;
