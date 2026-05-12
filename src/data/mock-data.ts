@@ -197,26 +197,79 @@ export const processInstances: ProcessInstance[] = [
   { id: "pi-5", template_id: null, lot_id: "lot-5", started_at: "2026-05-05T09:00:00Z", ended_at: null, is_custom: true },
 ];
 
+const phaseDefaults = {
+  paused_at: null,
+  resumed_at: null,
+  total_paused_minutes: 0,
+  expected_minutes: null as number | null,
+  status: "running" as const,
+  responsible_user_id: "user-1",
+  location: null as string | null,
+};
+
 export const processPhaseInstances: ProcessPhaseInstance[] = [
-  { id: "ph-1", process_instance_id: "pi-1", template_phase_id: "tp-2", name: "Secado en patio", order_index: 2, started_at: "2026-04-30T08:00:00Z", ended_at: null, notes: "Día 12 de secado." },
-  { id: "ph-2", process_instance_id: "pi-2", template_phase_id: "tp-5", name: "Secado lento", order_index: 2, started_at: "2026-04-12T08:00:00Z", ended_at: "2026-04-26T12:00:00Z", notes: null },
-  { id: "ph-3", process_instance_id: "pi-4", template_phase_id: "tp-9", name: "Fermentación anaeróbica", order_index: 1, started_at: "2026-05-01T10:00:00Z", ended_at: null, notes: "pH 4.2 a las 36h." },
-  { id: "ph-4", process_instance_id: "pi-5", template_phase_id: null, name: "Reposo de fruta", order_index: 1, started_at: "2026-05-05T09:00:00Z", ended_at: null, notes: "Proceso experimental." },
+  { id: "ph-1", process_instance_id: "pi-1", template_phase_id: "tp-2", name: "Secado", order_index: 2, started_at: "2026-04-30T08:00:00Z", ended_at: null, notes: "Día 12 de secado.", ...phaseDefaults, expected_minutes: 24 * 60 * 18, location: "Patio 2" },
+  { id: "ph-2", process_instance_id: "pi-2", template_phase_id: "tp-5", name: "Secado", order_index: 2, started_at: "2026-04-12T08:00:00Z", ended_at: "2026-04-26T12:00:00Z", notes: null, ...phaseDefaults, status: "finished", expected_minutes: 24 * 60 * 14 },
+  { id: "ph-3", process_instance_id: "pi-4", template_phase_id: "tp-9", name: "Fermentación", order_index: 1, started_at: "2026-05-01T10:00:00Z", ended_at: null, notes: "pH 4.2 a las 36h.", ...phaseDefaults, expected_minutes: 96 * 60, location: "Tanque 3" },
+  { id: "ph-4", process_instance_id: "pi-5", template_phase_id: null, name: "Reposo", order_index: 1, started_at: "2026-05-05T09:00:00Z", ended_at: null, notes: "Proceso experimental.", ...phaseDefaults, location: "Cámara experimental" },
 ];
+
+const VD_BASE = {
+  organization_id: ORG,
+  options: null as string[] | null,
+  min_value: null as number | null,
+  max_value: null as number | null,
+  ideal_min: null as number | null,
+  ideal_max: null as number | null,
+  suggested_frequency_minutes: null as number | null,
+  phase_associations: [] as string[],
+  alert_if_missing: false,
+  alert_if_out_of_range: true,
+  is_default: true,
+  description: null as string | null,
+};
 
 export const variableDefinitions: VariableDefinition[] = [
-  { id: "v-ph", organization_id: ORG, name: "pH", unit: null, value_type: "number", options: null, min_value: 3.5, max_value: 5.5, description: "Acidez del mosto." },
-  { id: "v-temp", organization_id: ORG, name: "Temperatura", unit: "°C", value_type: "number", options: null, min_value: 15, max_value: 30, description: null },
-  { id: "v-brix", organization_id: ORG, name: "Brix", unit: "°Bx", value_type: "number", options: null, min_value: 10, max_value: 25, description: "Sólidos solubles." },
-  { id: "v-smell", organization_id: ORG, name: "Olor", unit: null, value_type: "select", options: ["Frutal", "Vinoso", "Láctico", "Defecto"], min_value: null, max_value: null, description: null },
-  { id: "v-color", organization_id: ORG, name: "Color", unit: null, value_type: "select", options: ["Amarillo", "Naranja", "Rojo", "Marrón"], min_value: null, max_value: null, description: null },
+  { ...VD_BASE, id: "v-humedad", name: "Humedad", unit: "%", value_type: "percentage", category: "humedad", min_value: 0, max_value: 100, ideal_min: 10, ideal_max: 12, suggested_frequency_minutes: 24 * 60, phase_associations: ["Secado", "Reposo"], alert_if_missing: true },
+  { ...VD_BASE, id: "v-temp-amb", name: "Temperatura ambiente", unit: "°C", value_type: "number", category: "temperatura", min_value: -10, max_value: 50, ideal_min: 18, ideal_max: 28 },
+  { ...VD_BASE, id: "v-temp-masa", name: "Temperatura de masa", unit: "°C", value_type: "number", category: "temperatura", min_value: 0, max_value: 60, ideal_min: 18, ideal_max: 28, phase_associations: ["Fermentación"] },
+  { ...VD_BASE, id: "v-temp-tanque", name: "Temperatura del tanque", unit: "°C", value_type: "number", category: "temperatura", min_value: 0, max_value: 60, ideal_min: 18, ideal_max: 24, phase_associations: ["Fermentación"] },
+  { ...VD_BASE, id: "v-ph", name: "pH", unit: null, value_type: "number", category: "fermentacion", min_value: 0, max_value: 14, ideal_min: 3.8, ideal_max: 4.6, phase_associations: ["Fermentación"], description: "Acidez del mosto." },
+  { ...VD_BASE, id: "v-brix", name: "Brix", unit: "°Bx", value_type: "number", category: "fermentacion", min_value: 0, max_value: 30, ideal_min: 12, ideal_max: 22, phase_associations: ["Fermentación"], description: "Sólidos solubles." },
+  { ...VD_BASE, id: "v-peso", name: "Peso", unit: "kg", value_type: "number", category: "fisica", min_value: 0, max_value: 100000 },
+  { ...VD_BASE, id: "v-peso-neto", name: "Peso neto", unit: "kg", value_type: "number", category: "fisica", min_value: 0, max_value: 100000 },
+  { ...VD_BASE, id: "v-oxigeno", name: "Oxígeno", unit: "%", value_type: "percentage", category: "fermentacion", min_value: 0, max_value: 100, ideal_max: 5, phase_associations: ["Fermentación"] },
+  { ...VD_BASE, id: "v-presion", name: "Presión", unit: "bar", value_type: "number", category: "fermentacion", min_value: 0, max_value: 10 },
+  { ...VD_BASE, id: "v-agua", name: "Cantidad de agua usada", unit: "L", value_type: "number", category: "fisica", min_value: 0, max_value: 100000, phase_associations: ["Lavado"] },
+  { ...VD_BASE, id: "v-densidad", name: "Densidad", unit: "g/cm³", value_type: "number", category: "fisica", min_value: 0, max_value: 2 },
+  { ...VD_BASE, id: "v-aw", name: "Actividad de agua", unit: "aw", value_type: "number", category: "humedad", min_value: 0, max_value: 1, ideal_max: 0.6 },
+  { ...VD_BASE, id: "v-grosor", name: "Grosor de capa en secado", unit: "cm", value_type: "number", category: "secado", min_value: 0, max_value: 30, ideal_max: 5, phase_associations: ["Secado"] },
+  { ...VD_BASE, id: "v-vueltas", name: "Número de vueltas en secado", unit: "vueltas", value_type: "number", category: "secado", min_value: 0, max_value: 50, ideal_min: 4, phase_associations: ["Secado"] },
+  { ...VD_BASE, id: "v-clima", name: "Condición climática", unit: null, value_type: "single_select", category: "ambiente", options: ["Soleado", "Nublado", "Lluvia", "Neblina", "Viento"] },
+  { ...VD_BASE, id: "v-lluvia", name: "Lluvia", unit: "mm", value_type: "number", category: "ambiente", min_value: 0, max_value: 500 },
+  { ...VD_BASE, id: "v-hr", name: "Humedad relativa ambiente", unit: "%", value_type: "percentage", category: "ambiente", min_value: 0, max_value: 100, ideal_min: 40, ideal_max: 65 },
+  { ...VD_BASE, id: "v-olor", name: "Olor", unit: null, value_type: "single_select", category: "sensorial", options: ["Frutal", "Vinoso", "Láctico", "Defecto"] },
+  { ...VD_BASE, id: "v-color", name: "Color", unit: null, value_type: "single_select", category: "sensorial", options: ["Amarillo", "Naranja", "Rojo", "Marrón", "Negro"] },
+  { ...VD_BASE, id: "v-mucilago", name: "Mucílago", unit: "%", value_type: "percentage", category: "fermentacion", min_value: 0, max_value: 100 },
+  { ...VD_BASE, id: "v-obs", name: "Observaciones", unit: null, value_type: "long_text", category: "general" },
+  { ...VD_BASE, id: "v-foto", name: "Foto", unit: null, value_type: "photo", category: "general" },
 ];
 
+const VL_BASE = {
+  value_options: null as string[] | null,
+  value_boolean: null as boolean | null,
+  value_datetime: null as string | null,
+  photo_url: null as string | null,
+  file_url: null as string | null,
+};
+
 export const variableLogs: VariableLog[] = [
-  { id: "vl-1", variable_id: "v-ph", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: 4.2, value_text: null, measured_at: "2026-05-03T08:00:00Z", measured_by: "user-1", notes: null },
-  { id: "vl-2", variable_id: "v-temp", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: 22, value_text: null, measured_at: "2026-05-03T08:00:00Z", measured_by: "user-1", notes: null },
-  { id: "vl-3", variable_id: "v-brix", lot_id: "lot-5", phase_instance_id: "ph-4", value_number: 18, value_text: null, measured_at: "2026-05-08T09:00:00Z", measured_by: "user-1", notes: null },
-  { id: "vl-4", variable_id: "v-smell", lot_id: "lot-5", phase_instance_id: "ph-4", value_number: null, value_text: "Frutal", measured_at: "2026-05-08T09:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-1", variable_id: "v-ph", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: 4.2, value_text: null, measured_at: "2026-05-03T08:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-2", variable_id: "v-temp-tanque", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: 22, value_text: null, measured_at: "2026-05-03T08:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-3", variable_id: "v-brix", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: 18, value_text: null, measured_at: "2026-05-04T09:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-4", variable_id: "v-olor", lot_id: "lot-4", phase_instance_id: "ph-3", value_number: null, value_text: "Frutal", measured_at: "2026-05-04T09:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-5", variable_id: "v-temp-amb", lot_id: "lot-1", phase_instance_id: "ph-1", value_number: 24, value_text: null, measured_at: "2026-05-10T10:00:00Z", measured_by: "user-1", notes: null },
+  { ...VL_BASE, id: "vl-6", variable_id: "v-hr", lot_id: "lot-1", phase_instance_id: "ph-1", value_number: 55, value_text: null, measured_at: "2026-05-10T10:00:00Z", measured_by: "user-1", notes: null },
 ];
 
 export const moistureLogs: MoistureLog[] = [

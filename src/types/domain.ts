@@ -234,6 +234,8 @@ export interface ProcessInstance {
   is_custom: boolean;
 }
 
+export type PhaseStatus = "running" | "paused" | "finished";
+
 export interface ProcessPhaseInstance {
   id: UUID;
   process_instance_id: UUID;
@@ -242,12 +244,41 @@ export interface ProcessPhaseInstance {
   order_index: number;
   started_at: ISODateTime;
   ended_at: ISODateTime | null;
+  paused_at: ISODateTime | null;
+  resumed_at: ISODateTime | null;
+  total_paused_minutes: number;
+  expected_minutes: number | null;
+  status: PhaseStatus;
+  responsible_user_id: UUID | null;
+  location: string | null;
   notes: string | null;
 }
 
 // ───────────── Variables & measurements ─────────────
 
-export type VariableValueType = "number" | "text" | "select" | "boolean";
+export type VariableValueType =
+  | "number"
+  | "percentage"
+  | "short_text"
+  | "long_text"
+  | "single_select"
+  | "multi_select"
+  | "boolean"
+  | "datetime"
+  | "photo"
+  | "file"
+  | "scale_5"
+  | "custom_unit";
+
+export type VariableCategory =
+  | "humedad"
+  | "temperatura"
+  | "fermentacion"
+  | "fisica"
+  | "secado"
+  | "ambiente"
+  | "sensorial"
+  | "general";
 
 export interface VariableDefinition {
   id: UUID;
@@ -255,9 +286,19 @@ export interface VariableDefinition {
   name: string;
   unit: string | null;
   value_type: VariableValueType;
+  category: VariableCategory;
   options: string[] | null;
   min_value: number | null;
   max_value: number | null;
+  ideal_min: number | null;
+  ideal_max: number | null;
+  /** Suggested measurement frequency in minutes. */
+  suggested_frequency_minutes: number | null;
+  /** Phase names where this variable is commonly recorded. Empty = any phase. */
+  phase_associations: string[];
+  alert_if_missing: boolean;
+  alert_if_out_of_range: boolean;
+  is_default: boolean;
   description: string | null;
 }
 
@@ -268,6 +309,11 @@ export interface VariableLog {
   phase_instance_id: UUID | null;
   value_number: number | null;
   value_text: string | null;
+  value_options: string[] | null;
+  value_boolean: boolean | null;
+  value_datetime: ISODateTime | null;
+  photo_url: string | null;
+  file_url: string | null;
   measured_at: ISODateTime;
   measured_by: UUID | null;
   notes: string | null;
