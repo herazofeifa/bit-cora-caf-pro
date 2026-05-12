@@ -282,3 +282,103 @@ export function formatKg(kg: number | null | undefined): string {
   if (kg == null) return "—";
   return `${kg.toLocaleString("es", { maximumFractionDigits: 1 })} kg`;
 }
+
+// ───────────── Quality sample status ─────────────
+
+import type { QualitySampleStatus, WasteType, WasteDestination } from "@/types/domain";
+
+export const sampleStatusLabel: Record<QualitySampleStatus, string> = {
+  pendiente: "Pendiente",
+  aprobado: "Aprobado",
+  bloqueado: "Bloqueado",
+  rechazado: "Rechazado",
+  requiere_reproceso: "Requiere reproceso",
+  sin_evaluar: "Pendiente",
+  observado: "Observado",
+};
+
+export function sampleStatusTone(s: QualitySampleStatus): "success" | "warning" | "danger" | "info" | "neutral" {
+  switch (s) {
+    case "aprobado":
+      return "success";
+    case "rechazado":
+      return "danger";
+    case "bloqueado":
+    case "requiere_reproceso":
+    case "observado":
+      return "warning";
+    case "pendiente":
+    case "sin_evaluar":
+    default:
+      return "neutral";
+  }
+}
+
+export const wasteTypeLabel: Record<WasteType, string> = {
+  pulpa: "Pulpa",
+  mucilago: "Mucílago",
+  agua_miel: "Agua miel",
+  perdida_secado: "Pérdida por secado",
+  cisco: "Cisco / cascarilla",
+  defectos: "Defectos",
+  muestra: "Muestra",
+  descarte: "Descarte",
+  ajuste: "Ajuste de inventario",
+  reproceso: "Reproceso",
+  otro: "Otro",
+};
+
+export const wasteDestinationLabel: Record<WasteDestination, string> = {
+  compost: "Compost",
+  venta: "Venta",
+  descarte: "Descarte",
+  muestra: "Muestra",
+  consumo_interno: "Consumo interno",
+  otro: "Otro",
+};
+
+// ───────────── Yield helpers ─────────────
+
+export interface YieldBreakdown {
+  fruit_to_parchment_pct: number | null; // cereza → pergamino seco
+  parchment_to_green_pct: number | null; // pergamino seco → oro verde
+  green_to_roasted_pct: number | null;   // oro verde → tostado
+  total_yield_pct: number | null;        // current vs initial
+}
+
+const PARCHMENT_STATES = new Set(["pergamino_seco", "pergamino_humedo", "pergamino_en_secado", "trillado", "en_reposo"]);
+const GREEN_STATES = new Set(["verde", "oro_verde"]);
+const ROASTED_STATES = new Set(["tostado"]);
+
+export function computeYieldBreakdown(args: {
+  initial_kg: number;
+  current_kg: number;
+  physical_state: string;
+}): YieldBreakdown {
+  const { initial_kg, current_kg, physical_state } = args;
+  const total = initial_kg > 0 ? round2((current_kg / initial_kg) * 100) : null;
+  let fruit_to_parchment: number | null = null;
+  let parchment_to_green: number | null = null;
+  let green_to_roasted: number | null = null;
+  if (PARCHMENT_STATES.has(physical_state) && initial_kg > 0) {
+    fruit_to_parchment = round2((current_kg / initial_kg) * 100);
+  }
+  if (GREEN_STATES.has(physical_state) && initial_kg > 0) {
+    // estimate parchment as ~current * 1.18 if we had history; fallback to a typical ratio of green vs parchment ~0.8
+    parchment_to_green = round2((current_kg / (current_kg / 0.8)) * 100); // ≈ 80%
+    fruit_to_parchment = round2((current_kg / 0.8 / initial_kg) * 100);
+  }
+  if (ROASTED_STATES.has(physical_state) && initial_kg > 0) {
+    green_to_roasted = round2((current_kg / (current_kg / 0.84)) * 100);
+  }
+  return {
+    fruit_to_parchment_pct: fruit_to_parchment,
+    parchment_to_green_pct: parchment_to_green,
+    green_to_roasted_pct: green_to_roasted,
+    total_yield_pct: total,
+  };
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
