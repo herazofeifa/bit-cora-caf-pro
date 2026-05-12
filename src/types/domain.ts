@@ -9,7 +9,13 @@ export type ISODateTime = string;
 
 export type OrganizationType = "finca" | "beneficio" | "cooperativa" | "exportador";
 export type UserRole = "owner" | "admin" | "supervisor" | "operario" | "comercial" | "qc";
-export type CustomerType = "tostador" | "exportador" | "cafeteria" | "distribuidor" | "otro";
+export type CustomerType =
+  | "tostador"
+  | "exportador"
+  | "cafeteria"
+  | "distribuidor"
+  | "consumidor"
+  | "otro";
 export type UnitType = "weight" | "volume" | "count" | "custom";
 
 export type ProcessType =
@@ -21,6 +27,7 @@ export type ProcessType =
   | "custom";
 
 export type PhysicalState =
+  // Legacy / corto
   | "cereza"
   | "fermentacion"
   | "secado"
@@ -28,27 +35,66 @@ export type PhysicalState =
   | "pergamino_seco"
   | "trillado"
   | "verde"
-  | "tostado";
+  | "tostado"
+  // Estados extendidos
+  | "cafe_fruta"
+  | "cafe_seleccionado"
+  | "cafe_despulpado"
+  | "cafe_en_baba"
+  | "pergamino_en_secado"
+  | "en_reposo"
+  | "oro_verde"
+  | "muestra"
+  | "subproducto"
+  | "merma"
+  | "descarte";
 
 export type CommercialState =
+  // Legacy
   | "no_disponible"
   | "en_proceso"
   | "disponible"
   | "reservado"
   | "comprometido"
-  | "vendido";
+  | "vendido"
+  // Extendidos
+  | "libre"
+  | "bloqueado_humedad"
+  | "bloqueado_calidad"
+  | "bloqueado_revision"
+  | "vendido_parcial"
+  | "descartado";
+
+export type LocationType =
+  | "finca"
+  | "recibo"
+  | "tanque"
+  | "patio"
+  | "cama_africana"
+  | "secadora"
+  | "bodega"
+  | "trilla"
+  | "empaque"
+  | "cliente"
+  | "otra";
 
 export type QualityStatus = "sin_evaluar" | "aprobado" | "observado" | "rechazado";
 
 export type MovementType =
-  | "ingreso"
+  | "entrada"
+  | "ingreso" // alias legacy de entrada
   | "salida"
   | "ajuste"
   | "transformacion"
-  | "merma"
   | "transferencia"
   | "reserva"
-  | "liberacion";
+  | "liberacion" // legacy
+  | "liberacion_reserva"
+  | "venta"
+  | "merma"
+  | "muestra"
+  | "descarte"
+  | "reproceso";
 
 export type AlertSeverity = "info" | "warning" | "danger";
 export type AlertStatus = "open" | "acknowledged" | "resolved";
