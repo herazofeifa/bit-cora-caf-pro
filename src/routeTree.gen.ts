@@ -27,6 +27,7 @@ import { Route as AppIntakeRouteImport } from './routes/_app.intake'
 import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppProcessesCustomBuilderRouteImport } from './routes/_app.processes.custom-builder'
 import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
 import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
 import { Route as AppHarvestNewRouteImport } from './routes/_app.harvest.new'
@@ -120,6 +121,12 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProcessesCustomBuilderRoute =
+  AppProcessesCustomBuilderRouteImport.update({
+    id: '/custom-builder',
+    path: '/custom-builder',
+    getParentRoute: () => AppProcessesRoute,
+  } as any)
 const AppLotsIdRoute = AppLotsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -147,7 +154,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRouteWithChildren
   '/process-control': typeof AppProcessControlRoute
-  '/processes': typeof AppProcessesRoute
+  '/processes': typeof AppProcessesRouteWithChildren
   '/quality': typeof AppQualityRoute
   '/reports': typeof AppReportsRoute
   '/reservations': typeof AppReservationsRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
+  '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -169,7 +177,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRouteWithChildren
   '/process-control': typeof AppProcessControlRoute
-  '/processes': typeof AppProcessesRoute
+  '/processes': typeof AppProcessesRouteWithChildren
   '/quality': typeof AppQualityRoute
   '/reports': typeof AppReportsRoute
   '/reservations': typeof AppReservationsRoute
@@ -179,6 +187,7 @@ export interface FileRoutesByTo {
   '/harvest/new': typeof AppHarvestNewRoute
   '/intake/new': typeof AppIntakeNewRoute
   '/lots/$id': typeof AppLotsIdRoute
+  '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -193,7 +202,7 @@ export interface FileRoutesById {
   '/_app/inventory': typeof AppInventoryRoute
   '/_app/lots': typeof AppLotsRouteWithChildren
   '/_app/process-control': typeof AppProcessControlRoute
-  '/_app/processes': typeof AppProcessesRoute
+  '/_app/processes': typeof AppProcessesRouteWithChildren
   '/_app/quality': typeof AppQualityRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/reservations': typeof AppReservationsRoute
@@ -203,6 +212,7 @@ export interface FileRoutesById {
   '/_app/harvest/new': typeof AppHarvestNewRoute
   '/_app/intake/new': typeof AppIntakeNewRoute
   '/_app/lots/$id': typeof AppLotsIdRoute
+  '/_app/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/harvest/new'
     | '/intake/new'
     | '/lots/$id'
+    | '/processes/custom-builder'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/harvest/new'
     | '/intake/new'
     | '/lots/$id'
+    | '/processes/custom-builder'
   id:
     | '__root__'
     | '/'
@@ -272,6 +284,7 @@ export interface FileRouteTypes {
     | '/_app/harvest/new'
     | '/_app/intake/new'
     | '/_app/lots/$id'
+    | '/_app/processes/custom-builder'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -409,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/processes/custom-builder': {
+      id: '/_app/processes/custom-builder'
+      path: '/custom-builder'
+      fullPath: '/processes/custom-builder'
+      preLoaderRoute: typeof AppProcessesCustomBuilderRouteImport
+      parentRoute: typeof AppProcessesRoute
+    }
     '/_app/lots/$id': {
       id: '/_app/lots/$id'
       path: '/$id'
@@ -468,6 +488,18 @@ const AppLotsRouteChildren: AppLotsRouteChildren = {
 const AppLotsRouteWithChildren =
   AppLotsRoute._addFileChildren(AppLotsRouteChildren)
 
+interface AppProcessesRouteChildren {
+  AppProcessesCustomBuilderRoute: typeof AppProcessesCustomBuilderRoute
+}
+
+const AppProcessesRouteChildren: AppProcessesRouteChildren = {
+  AppProcessesCustomBuilderRoute: AppProcessesCustomBuilderRoute,
+}
+
+const AppProcessesRouteWithChildren = AppProcessesRoute._addFileChildren(
+  AppProcessesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -476,7 +508,7 @@ interface AppRouteChildren {
   AppInventoryRoute: typeof AppInventoryRoute
   AppLotsRoute: typeof AppLotsRouteWithChildren
   AppProcessControlRoute: typeof AppProcessControlRoute
-  AppProcessesRoute: typeof AppProcessesRoute
+  AppProcessesRoute: typeof AppProcessesRouteWithChildren
   AppQualityRoute: typeof AppQualityRoute
   AppReportsRoute: typeof AppReportsRoute
   AppReservationsRoute: typeof AppReservationsRoute
@@ -493,7 +525,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInventoryRoute: AppInventoryRoute,
   AppLotsRoute: AppLotsRouteWithChildren,
   AppProcessControlRoute: AppProcessControlRoute,
-  AppProcessesRoute: AppProcessesRoute,
+  AppProcessesRoute: AppProcessesRouteWithChildren,
   AppQualityRoute: AppQualityRoute,
   AppReportsRoute: AppReportsRoute,
   AppReservationsRoute: AppReservationsRoute,
