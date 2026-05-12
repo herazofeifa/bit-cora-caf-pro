@@ -383,8 +383,14 @@ export interface StockMovement {
   movement_type: MovementType;
   qty_kg: number;
   qty_original: number | null;
+  qty_original_unit: string | null;
   uom_original_id: UUID | null;
+  from_state: PhysicalState | null;
+  to_state: PhysicalState | null;
+  from_location: string | null;
+  to_location: string | null;
   reason: string | null;
+  notes: string | null;
   reference_id: UUID | null;
   created_by: UUID | null;
   created_at: ISODateTime;
@@ -401,7 +407,15 @@ export interface WasteLog {
   notes: string | null;
 }
 
-export type ReservationStatus = "activa" | "convertida" | "cancelada" | "vencida";
+export type ReservationStatus =
+  | "reservada"
+  | "confirmada"
+  | "entregada"
+  | "cancelada"
+  | "vencida"
+  // legacy
+  | "activa"
+  | "convertida";
 
 export interface Reservation {
   id: UUID;
