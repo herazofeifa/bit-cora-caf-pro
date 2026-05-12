@@ -33,7 +33,7 @@ function AuditPage() {
   if (!allowed) {
     return (
       <>
-        <PageHeader title="Auditoría" subtitle="Registro de cambios críticos." />
+        <PageHeader eyebrow="AUDITORÍA" title="Auditoría" subtitle="Registro de cambios críticos." />
         <EmptyState icon={ScrollText} title="Acceso restringido" description="Tu rol no tiene permiso para ver la auditoría." />
       </>
     );

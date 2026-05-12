@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_app/intake/new")({
 function NewIntakePage() {
   return (
     <>
-      <PageHeader title="Nuevo recibo" subtitle="Café que entra al beneficio. Te guiamos en 4 pasos." />
+      <PageHeader eyebrow="RECIBOS" title="Nuevo recibo" subtitle="Café que entra al beneficio. Te guiamos en 4 pasos." />
       <HarvestForm kind="intake" />
     </>
   );

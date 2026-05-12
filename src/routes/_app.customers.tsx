@@ -74,7 +74,7 @@ function CustomersPage() {
   return (
     <>
       <PageHeader
-        title="Clientes"
+        eyebrow="CLIENTES" title="Clientes"
         subtitle="Las personas y empresas que compran tu café."
         action={
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>

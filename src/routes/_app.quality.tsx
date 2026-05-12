@@ -100,7 +100,7 @@ function QualityPage() {
   return (
     <>
       <PageHeader
-        title="Calidad"
+        eyebrow="CALIDAD" title="Calidad"
         subtitle="Catación, puntajes y notas de tu café."
         action={
           <Dialog open={open} onOpenChange={setOpen}>

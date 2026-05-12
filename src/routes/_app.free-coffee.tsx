@@ -46,7 +46,7 @@ function FreeCoffeePage() {
   return (
     <>
       <PageHeader
-        title="Café libre para negociar"
+        eyebrow="CAFÉ LIBRE" title="Café libre para negociar"
         subtitle="Lotes aprobados, sin bloqueos y con inventario disponible. Lo que podés ofrecer hoy mismo."
       />
 

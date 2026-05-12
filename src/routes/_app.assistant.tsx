@@ -76,7 +76,7 @@ function AssistantPage() {
   return (
     <>
       <PageHeader
-        title="¿Qué querés hacer hoy?"
+        eyebrow="ASISTENTE" title="¿Qué querés hacer hoy?"
         subtitle="Elegí una opción y te llevo paso a paso."
       />
 

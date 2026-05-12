@@ -85,7 +85,7 @@ function VariablesPage() {
   return (
     <>
       <PageHeader
-        title="Variables"
+        eyebrow="VARIABLES" title="Variables"
         subtitle="Crea, ajusta y organiza las variables que registras en cada fase."
         action={
           <div className="flex gap-2">

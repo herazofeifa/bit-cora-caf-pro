@@ -109,7 +109,7 @@ function ProcessControlPage() {
   if (active.length === 0) {
     return (
       <>
-        <PageHeader title="Control de proceso" subtitle="Lotes activos por fase, en tiempo real." />
+        <PageHeader eyebrow="PROCESO" title="Control de proceso" subtitle="Lotes activos por fase, en tiempo real." />
         <EmptyState
           icon={Activity}
           title="No hay lotes en proceso"

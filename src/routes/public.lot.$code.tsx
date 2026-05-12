@@ -153,15 +153,13 @@ function PublicLotContent({
     <div className="min-h-screen bg-gradient-to-b from-secondary/40 to-background">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
         {/* Header */}
-        <header className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-            <Coffee className="h-3.5 w-3.5" /> Ficha pública del lote
-          </div>
-          <p className="font-mono text-xs text-muted-foreground tracking-wider">{lot.lot_code}</p>
-          <h1 className="mt-2 font-display text-3xl sm:text-4xl font-semibold leading-tight">
+        <header className="text-center mb-10 md:mb-14">
+          <span className="eyebrow inline-block mb-5">Trazabilidad del lote</span>
+          <p className="font-mono text-[11px] text-muted-foreground tracking-[0.2em]">{lot.lot_code}</p>
+          <h1 className="mt-3 font-serif italic text-4xl sm:text-5xl md:text-6xl font-normal leading-[1.05] tracking-tight">
             {lot.friendly_name}
           </h1>
-          <p className="mt-2 text-base text-muted-foreground">
+          <p className="mt-4 text-base md:text-lg text-muted-foreground">
             {lot.variety} · {PROCESS_LABEL[lot.process_type] ?? lot.process_type}
             {lot.is_custom_process && processInstance && " (proceso personalizado)"}
           </p>
