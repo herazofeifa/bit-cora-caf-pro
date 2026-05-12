@@ -396,12 +396,39 @@ export interface StockMovement {
   created_at: ISODateTime;
 }
 
+export type WasteType =
+  | "pulpa"
+  | "mucilago"
+  | "agua_miel"
+  | "perdida_secado"
+  | "cisco"
+  | "defectos"
+  | "muestra"
+  | "descarte"
+  | "ajuste"
+  | "reproceso"
+  | "otro";
+
+export type WasteDestination =
+  | "compost"
+  | "venta"
+  | "descarte"
+  | "muestra"
+  | "consumo_interno"
+  | "otro";
+
 export interface WasteLog {
   id: UUID;
   lot_id: UUID;
+  waste_type: WasteType;
   qty_kg: number;
+  qty_original: number | null;
+  qty_original_unit: string | null;
+  destination: WasteDestination;
   reason: string;
   phase_instance_id: UUID | null;
+  responsible_user_id: UUID | null;
+  photo_url: string | null;
   registered_at: ISODateTime;
   created_by: UUID | null;
   notes: string | null;
@@ -436,15 +463,36 @@ export interface Reservation {
 
 // ───────────── Calidad ─────────────
 
+export type QualitySampleStatus =
+  | "pendiente"
+  | "aprobado"
+  | "bloqueado"
+  | "rechazado"
+  | "requiere_reproceso"
+  // legacy aliases mapped to new statuses
+  | "sin_evaluar"
+  | "observado";
+
 export interface QualitySample {
   id: UUID;
   lot_id: UUID;
   sampled_at: ISODateTime;
   cupper: string | null;
   score: number | null;
-  notes: string | null;
+  moisture_pct: number | null;
+  water_activity: number | null;
+  density: number | null;
+  screen_size: string | null;
+  primary_defects: number | null;
+  secondary_defects: number | null;
+  color: string | null;
+  smell: string | null;
+  tasting_notes: string | null;
   defects: string | null;
-  status: QualityStatus;
+  status: QualitySampleStatus;
+  notes: string | null;
+  photo_urls: string[];
+  attachment_urls: string[];
 }
 
 // ───────────── Alertas y auditoría ─────────────
