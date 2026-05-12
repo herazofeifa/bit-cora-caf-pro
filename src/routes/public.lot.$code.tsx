@@ -93,8 +93,8 @@ function PublicLotContent({
   lot,
   profile,
 }: {
-  lot: NonNullable<ReturnType<typeof useStore<ReturnType<typeof selectLot>>>>;
-  profile: ReturnType<typeof getLotPublicProfile>;
+  lot: Lot;
+  profile: LotPublicProfile;
 }) {
   const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
   const parcel = mockDb.parcels.find((p) => p.id === lot.parcel_id);
