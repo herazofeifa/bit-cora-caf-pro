@@ -96,8 +96,8 @@ function HarvestListPage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon={Sprout}
-          title="Aún no hay cosechas"
-          description="Toca + Nueva cosecha para empezar tu primera jornada."
+          title="Todavía no registraste cosechas"
+          description="Podés empezar con el botón Nueva cosecha."
           action={
             <Button asChild>
               <Link to="/harvest/new"><Plus className="h-4 w-4" /> Nueva cosecha</Link>

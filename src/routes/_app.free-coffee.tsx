@@ -63,7 +63,7 @@ function FreeCoffeePage() {
       {free.length === 0 ? (
         <EmptyState
           icon={Coffee}
-          title="No hay café libre por ahora"
+          title="Por ahora no hay café libre para negociar"
           description="Aprobá un lote en calidad o liberá café reservado para que aparezca acá."
         />
       ) : (

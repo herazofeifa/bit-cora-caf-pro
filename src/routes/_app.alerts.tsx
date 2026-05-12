@@ -42,7 +42,7 @@ function AlertsPage() {
       <section className="mb-6">
         <h2 className="text-sm font-semibold mb-2">Activas ({open.length})</h2>
         {open.length === 0 ? (
-          <EmptyState icon={Bell} title="Todo en orden" description="Sin alertas activas en este momento." />
+          <EmptyState icon={Bell} title="Todo en orden por ahora" description="Cuando algo necesite tu atención, te avisamos acá." />
         ) : (
           <div className="space-y-2">
             {open.map((a) => (
