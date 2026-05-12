@@ -188,8 +188,8 @@ function DashboardPage() {
         title: `Finalizar fermentación del lote ${lot4.friendly_name}`,
         description: hours ? `Lleva ${hours} h en fermentación anaeróbica. Revisar pH y mover fase.` : "Revisar fermentación.",
         buttons: [
-          { label: "Mover fase", onClick: () => toast("Mover fase", { description: "Próximamente" }) },
-          { label: "Posponer", variant: "outline", onClick: () => toast("Pospuesto", { description: "Te recordaremos mañana" }) },
+          { label: "Mover fase", onClick: () => navigate({ to: "/lots/$id", params: { id: lot4.id } }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot4.id } }) },
         ],
       });
     }
