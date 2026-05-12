@@ -56,58 +56,60 @@
 }
 
 :root {
-  --radius: 1rem;
-  /* Warm cream background */
-  --background: oklch(0.985 0.012 80);
-  --foreground: oklch(0.28 0.04 50);
+  --radius: 0.875rem;
 
-  --card: oklch(1 0.005 80);
-  --card-foreground: oklch(0.28 0.04 50);
-  --popover: oklch(1 0.005 80);
-  --popover-foreground: oklch(0.28 0.04 50);
+  /* Warm ivory / parchment */
+  --background: oklch(0.975 0.012 82);
+  /* Near-black espresso */
+  --foreground: oklch(0.22 0.025 50);
 
-  /* Soft coffee leaf green */
-  --primary: oklch(0.52 0.09 145);
-  --primary-foreground: oklch(0.99 0.01 80);
+  --card: oklch(0.995 0.006 82);
+  --card-foreground: oklch(0.22 0.025 50);
+  --popover: oklch(0.995 0.006 82);
+  --popover-foreground: oklch(0.22 0.025 50);
+
+  /* Deep coffee brown */
+  --primary: oklch(0.34 0.045 45);
+  --primary-foreground: oklch(0.985 0.01 80);
 
   /* Warm beige */
-  --secondary: oklch(0.93 0.02 75);
-  --secondary-foreground: oklch(0.32 0.04 50);
+  --secondary: oklch(0.935 0.018 78);
+  --secondary-foreground: oklch(0.3 0.035 50);
 
-  --muted: oklch(0.95 0.015 75);
-  --muted-foreground: oklch(0.5 0.03 60);
+  --muted: oklch(0.955 0.012 78);
+  --muted-foreground: oklch(0.48 0.025 55);
 
-  /* Warm amber accent */
-  --accent: oklch(0.88 0.08 75);
-  --accent-foreground: oklch(0.3 0.05 50);
+  /* Muted forest green accent */
+  --accent: oklch(0.46 0.06 150);
+  --accent-foreground: oklch(0.985 0.01 80);
 
-  --destructive: oklch(0.58 0.2 25);
+  --destructive: oklch(0.52 0.16 28);
   --destructive-foreground: oklch(0.99 0.01 80);
 
-  --success: oklch(0.62 0.13 145);
+  --success: oklch(0.5 0.1 150);
   --success-foreground: oklch(0.99 0.01 80);
 
-  --warning: oklch(0.78 0.15 75);
+  --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.28 0.05 50);
 
-  --border: oklch(0.9 0.02 75);
-  --input: oklch(0.92 0.02 75);
-  --ring: oklch(0.52 0.09 145);
+  --border: oklch(0.9 0.018 78);
+  --input: oklch(0.92 0.018 78);
+  --ring: oklch(0.34 0.045 45);
 
-  --chart-1: oklch(0.52 0.09 145);
-  --chart-2: oklch(0.65 0.12 60);
-  --chart-3: oklch(0.55 0.08 35);
-  --chart-4: oklch(0.78 0.15 75);
-  --chart-5: oklch(0.45 0.06 145);
+  --chart-1: oklch(0.34 0.045 45);
+  --chart-2: oklch(0.46 0.06 150);
+  --chart-3: oklch(0.62 0.1 60);
+  --chart-4: oklch(0.78 0.14 78);
+  --chart-5: oklch(0.55 0.05 35);
 
-  --sidebar: oklch(0.97 0.015 80);
-  --sidebar-foreground: oklch(0.3 0.04 50);
-  --sidebar-primary: oklch(0.52 0.09 145);
+  --sidebar: oklch(0.96 0.014 80);
+  --sidebar-foreground: oklch(0.26 0.03 50);
+  --sidebar-primary: oklch(0.34 0.045 45);
   --sidebar-primary-foreground: oklch(0.99 0.01 80);
-  --sidebar-accent: oklch(0.93 0.025 75);
-  --sidebar-accent-foreground: oklch(0.3 0.04 50);
-  --sidebar-border: oklch(0.9 0.02 75);
-  --sidebar-ring: oklch(0.52 0.09 145);
+  --sidebar-accent: oklch(0.92 0.02 78);
+  --sidebar-accent-foreground: oklch(0.26 0.03 50);
+  --sidebar-border: oklch(0.9 0.018 78);
+  --sidebar-ring: oklch(0.34 0.045 45);
 }
 
 .dark {
@@ -154,15 +156,34 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    font-weight: 500;
   }
 }
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .font-serif { font-family: var(--font-serif); }
+  .font-display { font-family: var(--font-display); }
+
+  /* Small uppercase premium label inspired by editorial coffee brands. */
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    font-weight: 600;
+    color: var(--color-muted-foreground);
+  }
+  @media (min-width: 768px) {
+    .eyebrow { letter-spacing: 0.3em; }
+  }
 }
