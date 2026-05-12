@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Droplet,
@@ -22,7 +22,11 @@ import {
   Plus,
   Move,
   Boxes,
+  Pause,
+  Play,
+  CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +34,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
-import { useStore } from "@/lib/store";
+import {
+  evaluateTimeAlertsForActivePhases,
+  pausePhase,
+  resumePhase,
+  useStore,
+} from "@/lib/store";
+import {
+  RegisterMoistureDialog,
+  RegisterVariableDialog,
+  RegisterWasteDialog,
+} from "@/components/lot-action-dialogs";
+import { FinishPhaseDialog } from "@/components/finish-phase-dialog";
 import { mockDb } from "@/data/mock-data";
 import {
   calcAvailableKg,
