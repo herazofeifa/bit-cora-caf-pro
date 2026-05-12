@@ -101,7 +101,7 @@ function ReservationsPage() {
   return (
     <>
       <PageHeader
-        title="Reservas"
+        eyebrow="RESERVAS" title="Reservas"
         subtitle="Café apartado para tus clientes."
         action={
           <PermissionGate permission="reservation.create">

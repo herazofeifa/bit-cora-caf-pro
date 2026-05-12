@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_app/harvest/new")({
 function NewHarvestPage() {
   return (
     <>
-      <PageHeader title="Nueva cosecha" subtitle="Registremos juntos esta jornada en 4 pasos." />
+      <PageHeader eyebrow="COSECHA" title="Nueva cosecha" subtitle="Registremos juntos esta jornada en 4 pasos." />
       <HarvestForm kind="harvest" />
     </>
   );

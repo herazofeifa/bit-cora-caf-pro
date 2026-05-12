@@ -122,7 +122,7 @@ function VariableLogPage() {
         <ArrowLeft className="h-4 w-4 mr-1" /> Volver a variables
       </Link>
       <PageHeader
-        title="Registrar variable"
+        eyebrow="VARIABLES" title="Registrar variable"
         subtitle="Selecciona el lote, su fase activa y la lectura."
       />
 

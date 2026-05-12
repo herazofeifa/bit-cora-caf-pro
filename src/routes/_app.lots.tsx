@@ -161,7 +161,7 @@ function LotsPage() {
   return (
     <>
       <PageHeader
-        title="Lotes"
+        eyebrow="LOTES" title="Lotes"
         subtitle="Cada lote sigue su propio camino. Toca uno para ver su historia completa."
       />
 

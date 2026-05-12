@@ -44,7 +44,7 @@ function IntakeListPage() {
   return (
     <>
       <PageHeader
-        title="Recibos"
+        eyebrow="RECIBOS" title="Recibos"
         subtitle="Café que entra al beneficio."
         action={
           <Button asChild className="h-11 rounded-xl">

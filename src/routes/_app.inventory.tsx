@@ -136,7 +136,7 @@ function InventoryPage() {
   return (
     <>
       <PageHeader
-        title="Inventario"
+        eyebrow="INVENTARIO" title="Inventario"
         subtitle="Café disponible, reservado, comprometido y bloqueado en cada lote."
         action={
           <Button asChild variant="outline">

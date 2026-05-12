@@ -37,7 +37,7 @@ function AlertsPage() {
 
   return (
     <>
-      <PageHeader title="Alertas" subtitle="Tiempos, calidad, inventario y proceso." />
+      <PageHeader eyebrow="ALERTAS" title="Alertas" subtitle="Tiempos, calidad, inventario y proceso." />
 
       <section className="mb-6">
         <h2 className="text-sm font-semibold mb-2">Activas ({open.length})</h2>

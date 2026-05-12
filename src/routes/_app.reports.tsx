@@ -695,7 +695,7 @@ function ReportsPage() {
   return (
     <>
       <PageHeader
-        title="Reportes"
+        eyebrow="REPORTES" title="Reportes"
         subtitle="Resúmenes claros que responden las preguntas del día a día."
       />
 

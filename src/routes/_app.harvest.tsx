@@ -55,7 +55,7 @@ function HarvestListPage() {
   return (
     <>
       <PageHeader
-        title="Cosecha"
+        eyebrow="COSECHA" title="Cosecha"
         subtitle="Registra el café recolectado en tu finca."
         action={
           <Button asChild className="h-11 rounded-xl">

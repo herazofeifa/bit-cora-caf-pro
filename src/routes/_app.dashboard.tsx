@@ -255,7 +255,7 @@ function DashboardPage() {
     <>
       {/* 1. Header */}
       <PageHeader
-        title={`${greeting}, ${org.name.split(" ").slice(-1)[0]}`}
+        eyebrow="INICIO" title={`${greeting}, ${org.name.split(" ").slice(-1)[0]}`}
         subtitle={`${org.name} · ${org.region ?? org.country} · Cosecha ${season}`}
       />
 

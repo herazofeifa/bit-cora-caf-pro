@@ -185,7 +185,7 @@ function NewVariablePage() {
         <ArrowLeft className="h-4 w-4 mr-1" /> Volver a variables
       </Link>
       <PageHeader
-        title={editing ? "Editar variable" : "Nueva variable"}
+        eyebrow="VARIABLES" title={editing ? "Editar variable" : "Nueva variable"}
         subtitle="Cada variable se asocia a una o más fases del proceso."
       />
 

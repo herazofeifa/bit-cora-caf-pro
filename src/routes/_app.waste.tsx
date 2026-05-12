@@ -84,7 +84,7 @@ function WastePage() {
   return (
     <>
       <PageHeader
-        title="Mermas"
+        eyebrow="MERMAS" title="Mermas"
         subtitle="Lo que se pierde durante el proceso. Registralo para entender tus rendimientos."
         action={
           <Dialog open={open} onOpenChange={setOpen}>

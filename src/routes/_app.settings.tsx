@@ -76,7 +76,7 @@ function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Ajustes" subtitle="Organización, unidades, alertas, permisos y sincronización." />
+      <PageHeader eyebrow="AJUSTES" title="Ajustes" subtitle="Organización, unidades, alertas, permisos y sincronización." />
 
       <Tabs defaultValue="org">
         <TabsList className="flex flex-wrap h-auto gap-1">

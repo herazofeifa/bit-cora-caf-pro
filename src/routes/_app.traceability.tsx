@@ -95,7 +95,7 @@ function TraceabilityPage() {
   return (
     <>
       <PageHeader
-        title="Trazabilidad"
+        eyebrow="TRAZABILIDAD" title="Trazabilidad"
         subtitle="Busca cualquier lote y mira su historia completa, paso a paso."
       />
 

@@ -91,7 +91,7 @@ function ProcessesPage() {
   return (
     <>
       <PageHeader
-        title="Procesos"
+        eyebrow="PROCESO" title="Procesos"
         subtitle="Plantillas listas para usar y procesos diseñados a tu medida."
         action={
           <Button asChild>
