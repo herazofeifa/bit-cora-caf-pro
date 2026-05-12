@@ -738,7 +738,7 @@ export function createStockMovement(input: CreateStockMovementInput): StockMovem
       throw new Error("No se puede vender café bloqueado.");
     }
     const available = Math.max(0, lot.qty_current_kg - lot.qty_blocked_kg - lot.qty_reserved_kg - lot.qty_committed_kg - lot.stock_safety_kg);
-    if (input.qty_kg > available + lot.qty_reserved_kg) throw new Error("Cantidad mayor al inventario disponible.");
+    if (input.qty_kg > available) throw new Error("Cantidad mayor al inventario disponible.");
   }
 
   // Apply effects on lot
