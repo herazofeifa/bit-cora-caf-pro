@@ -169,8 +169,8 @@ function DashboardPage() {
         title: `Registrar humedad del lote ${lot1.friendly_name}`,
         description: `Humedad actual ${lot1.current_moisture}%${days ? ` · día ${days} de secado` : ""}.`,
         buttons: [
-          { label: "Registrar humedad", onClick: () => toast("Registrar humedad", { description: "Próximamente" }) },
-          { label: "Ver lote", variant: "outline", onClick: () => toast("Ver lote", { description: lot1.lot_code }) },
+          { label: "Registrar humedad", onClick: () => navigate({ to: "/lots/$id", params: { id: lot1.id } }) },
+          { label: "Ver lote", variant: "outline", onClick: () => navigate({ to: "/lots/$id", params: { id: lot1.id } }) },
         ],
       });
     }
