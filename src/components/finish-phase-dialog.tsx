@@ -22,8 +22,10 @@ import {
   logMoisture,
   logVariable,
   logWaste,
+  raiseAlert,
   timeStatus,
   useStore,
+  validatePhaseTransition,
 } from "@/lib/store";
 import type { Lot, ProcessPhaseInstance } from "@/types/domain";
 
