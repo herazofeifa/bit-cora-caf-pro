@@ -450,10 +450,19 @@ export const lots: Lot[] = [
   },
 ];
 
+const SM_BASE = {
+  qty_original_unit: null as string | null,
+  from_state: null as null,
+  to_state: null as null,
+  from_location: null as string | null,
+  to_location: null as string | null,
+  notes: null as string | null,
+};
+
 export const stockMovements: StockMovement[] = [
-  { id: "sm-1", lot_id: "lot-1", movement_type: "ingreso", qty_kg: 154.2, qty_original: 12, uom_original_id: "u-cajuela", reason: "Recibo cosecha", reference_id: "ht-1", created_by: "user-1", created_at: "2026-04-22T18:00:00Z" },
-  { id: "sm-2", lot_id: "lot-1", movement_type: "merma", qty_kg: 34.2, qty_original: null, uom_original_id: null, reason: "Pérdida por secado", reference_id: null, created_by: "user-1", created_at: "2026-05-10T08:00:00Z" },
-  { id: "sm-3", lot_id: "lot-2", movement_type: "reserva", qty_kg: 80, qty_original: null, uom_original_id: null, reason: "Reserva Taste Pura Vida", reference_id: "res-1", created_by: "user-1", created_at: "2026-04-28T10:00:00Z" },
+  { ...SM_BASE, id: "sm-1", lot_id: "lot-1", movement_type: "entrada", qty_kg: 154.2, qty_original: 12, qty_original_unit: "cajuela", uom_original_id: "u-cajuela", from_location: null, to_location: "Patio 2", reason: "Recibo cosecha", reference_id: "ht-1", created_by: "user-1", created_at: "2026-04-22T18:00:00Z" },
+  { ...SM_BASE, id: "sm-2", lot_id: "lot-1", movement_type: "merma", qty_kg: 34.2, qty_original: null, uom_original_id: null, reason: "Pérdida por secado", reference_id: null, created_by: "user-1", created_at: "2026-05-10T08:00:00Z" },
+  { ...SM_BASE, id: "sm-3", lot_id: "lot-2", movement_type: "reserva", qty_kg: 80, qty_original: null, uom_original_id: null, reason: "Reserva Taste Pura Vida", reference_id: "res-1", created_by: "user-1", created_at: "2026-04-28T10:00:00Z" },
 ];
 
 export const wasteLogs: WasteLog[] = [
@@ -461,7 +470,7 @@ export const wasteLogs: WasteLog[] = [
 ];
 
 export const reservations: Reservation[] = [
-  { id: "res-1", organization_id: ORG, lot_id: "lot-2", customer_id: "cust-1", qty_kg: 80, status: "activa", reserved_at: "2026-04-28T10:00:00Z", expires_at: "2026-06-15T00:00:00Z", notes: "Reserva para microlote." },
+  { id: "res-1", organization_id: ORG, lot_id: "lot-2", customer_id: "cust-1", qty_kg: 80, qty_original: null, qty_original_unit: null, price: 8.5, currency: "USD/lb", status: "reservada", reserved_at: "2026-04-28T10:00:00Z", expires_at: "2026-06-15T00:00:00Z", delivered_at: null, notes: "Reserva para microlote." },
 ];
 
 export const qualitySamples: QualitySample[] = [

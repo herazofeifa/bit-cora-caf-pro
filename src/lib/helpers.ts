@@ -89,16 +89,28 @@ type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 export function physicalStateTone(state: PhysicalState): StatusTone {
   switch (state) {
     case "cereza":
+    case "cafe_fruta":
+    case "cafe_seleccionado":
+    case "cafe_despulpado":
+    case "cafe_en_baba":
     case "fermentacion":
     case "secado":
     case "pergamino_humedo":
+    case "pergamino_en_secado":
       return "info";
     case "pergamino_seco":
     case "trillado":
     case "verde":
+    case "oro_verde":
+    case "en_reposo":
       return "success";
     case "tostado":
+    case "muestra":
+    case "subproducto":
       return "neutral";
+    case "merma":
+    case "descarte":
+      return "danger";
     default:
       return "neutral";
   }
@@ -107,14 +119,20 @@ export function physicalStateTone(state: PhysicalState): StatusTone {
 export function commercialStateTone(state: CommercialState): StatusTone {
   switch (state) {
     case "disponible":
+    case "libre":
       return "success";
     case "reservado":
     case "comprometido":
       return "info";
+    case "vendido_parcial":
     case "en_proceso":
       return "warning";
     case "vendido":
       return "neutral";
+    case "bloqueado_humedad":
+    case "bloqueado_calidad":
+    case "bloqueado_revision":
+    case "descartado":
     case "no_disponible":
       return "danger";
     default:
@@ -169,6 +187,17 @@ export const physicalStateLabel: Record<PhysicalState, string> = {
   trillado: "Trillado",
   verde: "Verde",
   tostado: "Tostado",
+  cafe_fruta: "Café fruta",
+  cafe_seleccionado: "Café seleccionado",
+  cafe_despulpado: "Café despulpado",
+  cafe_en_baba: "Café en baba",
+  pergamino_en_secado: "Pergamino en secado",
+  en_reposo: "En reposo",
+  oro_verde: "Oro verde",
+  muestra: "Muestra",
+  subproducto: "Subproducto",
+  merma: "Merma",
+  descarte: "Descarte",
 };
 
 export const commercialStateLabel: Record<CommercialState, string> = {
@@ -178,6 +207,62 @@ export const commercialStateLabel: Record<CommercialState, string> = {
   reservado: "Reservado",
   comprometido: "Comprometido",
   vendido: "Vendido",
+  libre: "Libre",
+  bloqueado_humedad: "Bloqueado por humedad",
+  bloqueado_calidad: "Bloqueado por calidad",
+  bloqueado_revision: "Bloqueado por revisión",
+  vendido_parcial: "Vendido parcialmente",
+  descartado: "Descartado",
+};
+
+export const locationLabel: Record<string, string> = {
+  finca: "Finca",
+  recibo: "Recibo",
+  tanque: "Tanque",
+  patio: "Patio",
+  cama_africana: "Cama africana",
+  secadora: "Secadora",
+  bodega: "Bodega",
+  trilla: "Trilla",
+  empaque: "Empaque",
+  cliente: "Cliente",
+  otra: "Otra",
+};
+
+export const movementTypeLabel: Record<string, string> = {
+  entrada: "Entrada",
+  ingreso: "Entrada",
+  salida: "Salida",
+  ajuste: "Ajuste",
+  transformacion: "Transformación",
+  transferencia: "Transferencia",
+  reserva: "Reserva",
+  liberacion: "Liberación de reserva",
+  liberacion_reserva: "Liberación de reserva",
+  venta: "Venta",
+  merma: "Merma",
+  muestra: "Muestra",
+  descarte: "Descarte",
+  reproceso: "Reproceso",
+};
+
+export const reservationStatusLabel: Record<string, string> = {
+  reservada: "Reservada",
+  activa: "Reservada",
+  confirmada: "Confirmada",
+  entregada: "Entregada",
+  convertida: "Entregada",
+  cancelada: "Cancelada",
+  vencida: "Vencida",
+};
+
+export const customerTypeLabel: Record<string, string> = {
+  tostador: "Tostador",
+  exportador: "Exportador",
+  cafeteria: "Cafetería",
+  distribuidor: "Distribuidor",
+  consumidor: "Consumidor",
+  otro: "Otro",
 };
 
 export const qualityStatusLabel: Record<QualityStatus, string> = {
