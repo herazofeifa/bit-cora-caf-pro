@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Sprout, Boxes, Warehouse, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { navItems, bottomNavRoutes } from "./nav-items";
+import { navGroups, bottomNavRoutes } from "./nav-items";
 import { cn } from "@/lib/utils";
 
 const primary = [
@@ -15,7 +15,13 @@ const primary = [
 export function MobileBottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const moreItems = navItems.filter((i) => !bottomNavRoutes.includes(i.to));
+
+  const moreGroups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => !bottomNavRoutes.includes(i.to)),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
@@ -45,24 +51,33 @@ export function MobileBottomNav() {
                 <span className="font-medium">Más</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-3xl">
+            <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>Más opciones</SheetTitle>
               </SheetHeader>
-              <ul className="mt-4 grid grid-cols-3 gap-2 pb-4">
-                {moreItems.map(({ to, label, icon: Icon }) => (
-                  <li key={to}>
-                    <Link
-                      to={to}
-                      onClick={() => setOpen(false)}
-                      className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center text-xs font-medium hover:bg-accent"
-                    >
-                      <Icon className="h-5 w-5 text-primary" />
-                      <span>{label}</span>
-                    </Link>
-                  </li>
+              <div className="mt-4 space-y-5 pb-4">
+                {moreGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="px-1 pb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                      {group.label}
+                    </p>
+                    <ul className="grid grid-cols-3 gap-2">
+                      {group.items.map(({ to, label, icon: Icon }) => (
+                        <li key={to}>
+                          <Link
+                            to={to}
+                            onClick={() => setOpen(false)}
+                            className="flex h-full flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center text-xs font-medium hover:bg-accent"
+                          >
+                            <Icon className="h-5 w-5 text-primary" />
+                            <span>{label}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </SheetContent>
           </Sheet>
         </li>
