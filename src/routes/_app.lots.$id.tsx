@@ -47,7 +47,7 @@ import {
 } from "@/components/lot-action-dialogs";
 import { FinishPhaseDialog } from "@/components/finish-phase-dialog";
 import { mockDb } from "@/data/mock-data";
-import { useFarms, useParcels, useUnits, getUnits } from "@/lib/app-config-store";
+import { useFarms, useParcels, getUnits } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
   calcYieldPct,
