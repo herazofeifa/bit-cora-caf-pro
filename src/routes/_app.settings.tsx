@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -18,6 +17,11 @@ import {
   roleLabel, roleDescription, useCurrentRole, setCurrentRole, type AppRole,
 } from "@/lib/permissions";
 import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
+import {
+  useOrganization, useFarms, useParcels, useUnits, useAppSettings,
+  updateOrganization, updateFarm, updateParcel, updateUnit, updateSettings,
+  type AppSettings,
+} from "@/lib/app-config-store";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
@@ -29,50 +33,9 @@ export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
 });
 
-interface AppSettings {
-  moisture_ideal_min: number;
-  moisture_ideal_max: number;
-  moisture_warn_margin: number;
-  alert_rules: Record<string, boolean>;
-  public_default_visible: {
-    availability: boolean; moisture: boolean; quality: boolean;
-    tasting_notes: boolean; photos: boolean; process_details: boolean;
-  };
-}
-
-const DEFAULTS: AppSettings = {
-  moisture_ideal_min: 9,
-  moisture_ideal_max: 12.5,
-  moisture_warn_margin: 0.5,
-  alert_rules: {
-    phase_near_max: true, phase_overdue: true, lot_no_movement: true, lot_missing_variable: true, drying_too_long: true,
-    moisture_above: true, moisture_below: true, ph_out_of_range: true, temp_out_of_range: true, water_activity_high: true, quality_pending: true,
-    low_inventory: true, reservation_near_expiry: true, reservation_expired: true, over_reservation: true, blocked_for_sale: true,
-    missing_required_variable: true, phase_finished_outside: true, experimental_deviation: true, waste_above_avg: true,
-  },
-  public_default_visible: {
-    availability: true, moisture: true, quality: true, tasting_notes: true, photos: true, process_details: false,
-  },
-};
-
-const STORAGE_KEY = "bcp.settings.v1";
-
-function loadSettings(): AppSettings {
-  if (typeof window === "undefined") return DEFAULTS;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULTS;
-    return { ...DEFAULTS, ...JSON.parse(raw), alert_rules: { ...DEFAULTS.alert_rules, ...(JSON.parse(raw).alert_rules ?? {}) } };
-  } catch { return DEFAULTS; }
-}
-
 function SettingsPage() {
   const role = useCurrentRole();
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
-
-  useEffect(() => {
-    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
-  }, [settings]);
+  const settings = useAppSettings();
 
   return (
     <>
@@ -93,24 +56,16 @@ function SettingsPage() {
           <TabsTrigger value="sync"><RefreshCw className="size-4" /> Sincronización</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="org" className="mt-4">
-          <OrgSection />
-        </TabsContent>
+        <TabsContent value="org" className="mt-4"><OrgSection /></TabsContent>
         <TabsContent value="farms" className="mt-4"><FarmsSection /></TabsContent>
         <TabsContent value="parcels" className="mt-4"><ParcelsSection /></TabsContent>
         <TabsContent value="users" className="mt-4"><UsersRolesSection currentRole={role} /></TabsContent>
         <TabsContent value="units" className="mt-4"><UnitsSection /></TabsContent>
-        <TabsContent value="moisture" className="mt-4">
-          <MoistureSection settings={settings} onChange={setSettings} />
-        </TabsContent>
+        <TabsContent value="moisture" className="mt-4"><MoistureSection settings={settings} /></TabsContent>
         <TabsContent value="processes" className="mt-4"><ProcessTemplatesSection /></TabsContent>
         <TabsContent value="variables" className="mt-4"><VariablesSection /></TabsContent>
-        <TabsContent value="alerts" className="mt-4">
-          <AlertRulesSection settings={settings} onChange={setSettings} />
-        </TabsContent>
-        <TabsContent value="public" className="mt-4">
-          <PublicSection settings={settings} onChange={setSettings} />
-        </TabsContent>
+        <TabsContent value="alerts" className="mt-4"><AlertRulesSection settings={settings} /></TabsContent>
+        <TabsContent value="public" className="mt-4"><PublicSection settings={settings} /></TabsContent>
         <TabsContent value="sync" className="mt-4"><SyncSection /></TabsContent>
       </Tabs>
     </>
@@ -118,15 +73,22 @@ function SettingsPage() {
 }
 
 function OrgSection() {
+  const org = useOrganization();
   return (
     <Card className="p-4 space-y-3">
       <div>
         <Label>Nombre de la organización</Label>
-        <Input defaultValue="Bitácora Café Pro" />
+        <Input value={org.name} onChange={(e) => updateOrganization({ name: e.target.value })} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Label>País</Label><Input defaultValue="Costa Rica" /></div>
-        <div><Label>Región</Label><Input defaultValue="Tarrazú" /></div>
+        <div>
+          <Label>País</Label>
+          <Input value={org.country} onChange={(e) => updateOrganization({ country: e.target.value })} />
+        </div>
+        <div>
+          <Label>Región</Label>
+          <Input value={org.region} onChange={(e) => updateOrganization({ region: e.target.value })} />
+        </div>
       </div>
       <div>
         <Button onClick={() => toast.success("Organización guardada")}>Guardar</Button>
@@ -136,15 +98,32 @@ function OrgSection() {
 }
 
 function FarmsSection() {
+  const farms = useFarms();
   return (
     <Card className="p-0 divide-y divide-border">
-      {mockDb.farms.map((f) => (
-        <div key={f.id} className="p-3 flex items-center justify-between text-sm">
+      {farms.map((f) => (
+        <div key={f.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_120px_auto] gap-2 items-end">
           <div>
-            <div className="font-medium">{f.name}</div>
-            <div className="text-xs text-muted-foreground">{f.region} · {f.country} · {f.altitude_m} msnm</div>
+            <Label className="text-xs">Nombre</Label>
+            <Input value={f.name} onChange={(e) => updateFarm(f.id, { name: e.target.value })} />
           </div>
-          <Button size="sm" variant="ghost" onClick={() => toast("Próximamente: edición de finca")}>Editar</Button>
+          <div>
+            <Label className="text-xs">Región</Label>
+            <Input value={f.region ?? ""} onChange={(e) => updateFarm(f.id, { region: e.target.value })} />
+          </div>
+          <div>
+            <Label className="text-xs">País</Label>
+            <Input value={f.country ?? ""} onChange={(e) => updateFarm(f.id, { country: e.target.value })} />
+          </div>
+          <div>
+            <Label className="text-xs">Altitud (msnm)</Label>
+            <Input
+              type="number"
+              value={f.altitude_m ?? ""}
+              onChange={(e) => updateFarm(f.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
+            />
+          </div>
+          <Button size="sm" variant="outline" onClick={() => toast.success(`${f.name}: guardada`)}>Guardar</Button>
         </div>
       ))}
     </Card>
@@ -152,17 +131,39 @@ function FarmsSection() {
 }
 
 function ParcelsSection() {
+  const parcels = useParcels();
+  const farms = useFarms();
   return (
     <Card className="p-0 divide-y divide-border">
-      {mockDb.parcels.map((p) => {
-        const farm = mockDb.farms.find((f) => f.id === p.farm_id);
+      {parcels.map((p) => {
+        const farm = farms.find((f) => f.id === p.farm_id);
         return (
-          <div key={p.id} className="p-3 flex items-center justify-between text-sm">
+          <div key={p.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_120px_120px_auto] gap-2 items-end">
             <div>
-              <div className="font-medium">{p.name}</div>
-              <div className="text-xs text-muted-foreground">{farm?.name} · {p.variety} · {p.area_ha} ha</div>
+              <Label className="text-xs">Nombre ({farm?.name ?? "—"})</Label>
+              <Input value={p.name} onChange={(e) => updateParcel(p.id, { name: e.target.value })} />
             </div>
-            <Button size="sm" variant="ghost" onClick={() => toast("Próximamente: edición de parcela")}>Editar</Button>
+            <div>
+              <Label className="text-xs">Variedad</Label>
+              <Input value={p.variety ?? ""} onChange={(e) => updateParcel(p.id, { variety: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Área (ha)</Label>
+              <Input
+                type="number" step="0.1"
+                value={p.area_ha ?? ""}
+                onChange={(e) => updateParcel(p.id, { area_ha: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Altitud</Label>
+              <Input
+                type="number"
+                value={p.altitude_m ?? ""}
+                onChange={(e) => updateParcel(p.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+            </div>
+            <Button size="sm" variant="outline" onClick={() => toast.success(`${p.name}: guardada`)}>Guardar</Button>
           </div>
         );
       })}
@@ -197,10 +198,7 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
 }
 
 function UnitsSection() {
-  const [units, setUnits] = useState(mockDb.units);
-  const update = (id: string, patch: Partial<typeof units[0]>) => {
-    setUnits((u) => u.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  };
+  const units = useUnits();
   return (
     <Card className="p-0 divide-y divide-border">
       {units.map((u) => (
@@ -216,7 +214,7 @@ function UnitsSection() {
               value={u.kg_factor ?? ""}
               placeholder={u.kg_factor == null ? "Sin definir" : ""}
               disabled={!u.is_configurable}
-              onChange={(e) => update(u.id, { kg_factor: e.target.value === "" ? null : Number(e.target.value) })}
+              onChange={(e) => updateUnit(u.id, { kg_factor: e.target.value === "" ? null : Number(e.target.value) })}
             />
           </div>
           <div>
@@ -225,10 +223,10 @@ function UnitsSection() {
               type="number" step="0.01"
               value={u.liters_factor ?? ""}
               disabled={!u.is_configurable}
-              onChange={(e) => update(u.id, { liters_factor: e.target.value === "" ? null : Number(e.target.value) })}
+              onChange={(e) => updateUnit(u.id, { liters_factor: e.target.value === "" ? null : Number(e.target.value) })}
             />
           </div>
-          <Button size="sm" variant="outline" onClick={() => toast.success(`${u.name}: factor actualizado (demo)`)}>Guardar</Button>
+          <Button size="sm" variant="outline" onClick={() => toast.success(`${u.name}: factor actualizado`)}>Guardar</Button>
         </div>
       ))}
       <div className="p-3 text-xs text-muted-foreground">
@@ -238,24 +236,24 @@ function UnitsSection() {
   );
 }
 
-function MoistureSection({ settings, onChange }: { settings: AppSettings; onChange: (s: AppSettings) => void }) {
+function MoistureSection({ settings }: { settings: AppSettings }) {
   return (
     <Card className="p-4 space-y-3">
       <div className="grid grid-cols-3 gap-3">
         <div>
           <Label>Mínimo ideal (%)</Label>
           <Input type="number" step="0.1" value={settings.moisture_ideal_min}
-            onChange={(e) => onChange({ ...settings, moisture_ideal_min: Number(e.target.value) })} />
+            onChange={(e) => updateSettings({ moisture_ideal_min: Number(e.target.value) })} />
         </div>
         <div>
           <Label>Máximo ideal (%)</Label>
           <Input type="number" step="0.1" value={settings.moisture_ideal_max}
-            onChange={(e) => onChange({ ...settings, moisture_ideal_max: Number(e.target.value) })} />
+            onChange={(e) => updateSettings({ moisture_ideal_max: Number(e.target.value) })} />
         </div>
         <div>
           <Label>Margen de aviso (%)</Label>
           <Input type="number" step="0.1" value={settings.moisture_warn_margin}
-            onChange={(e) => onChange({ ...settings, moisture_warn_margin: Number(e.target.value) })} />
+            onChange={(e) => updateSettings({ moisture_warn_margin: Number(e.target.value) })} />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -327,7 +325,7 @@ const ALERT_RULE_GROUPS: { title: string; rules: { key: string; label: string }[
   ]},
 ];
 
-function AlertRulesSection({ settings, onChange }: { settings: AppSettings; onChange: (s: AppSettings) => void }) {
+function AlertRulesSection({ settings }: { settings: AppSettings }) {
   return (
     <div className="space-y-4">
       {ALERT_RULE_GROUPS.map((g) => (
@@ -340,7 +338,7 @@ function AlertRulesSection({ settings, onChange }: { settings: AppSettings; onCh
                 <Switch
                   checked={settings.alert_rules[r.key] ?? true}
                   onCheckedChange={(v) =>
-                    onChange({ ...settings, alert_rules: { ...settings.alert_rules, [r.key]: v } })
+                    updateSettings({ alert_rules: { ...settings.alert_rules, [r.key]: v } })
                   }
                 />
               </div>
@@ -352,7 +350,7 @@ function AlertRulesSection({ settings, onChange }: { settings: AppSettings; onCh
   );
 }
 
-function PublicSection({ settings, onChange }: { settings: AppSettings; onChange: (s: AppSettings) => void }) {
+function PublicSection({ settings }: { settings: AppSettings }) {
   const fields: { key: keyof AppSettings["public_default_visible"]; label: string }[] = [
     { key: "availability", label: "Disponibilidad" },
     { key: "moisture", label: "Humedad" },
@@ -370,7 +368,7 @@ function PublicSection({ settings, onChange }: { settings: AppSettings; onChange
           <Switch
             checked={settings.public_default_visible[f.key]}
             onCheckedChange={(v) =>
-              onChange({ ...settings, public_default_visible: { ...settings.public_default_visible, [f.key]: v } })
+              updateSettings({ public_default_visible: { ...settings.public_default_visible, [f.key]: v } })
             }
           />
         </div>

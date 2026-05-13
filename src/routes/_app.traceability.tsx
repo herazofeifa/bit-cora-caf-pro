@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { useStore } from "@/lib/store";
 import { mockDb } from "@/data/mock-data";
+import { useFarms } from "@/lib/app-config-store";
 import {
   commercialStateLabel,
   commercialStateTone,
@@ -52,6 +53,7 @@ function TraceabilityPage() {
   const lots = useStore((s) => s.lots);
   const reservations = useStore((s) => s.reservations);
   const customers = useStore((s) => s.customers);
+  const farms = useFarms();
 
   const [q, setQ] = useState("");
   const [farmId, setFarmId] = useState("all");
@@ -115,7 +117,7 @@ function TraceabilityPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {mockDb.farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -208,7 +210,7 @@ function LotTraceabilityDetail({ lot }: { lot: Lot }) {
   const reservations = useStore((s) => s.reservations.filter((r) => r.lot_id === lot.id));
   const customers = useStore((s) => s.customers);
   const qualitySamples = mockDb.qualitySamples.filter((q) => q.lot_id === lot.id);
-  const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
+  const farm = useFarms().find((f) => f.id === lot.farm_id);
   const harvest = mockDb.harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
 
   const parent = lot.parent_lot_id ? allLots.find((l) => l.id === lot.parent_lot_id) : null;

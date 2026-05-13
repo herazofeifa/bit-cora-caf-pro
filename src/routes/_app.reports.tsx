@@ -45,6 +45,7 @@ import { Label } from "@/components/ui/label";
 
 import { useStore } from "@/lib/store";
 import { mockDb } from "@/data/mock-data";
+import { useFarms, useParcels } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
   commercialStateLabel,
@@ -191,8 +192,8 @@ const EMPTY_FILTERS: Filters = {
 };
 
 function FiltersBar({ filters, setFilters, onClear }: { filters: Filters; setFilters: (f: Filters) => void; onClear: () => void }) {
-  const farms = mockDb.farms;
-  const parcels = mockDb.parcels.filter((p) => filters.farmId === "all" || p.farm_id === filters.farmId);
+  const farms = useFarms();
+  const parcels = useParcels().filter((p) => filters.farmId === "all" || p.farm_id === filters.farmId);
   const varieties = Array.from(new Set(mockDb.lots.map((l) => l.variety).filter(Boolean)));
   const customers = mockDb.customers;
   const seasons = Array.from(new Set(mockDb.harvestTickets.map((h) => harvestSeasonOf(h.harvest_date))));
@@ -339,8 +340,8 @@ function ReportsPage() {
   const processInstances = mockDb.processInstances;
   const processTemplates = mockDb.processTemplates;
   const qualitySamples = mockDb.qualitySamples;
-  const farms = mockDb.farms;
-  const parcels = mockDb.parcels;
+  const farms = useFarms();
+  const parcels = useParcels();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
 

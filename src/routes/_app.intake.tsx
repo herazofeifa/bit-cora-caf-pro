@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
-import { mockDb } from "@/data/mock-data";
+import { useFarms } from "@/lib/app-config-store";
 import { unitLabel } from "@/lib/units";
 import { formatKg } from "@/lib/helpers";
 
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/_app/intake")({
 function IntakeListPage() {
   const records = useStore((s) => s.harvestTickets.filter((t) => t.kind === "intake"));
   const lots = useStore((s) => s.lots);
+  const farms = useFarms();
   const [q, setQ] = useState("");
   const [farmId, setFarmId] = useState("all");
 
@@ -34,10 +35,10 @@ function IntakeListPage() {
     return records.filter((r) => {
       if (farmId !== "all" && r.farm_id !== farmId) return false;
       if (!term) return true;
-      const farm = mockDb.farms.find((f) => f.id === r.farm_id)?.name ?? "";
+      const farm = farms.find((f) => f.id === r.farm_id)?.name ?? "";
       return `${farm} ${r.producer_name ?? ""} ${r.variety ?? ""}`.toLowerCase().includes(term);
     });
-  }, [records, q, farmId]);
+  }, [records, q, farmId, farms]);
 
   const pendingLot = filtered.filter((r) => !lots.some((l) => l.harvest_ticket_id === r.id));
 
@@ -78,7 +79,7 @@ function IntakeListPage() {
           <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Finca" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las fincas</SelectItem>
-            {mockDb.farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+            {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -97,7 +98,7 @@ function IntakeListPage() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {filtered.map((r) => {
-            const farm = mockDb.farms.find((f) => f.id === r.farm_id);
+            const farm = farms.find((f) => f.id === r.farm_id);
             const hasLot = lots.some((l) => l.harvest_ticket_id === r.id);
             const kgConfirmed = r.qty_kg != null && r.conversion_basis !== "pending";
             return (

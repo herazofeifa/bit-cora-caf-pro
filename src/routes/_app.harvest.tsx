@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
-import { mockDb } from "@/data/mock-data";
+import { useFarms, useParcels } from "@/lib/app-config-store";
 import { unitLabel } from "@/lib/units";
 import { formatKg } from "@/lib/helpers";
 
@@ -30,7 +30,8 @@ function HarvestListPage() {
   const [variety, setVariety] = useState<string>("all");
   const [date, setDate] = useState<string>("");
 
-  const farms = mockDb.farms;
+  const farms = useFarms();
+  const parcels = useParcels();
   const varieties = useMemo(
     () => Array.from(new Set(tickets.map((t) => t.variety).filter(Boolean) as string[])),
     [tickets],
@@ -43,14 +44,14 @@ function HarvestListPage() {
       if (variety !== "all" && t.variety !== variety) return false;
       if (date && t.harvest_date !== date) return false;
       if (term) {
-        const farm = mockDb.farms.find((f) => f.id === t.farm_id)?.name ?? "";
-        const parcel = mockDb.parcels.find((p) => p.id === t.parcel_id)?.name ?? "";
+        const farm = farms.find((f) => f.id === t.farm_id)?.name ?? "";
+        const parcel = parcels.find((p) => p.id === t.parcel_id)?.name ?? "";
         const blob = `${farm} ${parcel} ${t.producer_name ?? ""} ${t.variety ?? ""} ${t.harvest_date}`.toLowerCase();
         if (!blob.includes(term)) return false;
       }
       return true;
     });
-  }, [tickets, q, farmId, variety, date]);
+  }, [tickets, q, farmId, variety, date, farms, parcels]);
 
   return (
     <>
@@ -107,8 +108,8 @@ function HarvestListPage() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {filtered.map((t) => {
-            const farm = mockDb.farms.find((f) => f.id === t.farm_id);
-            const parcel = mockDb.parcels.find((p) => p.id === t.parcel_id);
+            const farm = farms.find((f) => f.id === t.farm_id);
+            const parcel = parcels.find((p) => p.id === t.parcel_id);
             return (
               <li key={t.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-2 mb-2">

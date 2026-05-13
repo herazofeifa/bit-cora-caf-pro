@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { mockDb } from "@/data/mock-data";
+import { useFarms } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
   commercialStateLabel,
@@ -106,6 +107,7 @@ function LotsPage() {
   const isDetail = matchRoute({ to: "/lots/$id" });
   if (isDetail) return <Outlet />;
   const lots = useStore((s) => s.lots);
+  const farms = useFarms();
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -118,7 +120,7 @@ function LotsPage() {
   const filtered = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
     return lots.filter((lot) => {
-      const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
+      const farm = farms.find((f) => f.id === lot.farm_id);
       const customers = mockDb.reservations
         .filter((r) => r.lot_id === lot.id)
         .map((r) => mockDb.customers.find((c) => c.id === r.customer_id)?.name?.toLowerCase() ?? "");
@@ -290,7 +292,7 @@ function LotsPage() {
 }
 
 function LotCard({ lot }: { lot: Lot }) {
-  const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
+  const farm = useFarms().find((f) => f.id === lot.farm_id);
   const phase = mockDb.processPhaseInstances.find((p) => p.id === lot.current_phase_id);
   const available = calcAvailableKg(lot);
   const risk = isAtRisk(lot);
