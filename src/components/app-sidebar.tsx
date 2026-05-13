@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Coffee } from "lucide-react";
-import { navItems } from "./nav-items";
+import { navGroups } from "./nav-items";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
@@ -18,27 +18,34 @@ export function AppSidebar() {
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto p-3">
-        <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const active = pathname === to;
-            return (
-              <li key={to}>
-                <Link
-                  to={to}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent",
-                  )}
-                >
-                  <Icon className="h-4.5 w-4.5" />
-                  <span>{label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {navGroups.map((group, gi) => (
+          <div key={group.label} className={cn(gi > 0 && "mt-5")}>
+            <p className="px-3 pb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              {group.label}
+            </p>
+            <ul className="space-y-1">
+              {group.items.map(({ to, label, icon: Icon }) => {
+                const active = pathname === to;
+                return (
+                  <li key={to}>
+                    <Link
+                      to={to}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent",
+                      )}
+                    >
+                      <Icon className="h-4.5 w-4.5" />
+                      <span>{label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
     </aside>
   );
