@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
 import { mockDb } from "@/data/mock-data";
 import type {
   Alert,
@@ -62,11 +62,33 @@ const subscribe = (l: () => void) => {
 };
 const emit = () => listeners.forEach((l) => l());
 
-export function useStore<T>(selector: (s: State) => T): T {
-  return useSyncExternalStore(
+function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return false;
+    return true;
+  }
+  const ak = Object.keys(a as object);
+  const bk = Object.keys(b as object);
+  if (ak.length !== bk.length) return false;
+  for (const k of ak) {
+    if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+    if (!Object.is((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])) return false;
+  }
+  return true;
+}
+
+const getSnapshot = () => state;
+
+export function useStore<T>(selector: (s: State) => T, isEqual?: (a: T, b: T) => boolean): T {
+  return useSyncExternalStoreWithSelector(
     subscribe,
-    () => selector(state),
-    () => selector(state),
+    getSnapshot,
+    getSnapshot,
+    selector,
+    isEqual ?? shallowEqual,
   );
 }
 
