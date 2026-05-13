@@ -47,6 +47,7 @@ import {
 } from "@/components/lot-action-dialogs";
 import { FinishPhaseDialog } from "@/components/finish-phase-dialog";
 import { mockDb } from "@/data/mock-data";
+import { useFarms, useParcels, useUnits, getUnits } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
   calcYieldPct,
@@ -143,8 +144,8 @@ function LotDetailPage() {
     );
   }
 
-  const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
-  const parcel = mockDb.parcels.find((p) => p.id === lot.parcel_id);
+  const farm = useFarms().find((f) => f.id === lot.farm_id);
+  const parcel = useParcels().find((p) => p.id === lot.parcel_id);
   const available = calcAvailableKg(lot);
 
   return (
@@ -954,7 +955,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
           date: ht.intake_datetime,
           type: ht.kind === "harvest" ? "Cosecha" : "Recibo",
           title: ht.kind === "harvest" ? "Cosecha registrada" : "Recibo en beneficio",
-          description: `${ht.qty_original} ${mockDb.units.find((u) => u.id === ht.uom_original_id)?.symbol ?? ""}${ht.qty_kg ? ` · ${formatKg(ht.qty_kg)}` : " · pendiente kg"}`,
+          description: `${ht.qty_original} ${getUnits().find((u) => u.id === ht.uom_original_id)?.symbol ?? ""}${ht.qty_kg ? ` · ${formatKg(ht.qty_kg)}` : " · pendiente kg"}`,
           tone: "info",
         });
       }
