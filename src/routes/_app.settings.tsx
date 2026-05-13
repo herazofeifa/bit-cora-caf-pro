@@ -1,7 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Building2, MapPin, Leaf, Users, Scale, Droplets, Workflow, Beaker, Bell, Eye, RefreshCw,
+  Plus, Trash2, RotateCcw, Save, Undo2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -11,17 +13,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmAction } from "@/components/confirm-action";
 import { mockDb } from "@/data/mock-data";
-import { useStore } from "@/lib/store";
+import { useStore, getStoreSnapshot } from "@/lib/store";
 import {
   roleLabel, roleDescription, useCurrentRole, setCurrentRole, type AppRole,
 } from "@/lib/permissions";
 import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
 import {
   useOrganization, useFarms, useParcels, useUnits, useAppSettings,
-  updateOrganization, updateFarm, updateParcel, updateUnit, updateSettings,
-  type AppSettings,
+  setOrganization, replaceFarms, replaceParcels, replaceUnits, setSettings,
+  addFarm, removeFarm, addParcel, removeParcel,
+  resetSettings, resetAll, DEFAULT_SETTINGS,
+  type AppSettings, type Organization,
 } from "@/lib/app-config-store";
+import type { Farm, Parcel, Unit } from "@/types/domain";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
@@ -35,11 +41,28 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   const role = useCurrentRole();
-  const settings = useAppSettings();
 
   return (
     <>
-      <PageHeader eyebrow="AJUSTES" title="Ajustes" subtitle="Organización, unidades, alertas, permisos y sincronización." />
+      <PageHeader
+        eyebrow="AJUSTES"
+        title="Ajustes"
+        subtitle="Organización, unidades, alertas, permisos y sincronización."
+        action={
+          <ConfirmAction
+            destructive
+            title="Restablecer todos los ajustes"
+            description="Se eliminarán los cambios locales en organización, fincas, parcelas, unidades y reglas. Esta acción no se puede deshacer."
+            confirmLabel="Restablecer"
+            trigger={
+              <Button variant="outline" className="h-10 rounded-xl">
+                <RotateCcw className="size-4" /> Restablecer todo
+              </Button>
+            }
+            onConfirm={() => { resetAll(); toast.success("Ajustes restablecidos"); }}
+          />
+        }
+      />
 
       <Tabs defaultValue="org">
         <TabsList className="flex flex-wrap h-auto gap-1">
@@ -61,115 +84,270 @@ function SettingsPage() {
         <TabsContent value="parcels" className="mt-4"><ParcelsSection /></TabsContent>
         <TabsContent value="users" className="mt-4"><UsersRolesSection currentRole={role} /></TabsContent>
         <TabsContent value="units" className="mt-4"><UnitsSection /></TabsContent>
-        <TabsContent value="moisture" className="mt-4"><MoistureSection settings={settings} /></TabsContent>
+        <TabsContent value="moisture" className="mt-4"><MoistureSection /></TabsContent>
         <TabsContent value="processes" className="mt-4"><ProcessTemplatesSection /></TabsContent>
         <TabsContent value="variables" className="mt-4"><VariablesSection /></TabsContent>
-        <TabsContent value="alerts" className="mt-4"><AlertRulesSection settings={settings} /></TabsContent>
-        <TabsContent value="public" className="mt-4"><PublicSection settings={settings} /></TabsContent>
+        <TabsContent value="alerts" className="mt-4"><AlertRulesSection /></TabsContent>
+        <TabsContent value="public" className="mt-4"><PublicSection /></TabsContent>
         <TabsContent value="sync" className="mt-4"><SyncSection /></TabsContent>
       </Tabs>
     </>
   );
 }
 
+// ───────────── Draft helpers ─────────────
+
+function useDraft<T>(source: T): { draft: T; setDraft: (next: T | ((prev: T) => T)) => void; dirty: boolean; reset: () => void } {
+  const [draft, setDraftState] = useState<T>(source);
+  // When the upstream source changes (e.g. external save or reset), refresh draft.
+  useEffect(() => { setDraftState(source); }, [source]);
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(source), [draft, source]);
+  return {
+    draft,
+    setDraft: (next) => setDraftState((prev) => (typeof next === "function" ? (next as (p: T) => T)(prev) : next)),
+    dirty,
+    reset: () => setDraftState(source),
+  };
+}
+
+function SaveBar({ dirty, onSave, onDiscard, extra }: { dirty: boolean; onSave: () => void; onDiscard: () => void; extra?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 pt-2">
+      <div className="text-xs text-muted-foreground">
+        {dirty ? "Tienes cambios sin guardar." : "Sin cambios pendientes."}
+      </div>
+      <div className="flex items-center gap-2">
+        {extra}
+        <Button variant="outline" size="sm" onClick={onDiscard} disabled={!dirty}>
+          <Undo2 className="size-4" /> Descartar
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={!dirty}>
+          <Save className="size-4" /> Guardar cambios
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ───────────── Organización ─────────────
+
 function OrgSection() {
   const org = useOrganization();
+  const { draft, setDraft, dirty, reset } = useDraft<Organization>(org);
   return (
     <Card className="p-4 space-y-3">
       <div>
         <Label>Nombre de la organización</Label>
-        <Input value={org.name} onChange={(e) => updateOrganization({ name: e.target.value })} />
+        <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>País</Label>
-          <Input value={org.country} onChange={(e) => updateOrganization({ country: e.target.value })} />
+          <Input value={draft.country} onChange={(e) => setDraft({ ...draft, country: e.target.value })} />
         </div>
         <div>
           <Label>Región</Label>
-          <Input value={org.region} onChange={(e) => updateOrganization({ region: e.target.value })} />
+          <Input value={draft.region} onChange={(e) => setDraft({ ...draft, region: e.target.value })} />
         </div>
       </div>
-      <div>
-        <Button onClick={() => toast.success("Organización guardada")}>Guardar</Button>
-      </div>
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => { setOrganization(draft); toast.success("Organización guardada"); }}
+      />
     </Card>
   );
 }
 
+// ───────────── Fincas ─────────────
+
 function FarmsSection() {
   const farms = useFarms();
+  const { draft, setDraft, dirty, reset } = useDraft<Farm[]>(farms);
+
+  const update = (id: string, patch: Partial<Farm>) =>
+    setDraft((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+
+  const tryRemove = (f: Farm) => {
+    const snap = getStoreSnapshot();
+    const lotsUsing = snap.lots.filter((l) => l.farm_id === f.id).length;
+    const ticketsUsing = snap.harvestTickets.filter((t) => t.farm_id === f.id).length;
+    if (lotsUsing > 0 || ticketsUsing > 0) {
+      toast.error(`No se puede borrar "${f.name}": tiene ${lotsUsing} lote(s) y ${ticketsUsing} recibo(s) asociados.`);
+      return;
+    }
+    setDraft((prev) => prev.filter((x) => x.id !== f.id));
+  };
+
   return (
-    <Card className="p-0 divide-y divide-border">
-      {farms.map((f) => (
-        <div key={f.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_120px_auto] gap-2 items-end">
-          <div>
-            <Label className="text-xs">Nombre</Label>
-            <Input value={f.name} onChange={(e) => updateFarm(f.id, { name: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">Región</Label>
-            <Input value={f.region ?? ""} onChange={(e) => updateFarm(f.id, { region: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">País</Label>
-            <Input value={f.country ?? ""} onChange={(e) => updateFarm(f.id, { country: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">Altitud (msnm)</Label>
-            <Input
-              type="number"
-              value={f.altitude_m ?? ""}
-              onChange={(e) => updateFarm(f.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => { const f = addFarm(); toast.success(`Finca creada: ${f.name}`); }}>
+          <Plus className="size-4" /> Añadir finca
+        </Button>
+      </div>
+      <Card className="p-0 divide-y divide-border">
+        {draft.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground text-center">No hay fincas. Añade una para empezar.</div>
+        ) : draft.map((f) => (
+          <div key={f.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_120px_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input value={f.name} onChange={(e) => update(f.id, { name: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Región</Label>
+              <Input value={f.region ?? ""} onChange={(e) => update(f.id, { region: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">País</Label>
+              <Input value={f.country ?? ""} onChange={(e) => update(f.id, { country: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Altitud (msnm)</Label>
+              <Input
+                type="number"
+                value={f.altitude_m ?? ""}
+                onChange={(e) => update(f.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+            </div>
+            <ConfirmAction
+              destructive
+              title={`Borrar finca "${f.name}"`}
+              description="Se eliminarán también sus parcelas. Esta acción no se puede deshacer."
+              confirmLabel="Borrar"
+              trigger={
+                <Button size="icon" variant="ghost" aria-label="Borrar finca">
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              }
+              onConfirm={() => { tryRemove(f); }}
             />
           </div>
-          <Button size="sm" variant="outline" onClick={() => toast.success(`${f.name}: guardada`)}>Guardar</Button>
-        </div>
-      ))}
-    </Card>
+        ))}
+      </Card>
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => {
+          const ids = new Set(draft.map((f) => f.id));
+          const removedIds = farms.filter((f) => !ids.has(f.id)).map((f) => f.id);
+          // Cascade: drop parcels for removed farms in the parcel store too.
+          if (removedIds.length > 0) {
+            removedIds.forEach((id) => removeFarm(id));
+          }
+          replaceFarms(draft.map((f) => ({ ...f, updated_at: new Date().toISOString() })));
+          toast.success("Fincas guardadas");
+        }}
+      />
+    </div>
   );
 }
+
+// ───────────── Parcelas ─────────────
 
 function ParcelsSection() {
   const parcels = useParcels();
   const farms = useFarms();
+  const { draft, setDraft, dirty, reset } = useDraft<Parcel[]>(parcels);
+
+  const update = (id: string, patch: Partial<Parcel>) =>
+    setDraft((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+
+  const tryRemove = (p: Parcel) => {
+    const snap = getStoreSnapshot();
+    const lotsUsing = snap.lots.filter((l) => l.parcel_id === p.id).length;
+    const ticketsUsing = snap.harvestTickets.filter((t) => t.parcel_id === p.id).length;
+    if (lotsUsing > 0 || ticketsUsing > 0) {
+      toast.error(`No se puede borrar "${p.name}": tiene ${lotsUsing} lote(s) y ${ticketsUsing} recibo(s) asociados.`);
+      return;
+    }
+    setDraft((prev) => prev.filter((x) => x.id !== p.id));
+  };
+
   return (
-    <Card className="p-0 divide-y divide-border">
-      {parcels.map((p) => {
-        const farm = farms.find((f) => f.id === p.farm_id);
-        return (
-          <div key={p.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_120px_120px_auto] gap-2 items-end">
-            <div>
-              <Label className="text-xs">Nombre ({farm?.name ?? "—"})</Label>
-              <Input value={p.name} onChange={(e) => updateParcel(p.id, { name: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Variedad</Label>
-              <Input value={p.variety ?? ""} onChange={(e) => updateParcel(p.id, { variety: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Área (ha)</Label>
-              <Input
-                type="number" step="0.1"
-                value={p.area_ha ?? ""}
-                onChange={(e) => updateParcel(p.id, { area_ha: e.target.value === "" ? null : Number(e.target.value) })}
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={farms.length === 0}
+          onClick={() => { const p = addParcel(farms[0]?.id); if (p) toast.success(`Parcela creada: ${p.name}`); }}
+        >
+          <Plus className="size-4" /> Añadir parcela
+        </Button>
+      </div>
+      <Card className="p-0 divide-y divide-border">
+        {draft.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground text-center">No hay parcelas todavía.</div>
+        ) : draft.map((p) => {
+          const farm = farms.find((f) => f.id === p.farm_id);
+          return (
+            <div key={p.id} className="p-3 grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1fr_100px_100px_auto] gap-2 items-end">
+              <div>
+                <Label className="text-xs">Nombre</Label>
+                <Input value={p.name} onChange={(e) => update(p.id, { name: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Finca</Label>
+                <Select value={p.farm_id} onValueChange={(v) => update(p.id, { farm_id: v })}>
+                  <SelectTrigger><SelectValue placeholder={farm?.name ?? "—"} /></SelectTrigger>
+                  <SelectContent>
+                    {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Variedad</Label>
+                <Input value={p.variety ?? ""} onChange={(e) => update(p.id, { variety: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Área (ha)</Label>
+                <Input
+                  type="number" step="0.1"
+                  value={p.area_ha ?? ""}
+                  onChange={(e) => update(p.id, { area_ha: e.target.value === "" ? null : Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Altitud</Label>
+                <Input
+                  type="number"
+                  value={p.altitude_m ?? ""}
+                  onChange={(e) => update(p.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
+                />
+              </div>
+              <ConfirmAction
+                destructive
+                title={`Borrar parcela "${p.name}"`}
+                description="Esta acción no se puede deshacer."
+                confirmLabel="Borrar"
+                trigger={
+                  <Button size="icon" variant="ghost" aria-label="Borrar parcela">
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                }
+                onConfirm={() => { tryRemove(p); }}
               />
             </div>
-            <div>
-              <Label className="text-xs">Altitud</Label>
-              <Input
-                type="number"
-                value={p.altitude_m ?? ""}
-                onChange={(e) => updateParcel(p.id, { altitude_m: e.target.value === "" ? null : Number(e.target.value) })}
-              />
-            </div>
-            <Button size="sm" variant="outline" onClick={() => toast.success(`${p.name}: guardada`)}>Guardar</Button>
-          </div>
-        );
-      })}
-    </Card>
+          );
+        })}
+      </Card>
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => {
+          const ids = new Set(draft.map((p) => p.id));
+          parcels.filter((p) => !ids.has(p.id)).forEach((p) => removeParcel(p.id));
+          replaceParcels(draft.map((p) => ({ ...p, updated_at: new Date().toISOString() })));
+          toast.success("Parcelas guardadas");
+        }}
+      />
+    </div>
   );
 }
+
+// ───────────── Roles ─────────────
 
 function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   const roles: AppRole[] = ["administrador", "encargado_beneficio", "productor", "comercial", "consulta"];
@@ -197,71 +375,109 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   );
 }
 
+// ───────────── Unidades ─────────────
+
 function UnitsSection() {
   const units = useUnits();
+  const { draft, setDraft, dirty, reset } = useDraft<Unit[]>(units);
+
+  const update = (id: string, patch: Partial<Unit>) =>
+    setDraft((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+
   return (
-    <Card className="p-0 divide-y divide-border">
-      {units.map((u) => (
-        <div key={u.id} className="p-3 grid grid-cols-1 md:grid-cols-[1fr_120px_140px_auto] gap-2 items-end">
-          <div>
-            <div className="font-medium text-sm">{u.name} <span className="text-muted-foreground">({u.symbol})</span></div>
-            <div className="text-xs text-muted-foreground">{u.notes}</div>
+    <div className="space-y-3">
+      <Card className="p-0 divide-y divide-border">
+        {draft.map((u) => (
+          <div key={u.id} className="p-3 grid grid-cols-1 md:grid-cols-[1fr_120px_140px] gap-2 items-end">
+            <div>
+              <div className="font-medium text-sm">{u.name} <span className="text-muted-foreground">({u.symbol})</span></div>
+              <div className="text-xs text-muted-foreground">{u.notes}</div>
+            </div>
+            <div>
+              <Label className="text-xs">kg por unidad</Label>
+              <Input
+                type="number" step="0.01"
+                value={u.kg_factor ?? ""}
+                placeholder={u.kg_factor == null ? "Sin definir" : ""}
+                disabled={!u.is_configurable}
+                onChange={(e) => update(u.id, { kg_factor: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">litros por unidad</Label>
+              <Input
+                type="number" step="0.01"
+                value={u.liters_factor ?? ""}
+                disabled={!u.is_configurable}
+                onChange={(e) => update(u.id, { liters_factor: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+            </div>
           </div>
-          <div>
-            <Label className="text-xs">kg por unidad</Label>
-            <Input
-              type="number" step="0.01"
-              value={u.kg_factor ?? ""}
-              placeholder={u.kg_factor == null ? "Sin definir" : ""}
-              disabled={!u.is_configurable}
-              onChange={(e) => updateUnit(u.id, { kg_factor: e.target.value === "" ? null : Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">litros por unidad</Label>
-            <Input
-              type="number" step="0.01"
-              value={u.liters_factor ?? ""}
-              disabled={!u.is_configurable}
-              onChange={(e) => updateUnit(u.id, { liters_factor: e.target.value === "" ? null : Number(e.target.value) })}
-            />
-          </div>
-          <Button size="sm" variant="outline" onClick={() => toast.success(`${u.name}: factor actualizado`)}>Guardar</Button>
+        ))}
+        <div className="p-3 text-xs text-muted-foreground">
+          Las unidades del sistema (como kg) no son configurables. Para fanega/cajuela, cada finca define su factor.
         </div>
-      ))}
-      <div className="p-3 text-xs text-muted-foreground">
-        La <strong>fanega</strong> permanece configurable: cada finca define cuántos kg representan una fanega según su interpretación local.
-      </div>
-    </Card>
+      </Card>
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => { replaceUnits(draft); toast.success("Unidades guardadas"); }}
+      />
+    </div>
   );
 }
 
-function MoistureSection({ settings }: { settings: AppSettings }) {
+// ───────────── Humedad ─────────────
+
+function MoistureSection() {
+  const settings = useAppSettings();
+  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
   return (
     <Card className="p-4 space-y-3">
       <div className="grid grid-cols-3 gap-3">
         <div>
           <Label>Mínimo ideal (%)</Label>
-          <Input type="number" step="0.1" value={settings.moisture_ideal_min}
-            onChange={(e) => updateSettings({ moisture_ideal_min: Number(e.target.value) })} />
+          <Input type="number" step="0.1" value={draft.moisture_ideal_min}
+            onChange={(e) => setDraft({ ...draft, moisture_ideal_min: Number(e.target.value) })} />
         </div>
         <div>
           <Label>Máximo ideal (%)</Label>
-          <Input type="number" step="0.1" value={settings.moisture_ideal_max}
-            onChange={(e) => updateSettings({ moisture_ideal_max: Number(e.target.value) })} />
+          <Input type="number" step="0.1" value={draft.moisture_ideal_max}
+            onChange={(e) => setDraft({ ...draft, moisture_ideal_max: Number(e.target.value) })} />
         </div>
         <div>
           <Label>Margen de aviso (%)</Label>
-          <Input type="number" step="0.1" value={settings.moisture_warn_margin}
-            onChange={(e) => updateSettings({ moisture_warn_margin: Number(e.target.value) })} />
+          <Input type="number" step="0.1" value={draft.moisture_warn_margin}
+            onChange={(e) => setDraft({ ...draft, moisture_warn_margin: Number(e.target.value) })} />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
         Fuera del rango ideal se genera una alerta de humedad. Por encima del margen, se considera crítico.
       </p>
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => { setSettings(draft); toast.success("Humedad guardada"); }}
+        extra={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraft({
+              ...draft,
+              moisture_ideal_min: DEFAULT_SETTINGS.moisture_ideal_min,
+              moisture_ideal_max: DEFAULT_SETTINGS.moisture_ideal_max,
+              moisture_warn_margin: DEFAULT_SETTINGS.moisture_warn_margin,
+            })}
+          >
+            <RotateCcw className="size-4" /> Valores por defecto
+          </Button>
+        }
+      />
     </Card>
   );
 }
+
+// ───────────── Procesos / Variables ─────────────
 
 function ProcessTemplatesSection() {
   return (
@@ -294,6 +510,8 @@ function VariablesSection() {
   );
 }
 
+// ───────────── Reglas de alertas ─────────────
+
 const ALERT_RULE_GROUPS: { title: string; rules: { key: string; label: string }[] }[] = [
   { title: "Tiempo", rules: [
     { key: "phase_near_max", label: "Fase cerca del máximo" },
@@ -325,7 +543,9 @@ const ALERT_RULE_GROUPS: { title: string; rules: { key: string; label: string }[
   ]},
 ];
 
-function AlertRulesSection({ settings }: { settings: AppSettings }) {
+function AlertRulesSection() {
+  const settings = useAppSettings();
+  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
   return (
     <div className="space-y-4">
       {ALERT_RULE_GROUPS.map((g) => (
@@ -336,9 +556,9 @@ function AlertRulesSection({ settings }: { settings: AppSettings }) {
               <div key={r.key} className="flex items-center justify-between">
                 <span className="text-sm">{r.label}</span>
                 <Switch
-                  checked={settings.alert_rules[r.key] ?? true}
+                  checked={draft.alert_rules[r.key] ?? true}
                   onCheckedChange={(v) =>
-                    updateSettings({ alert_rules: { ...settings.alert_rules, [r.key]: v } })
+                    setDraft({ ...draft, alert_rules: { ...draft.alert_rules, [r.key]: v } })
                   }
                 />
               </div>
@@ -346,11 +566,25 @@ function AlertRulesSection({ settings }: { settings: AppSettings }) {
           </div>
         </Card>
       ))}
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => { setSettings(draft); toast.success("Reglas de alertas guardadas"); }}
+        extra={
+          <Button variant="ghost" size="sm" onClick={() => { resetSettings(); toast.success("Reglas restablecidas"); }}>
+            <RotateCcw className="size-4" /> Restablecer reglas
+          </Button>
+        }
+      />
     </div>
   );
 }
 
-function PublicSection({ settings }: { settings: AppSettings }) {
+// ───────────── Trazabilidad pública ─────────────
+
+function PublicSection() {
+  const settings = useAppSettings();
+  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
   const fields: { key: keyof AppSettings["public_default_visible"]; label: string }[] = [
     { key: "availability", label: "Disponibilidad" },
     { key: "moisture", label: "Humedad" },
@@ -366,16 +600,23 @@ function PublicSection({ settings }: { settings: AppSettings }) {
         <div key={f.key} className="flex items-center justify-between">
           <span className="text-sm">{f.label}</span>
           <Switch
-            checked={settings.public_default_visible[f.key]}
+            checked={draft.public_default_visible[f.key]}
             onCheckedChange={(v) =>
-              updateSettings({ public_default_visible: { ...settings.public_default_visible, [f.key]: v } })
+              setDraft({ ...draft, public_default_visible: { ...draft.public_default_visible, [f.key]: v } })
             }
           />
         </div>
       ))}
+      <SaveBar
+        dirty={dirty}
+        onDiscard={reset}
+        onSave={() => { setSettings(draft); toast.success("Trazabilidad pública guardada"); }}
+      />
     </Card>
   );
 }
+
+// ───────────── Sincronización ─────────────
 
 function SyncSection() {
   const { items, online } = useSyncQueue();
