@@ -116,7 +116,7 @@ function TraceabilityPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {mockDb.farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -209,7 +209,7 @@ function LotTraceabilityDetail({ lot }: { lot: Lot }) {
   const reservations = useStore((s) => s.reservations.filter((r) => r.lot_id === lot.id));
   const customers = useStore((s) => s.customers);
   const qualitySamples = mockDb.qualitySamples.filter((q) => q.lot_id === lot.id);
-  const farm = mockDb.farms.find((f) => f.id === lot.farm_id);
+  const farm = farms.find((f) => f.id === lot.farm_id);
   const harvest = mockDb.harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
 
   const parent = lot.parent_lot_id ? allLots.find((l) => l.id === lot.parent_lot_id) : null;
