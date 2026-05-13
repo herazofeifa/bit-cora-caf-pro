@@ -177,6 +177,114 @@ export function setSettings(next: AppSettings) {
   emit();
 }
 
+// ───────────── Bulk replace (used by draft "Save" buttons) ─────────────
+
+export function replaceFarms(next: Farm[]) {
+  state.farms = next;
+  emit();
+}
+
+export function replaceParcels(next: Parcel[]) {
+  state.parcels = next;
+  emit();
+}
+
+export function replaceUnits(next: Unit[]) {
+  state.units = next;
+  emit();
+}
+
+export function setOrganization(next: Organization) {
+  state.organization = next;
+  emit();
+}
+
+// ───────────── Add / remove ─────────────
+
+const ORG_ID = mockDb.organizations[0]?.id ?? "org-1";
+
+function uid(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+export function addFarm(): Farm {
+  const nowIso = new Date().toISOString();
+  const farm: Farm = {
+    id: uid("farm"),
+    organization_id: ORG_ID,
+    name: "Nueva finca",
+    region: state.organization.region ?? null,
+    country: state.organization.country ?? "",
+    owner_name: null,
+    altitude_m: null,
+    notes: null,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+  state.farms = [...state.farms, farm];
+  emit();
+  return farm;
+}
+
+export function removeFarm(id: string) {
+  state.farms = state.farms.filter((f) => f.id !== id);
+  // Cascade: drop parcels of that farm.
+  state.parcels = state.parcels.filter((p) => p.farm_id !== id);
+  emit();
+}
+
+export function addParcel(farmId?: string): Parcel | null {
+  const farm = farmId ? state.farms.find((f) => f.id === farmId) : state.farms[0];
+  if (!farm) return null;
+  const nowIso = new Date().toISOString();
+  const parcel: Parcel = {
+    id: uid("parcel"),
+    farm_id: farm.id,
+    name: "Nueva parcela",
+    variety: null,
+    altitude_m: null,
+    area_ha: null,
+    notes: null,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+  state.parcels = [...state.parcels, parcel];
+  emit();
+  return parcel;
+}
+
+export function removeParcel(id: string) {
+  state.parcels = state.parcels.filter((p) => p.id !== id);
+  emit();
+}
+
+// ───────────── Reset ─────────────
+
+export function resetSettings() {
+  state.settings = {
+    ...DEFAULT_SETTINGS,
+    alert_rules: { ...DEFAULT_SETTINGS.alert_rules },
+    public_default_visible: { ...DEFAULT_SETTINGS.public_default_visible },
+  };
+  emit();
+}
+
+export function resetAll() {
+  if (typeof window !== "undefined") {
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch {}
+  }
+  state.organization = { ...DEFAULT_ORG };
+  state.farms = [...mockDb.farms];
+  state.parcels = [...mockDb.parcels];
+  state.units = [...mockDb.units];
+  state.settings = {
+    ...DEFAULT_SETTINGS,
+    alert_rules: { ...DEFAULT_SETTINGS.alert_rules },
+    public_default_visible: { ...DEFAULT_SETTINGS.public_default_visible },
+  };
+  emit();
+}
+
 // ───────────── Helpers ─────────────
 
 export function isMoistureOk(value: number, settings: AppSettings = state.settings) {
