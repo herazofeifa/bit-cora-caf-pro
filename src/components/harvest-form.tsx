@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
-import { mockDb } from "@/data/mock-data";
+import { useStore } from "@/lib/store";
+import { useFarms, useParcels } from "@/lib/app-config-store";
 import { createHarvestTicket, createLot } from "@/lib/store";
 import {
   IMPURITY_OPTIONS,
@@ -106,11 +107,12 @@ export function HarvestForm({ kind }: Props) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const farms = mockDb.farms;
-  const parcels = useMemo(() => mockDb.parcels.filter((p) => p.farm_id === farmId), [farmId]);
+  const farms = useFarms();
+  const allParcels = useParcels();
+  const parcels = useMemo(() => allParcels.filter((p) => p.farm_id === farmId), [allParcels, farmId]);
   const selectedUnit = getUnitOption(unitId);
   const selectedFarm = farms.find((f) => f.id === farmId);
-  const lots = mockDb.lots;
+  const lots = useStore((s) => s.lots);
 
   // Auto-suggest kg when factor known
   const suggestedKg = useMemo(() => {
