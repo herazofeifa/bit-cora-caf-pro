@@ -53,6 +53,7 @@ function TraceabilityPage() {
   const lots = useStore((s) => s.lots);
   const reservations = useStore((s) => s.reservations);
   const customers = useStore((s) => s.customers);
+  const farms = useFarms();
 
   const [q, setQ] = useState("");
   const [farmId, setFarmId] = useState("all");
