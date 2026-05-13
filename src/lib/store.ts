@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - types provided by @types/use-sync-external-store
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
 import { mockDb } from "@/data/mock-data";
 import type {
