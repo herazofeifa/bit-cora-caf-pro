@@ -1,61 +1,125 @@
-## Problema detectado
 
-En `/settings` el comportamiento actual es confuso y por eso parece que "no guarda ni borra":
+# Arquitectura de datos — Bitácora Café Pro
 
-1. **Los botones "Guardar" no hacen nada real** — solo muestran un `toast`. El guardado real ocurre silenciosamente en cada tecla, así que el usuario presiona "Guardar" esperando confirmación de cambios y no percibe ningún efecto.
-2. **No existen acciones para borrar** fincas, parcelas ni unidades. Tampoco hay botón para añadir nuevas.
-3. **No hay forma de descartar / restablecer** los valores actuales (volver a los valores originales).
-4. **No hay indicador visual** de "cambios sin guardar" vs "guardado", lo que refuerza la sensación de que no pasa nada.
+Este es el modelo de datos propuesto, mapeado 1:1 a las tablas Supabase cuando se conecte el backend. Actualmente vive en memoria (`mockDb`) + capa reactiva (`app-config-store.ts`) persistida en `localStorage`.
 
-Esto pasa en todas las secciones que escriben en el store de configuración: Organización, Fincas, Parcelas, Unidades, Humedad, Alertas y Trazabilidad pública.
+## Vista por dominios
 
-## Solución propuesta
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  TENANCY & SEGURIDAD                                            │
+│  organizations ── profiles ── user_roles (RBAC)                 │
+└─────────────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────┐
+│  CATÁLOGOS (configurables en Ajustes)                           │
+│  farms → parcels │ units │ customers │ variable_definitions     │
+│                  │        │           │ process_templates       │
+│                  │        │           │   └─ template_phases    │
+└─────────────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────┐
+│  ENTRADA DE MATERIA PRIMA                                       │
+│  harvest_tickets (kind = harvest | intake)                      │
+│     └── convierte a → lots                                      │
+└─────────────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────┐
+│  PRODUCCIÓN Y TRAZABILIDAD                                      │
+│  lots (parent_lot_id → genealogía)                              │
+│    ├── process_instances → process_phase_instances              │
+│    ├── variable_logs / moisture_logs                            │
+│    ├── stock_movements (entradas, salidas, transformaciones)    │
+│    ├── waste_logs (mermas)                                      │
+│    └── quality_samples                                          │
+└─────────────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────┐
+│  COMERCIAL                                                      │
+│  customers → reservations → (movimientos de venta)              │
+└─────────────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────┐
+│  OBSERVABILIDAD                                                 │
+│  alerts │ audit_log │ app_settings (por organización)           │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 1. Cambiar el modelo a "borrador + Guardar / Descartar"
+## Diagrama entidad-relación (Mermaid)
 
-Cada sección tendrá su propio borrador local (estado React) inicializado desde el store:
+Este diagrama se entregará como artefacto `.mmd` para incluir en la documentación de graduación.
 
-- Las ediciones modifican el borrador, no el store global.
-- Aparece una barra inferior con `Guardar cambios` y `Descartar` cuando hay diferencias.
-- `Guardar` aplica el borrador al store (que persiste en `localStorage` y notifica al resto de la app).
-- `Descartar` vuelve al último estado guardado.
+```mermaid
+erDiagram
+    ORGANIZATION ||--o{ PROFILE : "tiene"
+    ORGANIZATION ||--o{ FARM : "posee"
+    ORGANIZATION ||--o{ CUSTOMER : "gestiona"
+    ORGANIZATION ||--o{ UNIT : "define"
+    ORGANIZATION ||--o{ VARIABLE_DEFINITION : "define"
+    ORGANIZATION ||--o{ PROCESS_TEMPLATE : "define"
+    ORGANIZATION ||--|| APP_SETTINGS : "configura"
 
-Esto resuelve la percepción de "no guarda" y mantiene la propagación en vivo al resto del sistema (que ya funciona vía `useSyncExternalStoreWithSelector`).
+    PROFILE ||--o{ USER_ROLE : "tiene"
 
-### 2. Añadir acciones de borrado y creación
+    FARM ||--o{ PARCEL : "contiene"
+    FARM ||--o{ HARVEST_TICKET : "origen"
+    PARCEL ||--o{ HARVEST_TICKET : "origen"
 
-En el store `src/lib/app-config-store.ts` añadir:
+    HARVEST_TICKET ||--o| LOT : "genera"
+    UNIT ||--o{ HARVEST_TICKET : "uom_original"
 
-- `addFarm`, `removeFarm(id)`
-- `addParcel`, `removeParcel(id)`
-- `addUnit`, `removeUnit(id)` (solo cuando `is_configurable`)
-- `resetSettings()` para restablecer humedad, alertas y trazabilidad pública a valores por defecto.
-- `resetAll()` que limpia `localStorage` y vuelve a `mockDb` + `DEFAULT_SETTINGS`.
+    LOT ||--o{ LOT : "parent_lot (genealogía)"
+    LOT ||--o{ PROCESS_INSTANCE : "corre"
+    PROCESS_TEMPLATE ||--o{ PROCESS_TEMPLATE_PHASE : "fases"
+    PROCESS_TEMPLATE ||--o{ PROCESS_INSTANCE : "instancia"
+    PROCESS_INSTANCE ||--o{ PROCESS_PHASE_INSTANCE : "fases activas"
+    PROCESS_TEMPLATE_PHASE ||--o{ PROCESS_PHASE_INSTANCE : "plantilla"
 
-Reglas de seguridad:
-- No permitir borrar una finca si tiene parcelas o lotes asociados (mostrar motivo).
-- No permitir borrar una parcela si tiene lotes/recibos asociados.
-- No permitir borrar unidades del sistema (`is_configurable === false`).
-- Confirmar borrado con `ConfirmAction` (ya existe en `src/components/confirm-action.tsx`).
+    LOT ||--o{ VARIABLE_LOG : "mide"
+    VARIABLE_DEFINITION ||--o{ VARIABLE_LOG : "tipifica"
+    PROCESS_PHASE_INSTANCE ||--o{ VARIABLE_LOG : "contexto"
 
-### 3. UI de cada sección
+    LOT ||--o{ MOISTURE_LOG : "humedad"
+    LOT ||--o{ STOCK_MOVEMENT : "movimientos"
+    LOT ||--o{ WASTE_LOG : "mermas"
+    LOT ||--o{ QUALITY_SAMPLE : "catación"
 
-- **Fincas / Parcelas / Unidades**: añadir botón `+ Añadir` arriba y un botón de papelera por fila (deshabilitado con tooltip si no se puede borrar). Reemplazar el "Guardar" por fila por la barra global de la sección.
-- **Organización / Humedad / Alertas / Trazabilidad pública**: barra inferior con `Guardar` y `Descartar`, más botón `Restablecer valores por defecto`.
-- **Usuarios y roles** y **Sincronización**: no cambian (el rol activo ya se aplica al instante; sincronización ya tiene sus propias acciones).
+    CUSTOMER ||--o{ RESERVATION : "reserva"
+    LOT ||--o{ RESERVATION : "compromete"
 
-### 4. Verificación
+    LOT ||--o{ ALERT : "genera"
+    PROFILE ||--o{ AUDIT_LOG : "actúa"
+```
 
-- Cambiar nombre de una finca → pulsar `Descartar` → vuelve al valor anterior.
-- Cambiar nombre de una finca → pulsar `Guardar` → recargar página → cambio persiste y aparece en `/lots`, `/intake`, `/harvest`.
-- Borrar una parcela vacía → desaparece de `/settings` y de los selectores en `/harvest/new`.
-- Intentar borrar una finca con lotes → se bloquea con mensaje claro.
-- `Restablecer valores por defecto` en Humedad → vuelve a 9–12.5 % y los estados de humedad en `/lots` se recalculan.
+## Estado reactivo en el cliente (hoy)
 
-## Detalles técnicos
+```text
+localStorage (bcp.app-config.v1)
+        ▲
+        │ persist + emit
+        │
+  app-config-store.ts  ──► useSyncExternalStoreWithSelector
+        │                        │
+   mockDb (semilla)         Componentes React
+                            (Ajustes, Lotes, Recibos,
+                             Trazabilidad pública, etc.)
+```
 
-- Hook auxiliar `useDraft<T>(source, equals)` en cada sección o utilidad compartida en `src/lib/use-draft.ts` para manejar borrador + dirty flag.
-- `removeFarm` / `removeParcel`: comprobar referencias contra `useStore.getState().lots` y `harvestTickets` antes de borrar.
-- `addFarm` genera id `farm-${crypto.randomUUID()}` con valores mínimos editables.
-- `resetAll` borra la clave `bcp.app-config.v1` de `localStorage` y reemplaza `state` con los valores iniciales, luego `emit()`.
-- Mantener selectores actuales y `shallowEqual` para no regresar al loop de renders previo.
+## Reglas de integridad clave
+
+- `lots.parent_lot_id` habilita el árbol de trazabilidad genealógica (split/merge/transformación).
+- `qty_current_kg = qty_free_kg + qty_reserved_kg + qty_committed_kg + qty_blocked_kg` (invariante contable).
+- `stock_movements` es append-only: cualquier cambio en cantidades de un lote debe generar un movimiento.
+- Borrar `farm` requiere que no existan `parcels`, `lots` ni `harvest_tickets` asociados (validación ya implementada en Ajustes).
+- Borrar `parcel` requiere que no existan `lots` ni `harvest_tickets` asociados.
+- `units.is_configurable = false` bloquea edición/borrado (unidades base del sistema).
+- RBAC vía tabla separada `user_roles` + función `has_role()` SECURITY DEFINER (evita escalamiento).
+
+## Entregable
+
+Al aprobar el plan, generaré:
+
+1. `/mnt/documents/arquitectura-datos.mmd` — diagrama ER en Mermaid, listo para incrustar en la memoria de graduación.
+2. `/mnt/documents/arquitectura-datos-dominios.mmd` — segundo diagrama de flujo por dominios (el ASCII de arriba en formato Mermaid `flowchart`).
+
+Ambos se mostrarán como artefactos descargables en el chat. No se tocará código de la aplicación.
