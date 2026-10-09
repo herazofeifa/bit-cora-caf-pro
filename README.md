@@ -71,3 +71,6 @@ desde Ajustes → Usuarios y roles. No se puede quitar al último administrador.
 ## CI
 `.github/workflows/ci.yml` define typecheck, pruebas, build y pruebas de base de
 datos. El repositorio debe conectarse a GitHub para que se ejecute.
+
+## Estado actual (cierre)
+Una sola aplicación: todos los módulos usan los registros guardados de la organización elegida, con actualización en vivo. Las pantallas antiguas con datos locales se conservan solo como referencia en `legacy/` (no se compilan). Detalle de pruebas y limitaciones en `docs/ESTADO_ENTREGA.md`. Pruebas de base de datos: `bash tests/db/run-local.sh` (como usuario sin privilegios de root).
