@@ -577,6 +577,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -606,6 +607,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id?: string | null
           id?: string
+          location_updated_at?: string | null
           lot_code: string
           organization_id: string
           parcel_id?: string | null
@@ -635,6 +637,7 @@ export type Database = {
           friendly_name?: string
           harvest_ticket_id?: string | null
           id?: string
+          location_updated_at?: string | null
           lot_code?: string
           organization_id?: string
           parcel_id?: string | null
@@ -1195,6 +1198,8 @@ export type Database = {
       }
       reservations: {
         Row: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1213,6 +1218,8 @@ export type Database = {
           status: string
         }
         Insert: {
+          agreed_delivery_date?: string | null
+          conditions?: string | null
           confirmed_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -1231,6 +1238,8 @@ export type Database = {
           status?: string
         }
         Update: {
+          agreed_delivery_date?: string | null
+          conditions?: string | null
           confirmed_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -1605,6 +1614,8 @@ export type Database = {
       _lock_reservation: {
         Args: { _id: string }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1649,6 +1660,8 @@ export type Database = {
           _reason: string
         }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1694,6 +1707,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -1725,6 +1739,8 @@ export type Database = {
       cancel_reservation: {
         Args: { _id: string; _reason?: string }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1792,6 +1808,8 @@ export type Database = {
       confirm_reservation: {
         Args: { _id: string }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1839,6 +1857,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -1879,6 +1898,8 @@ export type Database = {
           _qty: number
         }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -1946,6 +1967,8 @@ export type Database = {
       deliver_reservation: {
         Args: { _id: string; _notes?: string; _op_key?: string }
         Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
           confirmed_at: string | null
           created_by: string | null
           currency: string | null
@@ -2072,6 +2095,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -2195,6 +2219,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -2243,6 +2268,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
@@ -2270,6 +2296,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resolve_alert: { Args: { _id: string }; Returns: undefined }
       revoke_report_snapshot: { Args: { _id: string }; Returns: undefined }
       sales_summary: {
         Args: { _from: string; _org: string; _to: string }
@@ -2311,6 +2338,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_lot_location: {
+        Args: { _location: string; _lot: string }
+        Returns: {
+          commercial_state: string
+          created_at: string
+          current_location: string | null
+          current_moisture: number | null
+          farm_id: string | null
+          friendly_name: string
+          harvest_ticket_id: string | null
+          id: string
+          location_updated_at: string | null
+          lot_code: string
+          organization_id: string
+          parcel_id: string | null
+          parent_lot_id: string | null
+          physical_state: string
+          process_type: string
+          qty_blocked_kg: number
+          qty_committed_kg: number
+          qty_current_kg: number
+          qty_free_kg: number | null
+          qty_initial_kg: number
+          qty_reserved_kg: number
+          qty_sold_kg: number
+          quality_status: string
+          sale_released: boolean
+          sale_released_at: string | null
+          stock_safety_kg: number
+          updated_at: string
+          variety: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_member_role: {
         Args: {
           _active?: boolean
@@ -2332,6 +2398,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_reservation_terms: {
+        Args: { _conditions: string; _delivery: string; _id: string }
+        Returns: {
+          agreed_delivery_date: string | null
+          conditions: string | null
+          confirmed_at: string | null
+          created_by: string | null
+          currency: string | null
+          customer_id: string
+          delivered_at: string | null
+          expires_at: string | null
+          id: string
+          lot_id: string
+          notes: string | null
+          organization_id: string
+          price: number | null
+          price_unit: string
+          qty_kg: number
+          released_at: string | null
+          reserved_at: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       split_lot: {
         Args: { _lot: string; _parts: Json }
         Returns: {
@@ -2343,6 +2438,7 @@ export type Database = {
           friendly_name: string
           harvest_ticket_id: string | null
           id: string
+          location_updated_at: string | null
           lot_code: string
           organization_id: string
           parcel_id: string | null
