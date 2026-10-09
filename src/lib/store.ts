@@ -1176,7 +1176,12 @@ export function updateQualitySampleStatus(id: string, status: import("@/types/do
 
 // ───────────── Lot public profiles (privacy-controlled) ─────────────
 
-const publicProfiles: Record<string, LotPublicProfile> = {};
+const publicProfiles: Record<string, LotPublicProfile> =
+  (persistedOps.publicProfiles as Record<string, LotPublicProfile> | undefined) ?? {};
+
+function getPublicProfilesForPersist(): Record<string, LotPublicProfile> {
+  try { return publicProfiles; } catch { return {}; }
+}
 
 function defaultPublicProfile(lotId: string): LotPublicProfile {
   return {
