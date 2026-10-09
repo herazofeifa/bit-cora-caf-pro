@@ -35,7 +35,7 @@ begin
   r := public.register_harvest(A, jsonb_build_object('qty', 1, 'uom', 'cajuela', 'kg_factor', 12.5, 'farm_id', F, 'harvest_date', '2026-10-01'), null, null, 'qh-3');
   perform pg_temp.eq('matching client factor accepted', (r->>'qty_kg')::numeric, 12.5);
   perform pg_temp.expect_fail(format('select public.register_harvest(%L, %L::jsonb, null, null, %L)', A,
-    jsonb_build_object('qty', 1, 'uom', 'lata', 'kg_factor', 9, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-4'), '%no está configurada%');
+    jsonb_build_object('qty', 1, 'uom', 'lata', 'kg_factor', 9, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-4'), '%Configure el peso%');
 
   -- 1) structured quality
   l := public.create_lot(A, 'Q', 100, F, null, 'Geisha', 'lavado', 'verde');
