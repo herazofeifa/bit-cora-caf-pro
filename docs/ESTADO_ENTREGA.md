@@ -126,3 +126,10 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 6. **PDF:** jsPDF 4.2.1 y jspdf-autotable 5.0.8. Ficha de lote (mezcla con 2 orígenes, fases, tabla de calidad con defectos/SCA, QR) y reporte con tabla generados con la biblioteca nueva y revisados visualmente.
 **Pruebas:** base local desechable 243 aserciones (16 nuevas en tests/db/quality_harvest.test.sql), EXIT 0; Vitest 13/13; tipos limpios. **No ejecutado:** CI de GitHub; lectura del QR con un teléfono; PDF descargado desde el navegador; los límites del copiloto con la cuenta de evaluación real.
 **Modo sin conexión (alcance real):** con la app ya abierta, las capturas de cosecha y mediciones se guardan en el dispositivo y se envían al volver la conexión. El service worker solo guarda recursos estáticos, no las páginas: abrir la app desde cero sin conexión no está soportado.
+
+## Corrección Ajustes → Fincas/Parcelas (09/10/2026)
+
+- Defecto: «Añadir finca/parcela» escribía en un estado local mientras la lista leía de la nube; mostraba éxito sin crear nada.
+- Arreglo: añadir crea una fila en el borrador con UUID estable; solo «Guardar cambios» escribe en la base y el aviso de éxito aparece tras la escritura confirmada (errores reales se muestran). Conversiones, Variables y Plantillas ya no tenían acciones locales enlazadas.
+- Prueba REAL en UI (Playwright, administrador original, Microbeneficio): crear «Finca Prueba UI» → guardar → «Parcela Prueba UI» → guardar → registrar cosecha 40 kg → lote LAV-2026-001 visible tras recargar; consulta a la base confirma finca, parcela y lote de 40 kg. Esos registros de prueba quedan en Microbeneficio.
+- Copiloto: con la nueva OPENAI_API_KEY (no compartida), «¿Cuánto café libre tengo por variedad?» respondió con datos reales (cero lotes libres, coincide con la base) en 5,9 s medidos por el autor. No se garantiza <3 s.

@@ -37,3 +37,5 @@ Reportes muestran precios promedio ponderados separados en USD y CRC. El copilot
 - No puede crear cuentas, cambiar roles ni crear otros entornos demo.
 
 > Si un intento anterior mostró «duplicate key … user_roles», ya está corregido: vuelve a enviar el formulario «Cuenta de evaluación» con profesores@bitacoracafe.example (no quedó ninguna cuenta a medias).
+
+> Nota: el copiloto responde con OpenAI real; latencia medida 4–10 s (5,9 s en la última prueba del autor). No se promete <3 s.
