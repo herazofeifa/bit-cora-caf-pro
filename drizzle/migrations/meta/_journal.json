@@ -15,6 +15,13 @@
       "when": 1791581772618,
       "tag": "0001_shared_operational_core",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791581975810,
+      "tag": "0002_fix_lot_links_policy",
+      "breakpoints": true
     }
   ]
 }
