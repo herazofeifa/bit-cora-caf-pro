@@ -68,6 +68,8 @@ export const createSacks = (lot: string, count: number, weight: number | null) =
   rpc<{ id: string; seq: number; sack_token: string; weight_kg: number | null }[]>("create_sacks", { _lot: lot, _count: count, _weight_kg: weight });
 export const publishLot = (lot: string, isPublic: boolean, story: string | null, notes: string | null, visibility: Record<string, boolean>) =>
   rpc<{ public_token: string; is_public: boolean }>("publish_lot", { _lot: lot, _is_public: isPublic, _short_story: story, _tasting_notes: notes, _visibility: visibility });
+export const declareLotExport = (lot: string, exportedAt: string | null) =>
+  rpc("declare_lot_export", { _lot: lot, _exported_at: exportedAt as string });
 export const salesSummary = (from: Date, to: Date) =>
   rpc<{ currency: string; deliveries: number; kg_delivered: number; kg_priced: number | null; weighted_price_per_kg: number | null }[]>(
     "sales_summary", { _org: requireOrg(), _from: from.toISOString(), _to: to.toISOString() });
