@@ -62,7 +62,7 @@ SQL
   ) &
 done
 wait
-CONF=$(grep -l '^CONF ' /tmp/bcp_exp_*.out | wc -l | tr -d ' ')
+CONF=$( (grep -l '^CONF ' /tmp/bcp_exp_*.out || true) | wc -l | tr -d ' ')
 REL=$(psql "$DATABASE_URL" -Atc "select count(*) from public.stock_movements where reference_id = '$RID' and movement_type = 'liberacion_reserva'")
 ST=$(psql "$DATABASE_URL" -Atc "select status from public.reservations where id = '$RID'")
 RSV=$(psql "$DATABASE_URL" -Atc "select qty_reserved_kg::int from public.lots where id = '$LOT'")
