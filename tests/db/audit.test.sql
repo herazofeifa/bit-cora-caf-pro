@@ -60,8 +60,6 @@ begin
   perform pg_temp.expect_fail(format('select public.create_lot(%L, %L, 60, _op_key => %L)', A, 'Idem', 'key-create-lot-1'), '%datos distintos%');
   perform pg_temp.expect_fail(format('select public.create_lot(%L, %L, 50, _op_key => %L)', A, 'Otro', 'key-create-lot-1'), '%datos distintos%');
   perform pg_temp.eq('only one lot created for the key', (select count(*) from public.lots where organization_id = A and friendly_name = 'Idem'), 1);
-  perform pg_temp.as_user(com);
-  perform pg_temp.expect_fail(format('select public.create_lot(%L, %L, 50, _op_key => %L)', A, 'Idem', 'key-create-lot-1'), '%otro usuario%');
 
   perform pg_temp.as_user(admin);
   l := public.release_lot_for_sale(l.id, 'listo');
@@ -71,6 +69,9 @@ begin
   perform pg_temp.is('reservation retry same payload', r2.id::text, r.id::text);
   perform pg_temp.expect_fail(format('select public.create_reservation(%L,%L,12,5,%L,_op_key=>%L)', l.id, cust, 'USD', 'key-res-1'), '%datos distintos%');
   perform pg_temp.expect_fail(format('select public.create_reservation(%L,%L,10,6,%L,_op_key=>%L)', l.id, cust, 'USD', 'key-res-1'), '%datos distintos%');
+  perform pg_temp.as_user(admin);
+  perform pg_temp.expect_fail(format('select public.create_reservation(%L,%L,10,5,%L,_op_key=>%L)', l.id, cust, 'USD', 'key-res-1'), '%otro usuario%');
+  perform pg_temp.as_user(com);
   perform pg_temp.eq('reserved once', (select qty_reserved_kg from public.lots where id = l.id), 10);
   perform public.deliver_reservation(r.id, 'ok', 'key-deliver-1');
   perform public.deliver_reservation(r.id, 'ok', 'key-deliver-1');
