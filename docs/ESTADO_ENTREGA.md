@@ -105,3 +105,8 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 - Actualización en vivo entre dos dispositivos físicos y funcionamiento sin conexión en un teléfono real no se probaron (solo en navegador automatizado).
 - La organización demo de prueba y sus 2 archivos quedan en la base; el autor puede ignorarla (solo es visible para él).
 - La ejecución de CI en GitHub no se verificó desde aquí.
+
+## Corrección alta de cuentas (09/10)
+- Causa: el disparador de alta ya crea el rol `consulta`; el formulario lo insertaba de nuevo → `user_roles_user_id_role_key`. Ahora la cuenta evaluadora y «Crear usuario» (incluido Consulta) agregan el rol sin duplicar.
+- Concurrencia: si otra solicitud ya dejó otro evaluador, la solicitud perdedora borra solo la cuenta que ella misma creó; nunca cuentas previas.
+- Evidencia real: usuario temporal creado con el alta real (con disparador), reproducido el error con el código anterior, alta correcta con el nuevo (consulta y comercial), y usuario temporal eliminado. La concurrencia se revisó en código y en el bloqueo de la base, sin prueba simultánea real.

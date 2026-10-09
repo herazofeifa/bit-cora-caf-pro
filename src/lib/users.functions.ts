@@ -41,7 +41,8 @@ export const createTeamUser = createServerFn({ method: "POST" })
       });
       if (memErr) throw new Error(memErr.message);
       // Legacy global role mirror: demo accounts stay least-privileged.
-      const { error: urErr } = await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: org.is_demo ? "consulta" : data.role });
+      const { error: urErr } = await supabaseAdmin.from("user_roles")
+        .upsert({ user_id: newId, role: org.is_demo ? "consulta" : data.role }, { onConflict: "user_id,role", ignoreDuplicates: true }); // trigger already added 'consulta'
       if (urErr) throw new Error(urErr.message);
       const { error: aErr } = await supabaseAdmin.from("audit_log").insert({
         organization_id: org.id, actor_id: context.userId,
