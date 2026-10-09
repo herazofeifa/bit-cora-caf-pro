@@ -18,6 +18,8 @@ import {
   Bell,
   ScrollText,
   Sparkles,
+  Cloud,
+  Bot,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +40,15 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/dashboard", label: "Inicio", icon: Home },
       { to: "/assistant", label: "Asistente", icon: Sparkles },
+      { to: "/copiloto", label: "Copiloto", icon: Bot },
+    ],
+  },
+  {
+    label: "Operación (servidor)",
+    items: [
+      { to: "/operacion", label: "Lotes y procesos", icon: Cloud },
+      { to: "/operacion/cosecha", label: "Registrar cosecha", icon: Sprout },
+      { to: "/operacion/reportes", label: "Reportes y PDF", icon: BarChart3 },
     ],
   },
   {
