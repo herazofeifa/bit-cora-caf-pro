@@ -57,7 +57,7 @@ function Dashboard() {
           <LoadState loading={alerts.loading} error={alerts.error} empty={!alerts.data.length && !overdue.data.length} emptyText="Todo en orden: no hay alertas abiertas." />
           <ul className="text-sm space-y-2">
             {overdue.data.slice(0, 5).map((o) => <li key={o.phase_id}>⏱ <LotLink id={o.lot_id} code={o.lot_code} /> · {o.phase_name}: {o.reason}</li>)}
-            {alerts.data.slice(0, 6).map((a) => <li key={a.id} className={a.severity === "alta" ? "text-destructive" : ""}>{a.message} <span className="text-xs text-muted-foreground">· {fmtDate(a.created_at)}</span></li>)}
+            {alerts.data.slice(0, 6).map((a) => <li key={a.id} className={a.severity === "critical" ? "text-destructive" : ""}>{a.message} <span className="text-xs text-muted-foreground">· {fmtDate(a.created_at)}</span></li>)}
           </ul>
         </Section>
         <Section title="Últimas cosechas" action={<Link to="/intake" className="text-sm underline">Recibos</Link>}>
