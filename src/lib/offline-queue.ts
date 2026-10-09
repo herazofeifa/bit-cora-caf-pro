@@ -86,7 +86,7 @@ let flushingPartition: string | null = null;
  * discarded instead of being written into another partition's list.
  */
 export async function flushQueue() {
-  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   const myPartition = partition, myOrg = partitionOrg, myGen = currentGeneration();
   if (!myPartition || !myOrg || flushingPartition === myPartition) return;
   flushingPartition = myPartition;
