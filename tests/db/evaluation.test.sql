@@ -54,7 +54,10 @@ begin
   res2 := public.provision_evaluation(SRC, ev);
   perform pg_temp.is('idempotent: same blank org', res2->>'blank_org', BL::text);
   perform pg_temp.is('idempotent: not recreated', res2->>'created', 'false');
+  perform pg_temp.eq('author (not a member) cannot read eval orgs', (select count(*) from public.organizations where eval_kind is not null), 0);
+  perform pg_temp.as_owner();
   perform pg_temp.eq('exactly two evaluation orgs', (select count(*) from public.organizations where eval_kind is not null), 2);
+  perform pg_temp.as_user(author);
   perform pg_temp.expect_fail(format('select public.provision_evaluation(%L, %L)', SRC, com), '%Ya existe%');
   perform pg_temp.eq('author not member of eval orgs', (select count(*) from public.memberships where user_id = author and organization_id in (BL, SA)), 0);
 
@@ -67,6 +70,7 @@ begin
   perform pg_temp.expect_fail('select public.create_demo_environment()', '%Permiso denegado%');
   perform pg_temp.expect_fail(format('select public.provision_evaluation(%L)', SA), '%Permiso denegado%');
 
+  perform pg_temp.as_user(ev);
   -- Blank: zero operations, base config present
   perform pg_temp.eq('blank: 0 harvests', (select count(*) from public.harvest_tickets where organization_id = BL), 0);
   perform pg_temp.eq('blank: 0 lots', (select count(*) from public.lots where organization_id = BL), 0);
