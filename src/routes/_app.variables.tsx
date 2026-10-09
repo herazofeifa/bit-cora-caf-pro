@@ -1,210 +1,81 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Beaker, Plus, Search, Pencil, Trash2, ListPlus } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { deactivateVariableDefinition, useStore } from "@/lib/store";
-import type { VariableCategory, VariableValueType } from "@/types/domain";
+import { LoadState, LotLink, Section, SimpleTable, selectCls, type Lot } from "@/components/ops-ui";
+import { DEFAULT_ORG_SETTINGS, fmtDate, loadOrgSettings, sel, useOrgQuery } from "@/lib/org-data";
+import { friendlyError, logMoisture, logPhaseVariable, newOpKey } from "@/lib/ops-cloud";
+import { useCurrentRole } from "@/lib/permissions";
 
+type Search = { tab?: string };
 export const Route = createFileRoute("/_app/variables")({
-  head: () => ({
-    meta: [
-      { title: "Variables — Bitácora Café Pro" },
-      { name: "description", content: "Gestiona variables de calidad y proceso." },
-    ],
-  }),
+  validateSearch: (s: Record<string, unknown>): Search => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
+  head: () => ({ meta: [
+    { title: "Variables y humedad — Bitácora Café Pro" },
+    { name: "description", content: "Registra humedad y variables de proceso (temperatura, pH, Brix) con rangos y su historial." },
+    { property: "og:title", content: "Variables y humedad — Bitácora Café Pro" },
+    { property: "og:description", content: "Mediciones de proceso y humedad." },
+  ] }),
   component: VariablesPage,
 });
 
-const CATEGORY_LABEL: Record<VariableCategory, string> = {
-  humedad: "Humedad",
-  temperatura: "Temperatura",
-  fermentacion: "Fermentación",
-  fisica: "Física",
-  secado: "Secado",
-  ambiente: "Ambiente",
-  sensorial: "Sensorial",
-  general: "General",
-};
-
-const VALUE_TYPE_LABEL: Record<VariableValueType, string> = {
-  number: "Número",
-  percentage: "Porcentaje",
-  short_text: "Texto corto",
-  long_text: "Texto largo",
-  single_select: "Opción única",
-  multi_select: "Múltiple",
-  boolean: "Sí/No",
-  datetime: "Fecha/hora",
-  photo: "Foto",
-  file: "Archivo",
-  scale_5: "Escala 1-5",
-  custom_unit: "Unidad personalizada",
-};
+type VL = { id: string; lot_id: string; phase_id: string | null; value_number: number | null; value: { label?: string; unit?: string; in_range?: boolean } | null; measured_at: string };
+type ML = { id: string; lot_id: string; moisture_pct: number; measured_at: string; device: string | null; notes: string | null };
+type Ph = { id: string; lot_id: string; name: string; status: string; variables: { key: string; label?: string; unit?: string; min?: number; max?: number }[] };
 
 function VariablesPage() {
-  const definitions = useStore((s) => s.variableDefinitions);
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState<string>("all");
-  const [valueType, setValueType] = useState<string>("all");
-  const [origin, setOrigin] = useState<string>("all");
-
-  const filtered = useMemo(() => {
-    return definitions.filter((d) => {
-      if (q && !d.name.toLowerCase().includes(q.toLowerCase())) return false;
-      if (category !== "all" && d.category !== category) return false;
-      if (valueType !== "all" && d.value_type !== valueType) return false;
-      if (origin === "default" && !d.is_default) return false;
-      if (origin === "custom" && d.is_default) return false;
-      return true;
-    });
-  }, [definitions, q, category, valueType, origin]);
-
-  const grouped = useMemo(() => {
-    const map = new Map<VariableCategory, typeof filtered>();
-    for (const d of filtered) {
-      const arr = map.get(d.category) ?? [];
-      arr.push(d);
-      map.set(d.category, arr);
-    }
-    return Array.from(map.entries());
-  }, [filtered]);
+  const role = useCurrentRole(); const can = role === "administrador" || role === "encargado_beneficio";
+  const vl = useOrgQuery<VL[]>("vl", (o) => sel("variable_logs", "id,lot_id,phase_id,value_number,value,measured_at", o, "measured_at", false, 300), ["variable_logs"], []);
+  const ml = useOrgQuery<ML[]>("ml", (o) => sel("moisture_logs", "*", o, "measured_at", false, 300), ["moisture_logs"], []);
+  const lots = useOrgQuery<Lot[]>("v-l", (o) => sel("lots", "*", o), ["lots"], []);
+  const ph = useOrgQuery<Ph[]>("v-ph", async (o) => (await sel<Ph[]>("process_phases", "id,lot_id,name,status,variables", o, "started_at")).filter((p) => p.status !== "finished"), ["process_phases"], []);
+  const st = useOrgQuery("v-st", loadOrgSettings, ["org_settings"], DEFAULT_ORG_SETTINGS);
+  const [m, setM] = useState({ lot: "", pct: "", device: "" }); const [v, setV] = useState({ phase: "", key: "", value: "" }); const [busy, setBusy] = useState(false);
+  const code = (id: string) => lots.data.find((l) => l.id === id)?.lot_code ?? "—";
+  const phase = ph.data.find((p) => p.id === v.phase);
+  const vars = phase?.variables.length ? phase.variables : [{ key: "temperatura", label: "Temperatura", unit: "°C" }, { key: "ph", label: "pH" }, { key: "brix", label: "Brix", unit: "°Bx" }];
+  const { moisture_min: lo, moisture_max: hi } = st.data;
+  const pct = Number(m.pct);
+  const hint = m.pct && pct > 0 ? (pct > hi ? `Sigue en secado. Faltan aproximadamente ${(pct - hi).toFixed(1)} puntos para llegar al rango ideal (${lo}–${hi}%).` : pct < lo ? `Por debajo del mínimo (${lo}%): se creará una alerta.` : "Dentro del rango ideal.") : "";
+  const run = async (fn: () => Promise<unknown>, ok: string) => { setBusy(true); try { await fn(); toast.success(ok); } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(false); } };
 
   return (
     <>
-      <PageHeader
-        eyebrow="VARIABLES" title="Variables"
-        subtitle="Crea, ajusta y organiza las variables que registras en cada fase."
-        action={
-          <div className="flex gap-2">
-            <Button asChild variant="secondary">
-              <Link to="/variables/log">
-                <ListPlus className="h-4 w-4 mr-1.5" /> Registrar
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/variables/new">
-                <Plus className="h-4 w-4 mr-1.5" /> Nueva variable
-              </Link>
-            </Button>
+      <PageHeader eyebrow="VARIABLES" title="Variables y humedad" subtitle={`Rango de humedad de la organización: ${lo}–${hi}%. Se cambia en Ajustes.`} />
+      {can && <div className="grid gap-4 lg:grid-cols-2 mb-4">
+        <Section title="Registrar humedad">
+          <div className="grid gap-2">
+            <select className={selectCls} value={m.lot} onChange={(e) => setM({ ...m, lot: e.target.value })}><option value="">Lote…</option>{lots.data.filter((l) => l.qty_current_kg > 0).map((l) => <option key={l.id} value={l.id}>{l.lot_code} · {l.friendly_name}</option>)}</select>
+            <Input placeholder="Humedad %" inputMode="decimal" value={m.pct} onChange={(e) => setM({ ...m, pct: e.target.value })} />
+            <Input placeholder="Equipo (opcional)" value={m.device} onChange={(e) => setM({ ...m, device: e.target.value })} />
+            {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+            <Button disabled={busy || !m.lot || !(pct > 0 && pct <= 100)} onClick={() => run(async () => { await logMoisture(m.lot, pct, m.device || null, null); setM({ ...m, pct: "" }); }, `Humedad registrada. ${hint}`)}>Registrar humedad</Button>
           </div>
-        }
-      />
-
-      <div className="mb-4 grid gap-2 sm:grid-cols-4">
-        <div className="relative sm:col-span-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar variable…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las categorías</SelectItem>
-            {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={origin} onValueChange={setOrigin}>
-          <SelectTrigger><SelectValue placeholder="Origen" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Default + Personalizadas</SelectItem>
-            <SelectItem value="default">Solo default</SelectItem>
-            <SelectItem value="custom">Solo personalizadas</SelectItem>
-          </SelectContent>
-        </Select>
+        </Section>
+        <Section title="Registrar variable de una fase en curso">
+          <div className="grid gap-2">
+            <select className={selectCls} value={v.phase} onChange={(e) => setV({ ...v, phase: e.target.value, key: "" })}><option value="">Fase en curso…</option>{ph.data.map((p) => <option key={p.id} value={p.id}>{code(p.lot_id)} · {p.name}</option>)}</select>
+            <select className={selectCls} value={v.key} onChange={(e) => setV({ ...v, key: e.target.value })} disabled={!phase}><option value="">Variable…</option>{vars.map((x) => <option key={x.key} value={x.key}>{x.label ?? x.key}{"min" in x && x.min != null ? ` (${x.min}–${x.max})` : ""}</option>)}</select>
+            <Input placeholder="Valor" inputMode="decimal" value={v.value} onChange={(e) => setV({ ...v, value: e.target.value })} />
+            <Button disabled={busy || !v.phase || !v.key || v.value === "" || !Number.isFinite(Number(v.value))} onClick={() => run(async () => { await logPhaseVariable(v.phase, v.key, Number(v.value), null, newOpKey("var")); setV({ ...v, value: "" }); }, "Medición registrada")}>Registrar</Button>
+            {ph.data.length === 0 && <p className="text-xs text-muted-foreground">No hay fases en curso. Inicia una desde la ficha del lote.</p>}
+          </div>
+        </Section>
+      </div>}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Section title="Historial de humedad">
+          <LoadState loading={ml.loading} error={ml.error} empty={!ml.data.length} />
+          {ml.data.length > 0 && <SimpleTable head={["Fecha", "Lote", "%", "Equipo"]} rows={ml.data.map((x) => [fmtDate(x.measured_at), <LotLink id={x.lot_id} code={code(x.lot_id)} />,
+            <span className={x.moisture_pct < lo ? "text-destructive" : ""}>{x.moisture_pct}%</span>, x.device ?? "—"])} />}
+        </Section>
+        <Section title="Historial de variables">
+          <LoadState loading={vl.loading} error={vl.error} empty={!vl.data.length} />
+          {vl.data.length > 0 && <SimpleTable head={["Fecha", "Lote", "Variable", "Valor"]} rows={vl.data.map((x) => [fmtDate(x.measured_at), <LotLink id={x.lot_id} code={code(x.lot_id)} />, x.value?.label ?? "—",
+            <span className={x.value?.in_range === false ? "text-destructive" : ""}>{x.value_number} {x.value?.unit ?? ""}{x.value?.in_range === false ? " (fuera de rango)" : ""}</span>])} />}
+        </Section>
       </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Beaker}
-          title="Sin variables"
-          description="Aún no hay variables que coincidan con tu búsqueda."
-        />
-      ) : (
-        <div className="space-y-6">
-          {grouped.map(([cat, defs]) => (
-            <section key={cat}>
-              <h2 className="mb-2 font-display text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {CATEGORY_LABEL[cat]}
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {defs.map((d) => (
-                  <Card key={d.id}>
-                    <CardContent className="pt-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="font-semibold leading-tight">{d.name}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            {VALUE_TYPE_LABEL[d.value_type]}{d.unit ? ` · ${d.unit}` : ""}
-                          </p>
-                        </div>
-                        <Badge variant={d.is_default ? "secondary" : "outline"} className="text-[10px] shrink-0">
-                          {d.is_default ? "Default" : "Personalizada"}
-                        </Badge>
-                      </div>
-                      {(d.ideal_min != null || d.ideal_max != null) && (
-                        <div className="text-xs text-muted-foreground">
-                          Ideal: {d.ideal_min ?? "—"} a {d.ideal_max ?? "—"} {d.unit ?? ""}
-                        </div>
-                      )}
-                      {d.phase_associations.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {d.phase_associations.map((ph) => (
-                            <Badge key={ph} variant="outline" className="text-[10px]">{ph}</Badge>
-                          ))}
-                        </div>
-                      )}
-                      {d.alert_if_missing && (
-                        <Badge className="text-[10px] bg-warning text-warning-foreground">Requerida</Badge>
-                      )}
-                      {!d.is_default && (
-                        <div className="flex gap-1.5 pt-1 border-t border-border/40">
-                          <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-                            <Link to="/variables/new" search={{ id: d.id }}>
-                              <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-destructive"
-                            onClick={() => {
-                              if (confirm(`¿Desactivar "${d.name}"?`)) {
-                                deactivateVariableDefinition(d.id);
-                                toast.success("Variable desactivada");
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
     </>
   );
 }

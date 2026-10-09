@@ -1,73 +1,38 @@
-import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ScrollText, Search } from "lucide-react";
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
-import { useStore } from "@/lib/store";
-import { useCan } from "@/lib/permissions";
+import { LoadState, Section, SimpleTable } from "@/components/ops-ui";
+import { fmtDate, sel, useOrgQuery } from "@/lib/org-data";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/audit")({
-  head: () => ({
-    meta: [
-      { title: "Auditoría — Bitácora Café Pro" },
-      { name: "description", content: "Registro de cambios críticos en el sistema." },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Auditoría — Bitácora Café Pro" },
+    { name: "description", content: "Historial inalterable de acciones: quién hizo qué, cuándo y sobre qué registro." },
+    { property: "og:title", content: "Auditoría — Bitácora Café Pro" },
+    { property: "og:description", content: "Bitácora de acciones de la organización." },
+  ] }),
   component: AuditPage,
 });
 
+type E = { id: number; actor_id: string | null; entity: string; entity_id: string; action: string; diff: unknown; created_at: string };
+
 function AuditPage() {
-  const allowed = useCan("audit.view");
-  const audit = useStore((s) => s.audit);
+  const log = useOrgQuery<E[]>("audit", (o) => sel("audit_log", "*", o, "created_at", false, 500), [], []);
+  const people = useOrgQuery<{ id: string; full_name: string | null; email: string | null }[]>("a-p", async () => (await supabase.from("profiles").select("id,full_name,email")).data ?? [], [], []);
   const [q, setQ] = useState("");
-
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return audit;
-    return audit.filter((a) =>
-      [a.entity, a.entity_id, a.action, JSON.stringify(a.diff ?? {})].join(" ").toLowerCase().includes(term),
-    );
-  }, [audit, q]);
-
-  if (!allowed) {
-    return (
-      <>
-        <PageHeader eyebrow="AUDITORÍA" title="Auditoría" subtitle="Registro de cambios críticos." />
-        <EmptyState icon={ScrollText} title="Acceso restringido" description="Tu rol no tiene permiso para ver la auditoría." />
-      </>
-    );
-  }
-
+  const who = (id: string | null) => { const p = people.data.find((x) => x.id === id); return p?.full_name || p?.email || (id ? "Otro usuario" : "Sistema"); };
+  const rows = log.data.filter((e) => !q || `${e.entity} ${e.action} ${who(e.actor_id)} ${JSON.stringify(e.diff)}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <>
-      <PageHeader title="Auditoría" subtitle="Quién hizo qué y cuándo." />
-
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por entidad, acción o ID…" value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState icon={ScrollText} title="Sin registros" description="Cuando ocurran acciones críticas aparecerán aquí." />
-      ) : (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border">
-          {filtered.map((a) => (
-            <div key={a.id} className="p-3 grid grid-cols-1 md:grid-cols-[160px_140px_120px_1fr] gap-2 text-sm">
-              <div className="text-muted-foreground">{new Date(a.created_at).toLocaleString("es")}</div>
-              <div><span className="font-medium">{a.entity}</span></div>
-              <div className="uppercase text-xs">{a.action}</div>
-              <div className="text-muted-foreground break-all">
-                <span className="text-foreground">{a.actor_id ?? "sistema"}</span>
-                {" · "}#{a.entity_id.slice(0, 10)}
-                {a.diff && (
-                  <pre className="mt-1 text-xs whitespace-pre-wrap bg-muted/40 rounded p-2">{JSON.stringify(a.diff, null, 2)}</pre>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <PageHeader eyebrow="AUDITORÍA" title="Auditoría" subtitle="Cada acción importante queda registrada con autor y hora. Nadie puede editar ni borrar este historial." />
+      <Input className="max-w-sm mb-4" placeholder="Buscar acción, usuario, registro…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Section title={`${rows.length} registros (últimos 500)`}>
+        <LoadState loading={log.loading} error={log.error} empty={!rows.length} />
+        {rows.length > 0 && <SimpleTable head={["Fecha", "Usuario", "Registro", "Acción", "Detalle"]} rows={rows.map((e) => [fmtDate(e.created_at), who(e.actor_id), e.entity, e.action,
+          <span className="text-xs text-muted-foreground break-all line-clamp-2">{e.diff ? JSON.stringify(e.diff).slice(0, 160) : ""}</span>])} />}
+      </Section>
     </>
   );
 }

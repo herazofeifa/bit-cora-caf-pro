@@ -1,1191 +1,272 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { PermissionGate } from "@/components/permission-gate";
-import {
-  ArrowLeft,
-  Droplet,
-  Thermometer,
-  TrendingUp,
-  MapPin,
-  Calendar,
-  Coffee,
-  Package,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Beaker,
-  History,
-  GitBranch,
-  QrCode,
-  TestTube,
-  Trash2,
-  ClipboardList,
-  Plus,
-  Boxes,
-  Pause,
-  Play,
-  CheckCircle,
-} from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import { ArrowLeft, Download, FileUp, Lock, Play, Square } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { StatusBadge } from "@/components/status-badge";
-import { EmptyState } from "@/components/empty-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useCloudState } from "@/lib/cloud";
+import { useCurrentRole } from "@/lib/permissions";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  evaluateTimeAlertsForActivePhases,
-  pausePhase,
-  resumePhase,
-  useStore,
-} from "@/lib/store";
-import {
-  RegisterMoistureDialog,
-  RegisterVariableDialog,
-  RegisterWasteDialog,
-} from "@/components/lot-action-dialogs";
-import { FinishPhaseDialog } from "@/components/finish-phase-dialog";
-import { mockDb } from "@/data/mock-data";
-import { getStoreSnapshot, getQualitySamples } from "@/lib/store";
-import { useFarms, useParcels, getUnits } from "@/lib/app-config-store";
-import {
-  calcAvailableKg,
-  calcYieldPct,
-  commercialStateLabel,
-  commercialStateTone,
-  formatKg,
-  phaseDurationHours,
-  physicalStateLabel,
-  physicalStateTone,
-  qualityStatusLabel,
-  qualityTone,
-  sampleStatusLabel,
-  sampleStatusTone,
-} from "@/lib/helpers";
-import type { Lot, ProcessPhaseInstance, ProcessType } from "@/types/domain";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  ReferenceLine,
-} from "recharts";
+  closePhase, confirmReservation, cancelReservation, createReservation, createSacks, deliverReservation, friendlyError, getLot,
+  logPhaseVariable, newOpKey, publishLot, declareLotExport, recordQuality, releaseLot, signedFileUrl, startPhase, uploadLotFile, type CloudLot,
+} from "@/lib/ops-cloud";
+import { enqueue, flushQueue } from "@/lib/offline-queue";
+import { sackLabelsPdf } from "@/lib/pdf";
+import { commercialStateLabel } from "@/lib/helpers";
+import type { CommercialState } from "@/types/domain";
 
 export const Route = createFileRoute("/_app/lots/$id")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Lote ${params.id} — Bitácora Café Pro` },
-      { name: "description", content: "Ficha completa del lote de café." },
-    ],
-  }),
-  component: LotDetailPage,
-  notFoundComponent: () => (
-    <EmptyState
-      icon={Boxes}
-      title="Lote no encontrado"
-      description="El lote que buscas no existe o fue eliminado."
-    />
-  ),
+  head: () => ({ meta: [
+    { title: "Ficha de lote — Bitácora Café Pro" },
+    { name: "description", content: "Fases, mediciones, reservas, archivos, sacos y ficha pública del lote." },
+  ] }),
+  component: CloudLotPage,
 });
 
-const PROCESS_LABEL: Record<ProcessType, string> = {
-  lavado: "Lavado",
-  honey: "Honey",
-  natural: "Natural",
-  anaerobico: "Anaeróbico",
-  experimental: "Experimental",
-  custom: "Personalizado",
-};
+type Phase = { id: string; name: string; status: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null;
+  expected_minutes: number | null; variables: { key: string; label?: string; unit?: string; min?: number; max?: number }[] };
+type VarLog = { id: string; phase_id: string | null; value_number: number | null; value: { label?: string; unit?: string; in_range?: boolean } | null; measured_at: string };
+type Res = { id: string; qty_kg: number; price: number | null; currency: string | null; status: string; customer_id: string; expires_at: string | null };
+type FileRow = { id: string; kind: string; title: string; storage_path: string; mime_type: string; public_selected: boolean; phase_id: string | null };
+type Sack = { id: string; seq: number; sack_token: string; weight_kg: number | null };
+type Tpl = { id: string; name: string; process_type: string; version: number; phases: { name: string; expected_minutes?: number }[] };
 
-function daysBetween(from: string, to: Date = new Date()): number {
-  return Math.max(0, Math.floor((to.getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24)));
-}
+const STATES = ["cereza", "despulpado", "fermentado", "lavado", "pergamino_humedo", "pergamino_seco", "oro"];
+const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <section className="rounded-xl border border-border bg-card p-4 md:p-5"><h2 className="font-serif text-lg mb-3">{title}</h2>{children}</section>
+);
 
-function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("es", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+function CloudLotPage() {
+  const { id } = Route.useParams(); const cloud = useCloudState(); const role = useCurrentRole();
+  const [lot, setLot] = useState<CloudLot | null | undefined>(undefined);
+  const [phases, setPhases] = useState<Phase[]>([]); const [vars, setVars] = useState<VarLog[]>([]);
+  const [res, setRes] = useState<Res[]>([]); const [files, setFiles] = useState<FileRow[]>([]); const [sacks, setSacks] = useState<Sack[]>([]);
+  const [tpls, setTpls] = useState<Tpl[]>([]); const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [profile, setProfile] = useState<{ is_public: boolean; public_token: string; short_story: string | null; tasting_notes: string | null; visibility: Record<string, boolean>; exported_at?: string | null } | null>(null);
+  const [exportDate, setExportDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [phaseForm, setPhaseForm] = useState({ tpl: "", name: "", expected: "" });
+  const [meas, setMeas] = useState({ key: "", value: "" });
+  const [close, setClose] = useState({ weight: "", state: "", notes: "" });
+  const [resForm, setResForm] = useState({ customer: "", qty: "", price: "", currency: "USD", expires: "" });
+  const [fileForm, setFileForm] = useState<{ kind: string; title: string; file: File | null }>({ kind: "photo", title: "", file: null });
+  const [sackForm, setSackForm] = useState({ count: "", weight: "46" });
+  const [pub, setPub] = useState({ story: "", notes: "", measurements: false, producer: true });
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function LotDetailPage() {
-  const { id } = useParams({ from: "/_app/lots/$id" });
-  const lot = useStore((s) => s.lots.find((l) => l.id === id));
-  const phase = useStore((s) =>
-    lot ? s.phases.find((p) => p.id === lot.current_phase_id) : undefined,
-  );
-
+  const load = useCallback(async () => {
+    try {
+      const l = await getLot(id); setLot(l); if (!l) return;
+      const [p, v, r, f, s, t, c, pp] = await Promise.all([
+        supabase.from("process_phases").select("*").eq("lot_id", id).order("started_at"),
+        supabase.from("variable_logs").select("id,phase_id,value_number,value,measured_at").eq("lot_id", id).order("measured_at"),
+        supabase.from("reservations").select("id,qty_kg,price,currency,status,customer_id,expires_at").eq("lot_id", id).order("reserved_at"),
+        supabase.from("files").select("id,kind,title,storage_path,mime_type,public_selected,phase_id").eq("lot_id", id).order("created_at"),
+        supabase.from("sacks").select("id,seq,sack_token,weight_kg").eq("lot_id", id).order("seq"),
+        supabase.from("process_templates").select("id,name,process_type,version,phases").eq("active", true).order("name"),
+        supabase.from("customers").select("id,name").order("name"),
+        supabase.from("lot_public_profiles").select("is_public,public_token,short_story,tasting_notes,visibility,exported_at").eq("lot_id", id).maybeSingle(),
+      ]);
+      setPhases((p.data ?? []) as unknown as Phase[]); setVars((v.data ?? []) as unknown as VarLog[]); setRes((r.data ?? []) as Res[]);
+      setFiles((f.data ?? []) as FileRow[]); setSacks((s.data ?? []) as Sack[]); setTpls((t.data ?? []) as unknown as Tpl[]);
+      setCustomers(c.data ?? []); setProfile(pp.data as never);
+      if (pp.data) setPub((x) => ({ ...x, story: pp.data!.short_story ?? "", notes: pp.data!.tasting_notes ?? "" }));
+    } catch (e) { toast.error(friendlyError(e)); }
+  }, [id]);
   useEffect(() => {
-    evaluateTimeAlertsForActivePhases();
-    const t = setInterval(evaluateTimeAlertsForActivePhases, 60_000);
-    return () => clearInterval(t);
-  }, []);
+    if (!cloud.orgId) return; void load();
+    const ch = supabase.channel(`lot-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "lots", filter: `id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservations", filter: `lot_id=eq.${id}` }, () => void load())
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [cloud.orgId, id, load]);
 
-  if (!lot) {
-    return (
-      <>
-        <BackLink />
-        <EmptyState
-          icon={Boxes}
-          title="Lote no encontrado"
-          description="El lote que buscas no existe o fue eliminado."
-        />
-      </>
-    );
-  }
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try { await fn(); toast.success(ok); await load(); } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(false); }
+  };
 
-  const farm = useFarms().find((f) => f.id === lot.farm_id);
-  const parcel = useParcels().find((p) => p.id === lot.parcel_id);
-  const available = calcAvailableKg(lot);
+  if (lot === undefined) return <p className="text-muted-foreground">Cargando lote…</p>;
+  if (lot === null) return <p>Lote no encontrado o sin acceso. <Link to="/lots" className="underline">Volver</Link></p>;
 
-  return (
-    <div className="pb-20">
-      <BackLink />
-
-      {/* Hero */}
-      <div className="mb-6 rounded-2xl border border-border bg-gradient-to-br from-card to-secondary/40 p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs font-medium text-muted-foreground">{lot.lot_code}</span>
-              {lot.is_custom_process && (
-                <Badge variant="outline" className="text-[10px]">Proceso personalizado</Badge>
-              )}
-            </div>
-            <h1 className="mt-1 font-display text-2xl sm:text-3xl font-semibold leading-tight">
-              {lot.friendly_name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {lot.variety} · {PROCESS_LABEL[lot.process_type]} · {farm?.name}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          <StatusBadge status={physicalStateTone(lot.physical_state)}>
-            {physicalStateLabel[lot.physical_state]}
-          </StatusBadge>
-          <StatusBadge status={commercialStateTone(lot.commercial_state)}>
-            {commercialStateLabel[lot.commercial_state]}
-          </StatusBadge>
-          <StatusBadge status={qualityTone(lot.quality_status)}>
-            {qualityStatusLabel[lot.quality_status]}
-          </StatusBadge>
-        </div>
-
-        <QuickActions lot={lot} phase={phase ?? null} />
-      </div>
-
-      <Tabs defaultValue="resumen" className="w-full">
-        <TabsList className="w-full overflow-x-auto justify-start no-scrollbar h-auto flex-wrap">
-          <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="proceso">Proceso</TabsTrigger>
-          <TabsTrigger value="variables">Variables</TabsTrigger>
-          <TabsTrigger value="inventario">Inventario</TabsTrigger>
-          <TabsTrigger value="reservas">Reservas</TabsTrigger>
-          <TabsTrigger value="calidad">Calidad</TabsTrigger>
-          <TabsTrigger value="mermas">Mermas</TabsTrigger>
-          <TabsTrigger value="historial">Historial</TabsTrigger>
-          <TabsTrigger value="trazabilidad">Trazabilidad</TabsTrigger>
-          <TabsTrigger value="qr">QR público</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="resumen" className="mt-4">
-          <ResumenTab lot={lot} farmName={farm?.name ?? "—"} parcelName={parcel?.name ?? null} phase={phase ?? null} available={available} />
-        </TabsContent>
-        <TabsContent value="proceso" className="mt-4">
-          <ProcesoTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="variables" className="mt-4">
-          <VariablesTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="inventario" className="mt-4">
-          <InventarioTab lot={lot} available={available} />
-        </TabsContent>
-        <TabsContent value="reservas" className="mt-4">
-          <ReservasTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="calidad" className="mt-4">
-          <CalidadTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="mermas" className="mt-4">
-          <MermasTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="historial" className="mt-4">
-          <HistorialTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="trazabilidad" className="mt-4">
-          <TrazabilidadTab lot={lot} />
-        </TabsContent>
-        <TabsContent value="qr" className="mt-4">
-          <QrTab lot={lot} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function BackLink() {
-  return (
-    <Link
-      to="/lots"
-      className="mb-4 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft className="h-4 w-4 mr-1" /> Volver a lotes
-    </Link>
-  );
-}
-
-function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | null }) {
-  const navigate = useNavigate();
-  const [moistureOpen, setMoistureOpen] = useState(false);
-  const [varOpen, setVarOpen] = useState(false);
-  const [wasteOpen, setWasteOpen] = useState(false);
-  const [finishOpen, setFinishOpen] = useState(false);
-
-  const isRunning = phase?.status === "running";
-  const isPaused = phase?.status === "paused";
+  const running = phases.find((p) => p.status !== "finished");
+  const canProcess = role === "administrador" || role === "encargado_beneficio";
+  const canSell = role === "administrador" || role === "comercial";
+  const tpl = tpls.find((t) => t.id === phaseForm.tpl);
+  const custName = (cid: string) => customers.find((c) => c.id === cid)?.name ?? "—";
+  const publicUrl = profile ? `${window.location.origin}/t/${profile.public_token}` : null;
 
   return (
     <>
-      <div className="mt-5 -mx-1 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setMoistureOpen(true)}>
-          <Droplet className="h-3.5 w-3.5 mr-1.5" /> Humedad
-        </Button>
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setVarOpen(true)}>
-          <Beaker className="h-3.5 w-3.5 mr-1.5" /> Variable
-        </Button>
-        {phase && isRunning && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="shrink-0"
-            onClick={() => { pausePhase(phase.id); toast.success("Fase pausada"); }}
-          >
-            <Pause className="h-3.5 w-3.5 mr-1.5" /> Pausar fase
-          </Button>
-        )}
-        {phase && isPaused && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="shrink-0"
-            onClick={() => { resumePhase(phase.id); toast.success("Fase reanudada"); }}
-          >
-            <Play className="h-3.5 w-3.5 mr-1.5" /> Reanudar
-          </Button>
-        )}
-        {phase && (
-          <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setFinishOpen(true)}>
-            <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Finalizar fase
-          </Button>
-        )}
-        <PermissionGate permission="waste.log">
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setWasteOpen(true)}>
-          <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Merma
-        </Button>
-        </PermissionGate>
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={() => navigate({ to: "/reservations" })}>
-          <ClipboardList className="h-3.5 w-3.5 mr-1.5" /> Reservar
-        </Button>
-        <Button variant="secondary" size="sm" className="shrink-0" disabled>
-          <GitBranch className="h-3.5 w-3.5 mr-1.5" /> Dividir
-        </Button>
-        <Button variant="secondary" size="sm" className="shrink-0" disabled>
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Mezclar
-        </Button>
-        <Button variant="secondary" size="sm" className="shrink-0" disabled>
-          <Package className="h-3.5 w-3.5 mr-1.5" /> Ajustar
-        </Button>
-        <Button asChild variant="secondary" size="sm" className="shrink-0">
-          <Link to="/public/lot/$code" params={{ code: lot.lot_code }} target="_blank">
-            <QrCode className="h-3.5 w-3.5 mr-1.5" /> Ficha pública
-          </Link>
-        </Button>
-      </div>
+      <Link to="/lots" className="text-sm text-muted-foreground inline-flex items-center gap-1 mb-3"><ArrowLeft className="h-4 w-4" />Lotes</Link>
+      <PageHeader eyebrow={lot.lot_code} title={lot.friendly_name} subtitle={`${lot.variety || "—"} · ${lot.process_type} · ${lot.physical_state}`} />
 
-      <RegisterMoistureDialog open={moistureOpen} onOpenChange={setMoistureOpen} lot={lot} />
-      <RegisterVariableDialog open={varOpen} onOpenChange={setVarOpen} lot={lot} />
-      <RegisterWasteDialog open={wasteOpen} onOpenChange={setWasteOpen} lot={lot} />
-      {phase && (
-        <FinishPhaseDialog open={finishOpen} onOpenChange={setFinishOpen} lot={lot} phase={phase} />
-      )}
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-6 text-sm">
+        {[["Actual", lot.qty_current_kg], ["Libre", lot.qty_free_kg], ["Reservado", lot.qty_reserved_kg], ["Comprometido", lot.qty_committed_kg], ["Vendido", lot.qty_sold_kg]].map(([k, v]) => (
+          <div key={k as string} className="rounded-lg border border-border p-3"><div className="eyebrow">{k}</div><div className="text-xl font-medium">{Number(v)} kg</div></div>))}
+      </div>
+      <p className="mb-6 text-sm">Estado comercial: <b>{commercialStateLabel[lot.commercial_state as CommercialState] ?? lot.commercial_state}</b> · Calidad: {lot.quality_status}
+        {lot.current_moisture != null && <> · Humedad {lot.current_moisture}%</>}</p>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Proceso">
+          <ul className="text-sm space-y-2 mb-4">{phases.map((p) => (
+            <li key={p.id} className="rounded-lg border border-border p-2">
+              <div className="font-medium">{p.name} {p.status !== "finished" ? "· en curso" : ""}</div>
+              <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleString()} → {p.ended_at ? new Date(p.ended_at).toLocaleString() : "…"}
+                {p.weight_in_kg != null && ` · entra ${p.weight_in_kg} kg`}{p.weight_out_kg != null && ` · sale ${p.weight_out_kg} kg`}</div>
+              {vars.filter((v) => v.phase_id === p.id).map((v) => (
+                <div key={v.id} className={"text-xs " + (v.value?.in_range === false ? "text-destructive" : "")}>{v.value?.label}: {v.value_number} {v.value?.unit} {v.value?.in_range === false && "(fuera de rango)"}</div>))}
+            </li>))}{phases.length === 0 && <li className="text-muted-foreground">Sin fases todavía.</li>}</ul>
+
+          {canProcess && !running && (
+            <div className="grid gap-2">
+              <Label>Iniciar fase</Label>
+              <select className={sel} value={phaseForm.tpl} onChange={(e) => setPhaseForm({ ...phaseForm, tpl: e.target.value, name: "" })}>
+                <option value="">Fase libre (sin plantilla)</option>{tpls.map((t) => <option key={t.id} value={t.id}>{t.name} v{t.version}</option>)}</select>
+              {tpl ? <select className={sel} value={phaseForm.name} onChange={(e) => setPhaseForm({ ...phaseForm, name: e.target.value })}>
+                <option value="">Elegir fase…</option>{tpl.phases.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
+                : <Input placeholder="Nombre de la fase" value={phaseForm.name} onChange={(e) => setPhaseForm({ ...phaseForm, name: e.target.value })} />}
+              {!tpl && <Input placeholder="Duración esperada (horas)" inputMode="decimal" value={phaseForm.expected} onChange={(e) => setPhaseForm({ ...phaseForm, expected: e.target.value })} />}
+              <Button disabled={busy || !phaseForm.name} onClick={() => run(() => startPhase(lot.id, phaseForm.name, phaseForm.tpl || null,
+                phaseForm.expected ? Math.round(Number(phaseForm.expected) * 60) : null, newOpKey("phase")), "Fase iniciada")}><Play className="h-4 w-4 mr-1" />Iniciar</Button>
+            </div>)}
+
+          {canProcess && running && (
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label>Medición en {running.name}</Label>
+                <div className="flex gap-2">
+                  <select className={sel} value={meas.key} onChange={(e) => setMeas({ ...meas, key: e.target.value })}>
+                    <option value="">Variable…</option>
+                    {(running.variables.length ? running.variables : [{ key: "temperatura", label: "Temperatura" }, { key: "ph", label: "pH" }, { key: "brix", label: "Brix" }, { key: "humedad", label: "Humedad" }])
+                      .map((v) => <option key={v.key} value={v.key}>{v.label ?? v.key}{v.min != null ? ` (${v.min}–${v.max} ${v.unit ?? ""})` : ""}</option>)}
+                  </select>
+                  <Input className="w-28" inputMode="decimal" placeholder="Valor" value={meas.value} onChange={(e) => setMeas({ ...meas, value: e.target.value })} />
+                </div>
+                <Button variant="outline" disabled={busy || !meas.key || !Number.isFinite(Number(meas.value)) || meas.value === ""} onClick={async () => {
+                  const key = newOpKey("meas");
+                  await enqueue("measurement", `${meas.key}=${meas.value} · ${lot.lot_code}`, { phase: running.id, key: meas.key, value: Number(meas.value), unit: null }, key);
+                  await flushQueue(); setMeas({ key: "", value: "" }); await load();
+                  toast.message(navigator.onLine ? "Medición enviada" : "Sin conexión: medición guardada como borrador");
+                }}>Registrar medición</Button>
+              </div>
+              <div className="grid gap-2 border-t border-border pt-3">
+                <Label>Cerrar fase con el peso medido (kg)</Label>
+                <Input inputMode="decimal" placeholder={`Peso actual ${lot.qty_current_kg} kg`} value={close.weight} onChange={(e) => setClose({ ...close, weight: e.target.value })} />
+                <select className={sel} value={close.state} onChange={(e) => setClose({ ...close, state: e.target.value })}>
+                  <option value="">Estado físico al salir (sin cambio)</option>{STATES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                <Textarea rows={2} placeholder="Notas" value={close.notes} onChange={(e) => setClose({ ...close, notes: e.target.value })} />
+                {close.weight && Number(close.weight) < lot.qty_current_kg && <p className="text-xs text-muted-foreground">Se registrará una merma de proceso de {(lot.qty_current_kg - Number(close.weight)).toFixed(2)} kg.</p>}
+                <Button disabled={busy || close.weight === ""} onClick={() => run(() => closePhase(running.id, Number(close.weight), close.state || null, close.notes || null, newOpKey("close")), "Fase cerrada")}>
+                  <Square className="h-4 w-4 mr-1" />Cerrar fase</Button>
+              </div>
+            </div>)}
+        </Card>
+
+        <Card title="Calidad y liberación">
+          {canProcess ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" disabled={busy} onClick={() => { const s = prompt("Puntaje SCA (0–100)"); if (s === null) return; void run(() => recordQuality(lot.id, "aprobado", s ? Number(s) : null, null), "Calidad aprobada"); }}>Aprobar calidad</Button>
+              <Button variant="outline" disabled={busy} onClick={() => run(() => recordQuality(lot.id, "bloqueado", null, null), "Lote bloqueado por calidad")}><Lock className="h-4 w-4 mr-1" />Bloquear</Button>
+              <Button disabled={busy || lot.sale_released} onClick={() => run(() => releaseLot(lot.id, "Liberado desde la ficha"), "Lote liberado para la venta")}>
+                {lot.sale_released ? "Ya liberado para la venta" : "Liberar para la venta"}</Button>
+            </div>) : <p className="text-sm text-muted-foreground">Solo administración o encargado de beneficio.</p>}
+          <p className="mt-3 text-xs text-muted-foreground">El café recién cosechado o en proceso no se puede reservar hasta liberarlo. Aprobar la calidad no lo libera por sí solo.</p>
+        </Card>
+
+        <Card title="Reservas y entregas">
+          <ul className="text-sm space-y-2 mb-3">{res.map((r) => (
+            <li key={r.id} className="rounded-lg border border-border p-2 flex flex-wrap items-center justify-between gap-2">
+              <span>{custName(r.customer_id)} · {r.qty_kg} kg {r.price != null && `· ${r.price} ${r.currency}/kg`} · <b>{r.status}</b></span>
+              {canSell && (r.status === "reservada" || r.status === "confirmada") && <span className="flex gap-1">
+                {r.status === "reservada" && <Button size="sm" variant="outline" disabled={busy} onClick={() => run(() => confirmReservation(r.id), "Confirmada")}>Confirmar</Button>}
+                <Button size="sm" disabled={busy} onClick={() => run(() => deliverReservation(r.id, newOpKey("del")), "Entrega registrada")}>Entregar</Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => cancelReservation(r.id, "Cancelada por usuario"), "Cancelada")}>Cancelar</Button></span>}
+            </li>))}{res.length === 0 && <li className="text-muted-foreground">Sin reservas.</li>}</ul>
+          {canSell && (
+            <div className="grid gap-2 grid-cols-2">
+              <select className={sel + " col-span-2"} value={resForm.customer} onChange={(e) => setResForm({ ...resForm, customer: e.target.value })}>
+                <option value="">Cliente…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+              <Input inputMode="decimal" placeholder="kg" value={resForm.qty} onChange={(e) => setResForm({ ...resForm, qty: e.target.value })} />
+              <div className="flex gap-1"><Input inputMode="decimal" placeholder="Precio por kg" value={resForm.price} onChange={(e) => setResForm({ ...resForm, price: e.target.value })} />
+                <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={resForm.currency} onChange={(e) => setResForm({ ...resForm, currency: e.target.value })}><option>USD</option><option>CRC</option><option>EUR</option></select></div>
+              <Label className="col-span-2 text-xs">Vence (opcional)</Label>
+              <Input type="date" className="col-span-2" value={resForm.expires} onChange={(e) => setResForm({ ...resForm, expires: e.target.value })} />
+              <Button className="col-span-2" disabled={busy || !resForm.customer || !resForm.qty} onClick={() => run(() => createReservation(lot.id, resForm.customer, Number(resForm.qty),
+                resForm.price === "" ? null : Number(resForm.price), resForm.price === "" ? null : resForm.currency,
+                resForm.expires ? new Date(resForm.expires + "T23:59:59").toISOString() : null, newOpKey("res")), "Reserva creada")}>Reservar ({lot.qty_free_kg} kg libres)</Button>
+            </div>)}
+        </Card>
+
+        <Card title="Fotos y documentos">
+          <ul className="text-sm space-y-1 mb-3">{files.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-2">
+              <button className="underline text-left" onClick={async () => { try { window.open(await signedFileUrl(f.storage_path), "_blank", "noopener"); } catch (e) { toast.error(friendlyError(e)); } }}>
+                {f.kind === "photo" ? "Foto" : f.kind === "certificate" ? "Certificado" : f.kind === "contract" ? "Contrato" : "Documento"}: {f.title}</button>
+              {canSell && f.kind !== "contract" && <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={f.public_selected} onChange={async (e) => {
+                const { error } = await supabase.from("files").update({ public_selected: e.target.checked }).eq("id", f.id);
+                if (error) toast.error(friendlyError(error)); else void load();
+              }} />en ficha pública</label>}
+              {f.kind === "contract" && <span className="text-xs text-muted-foreground">privado siempre</span>}
+            </li>))}{files.length === 0 && <li className="text-muted-foreground">Sin archivos.</li>}</ul>
+          {role !== "consulta" && (
+            <div className="grid gap-2">
+              <select className={sel} value={fileForm.kind} onChange={(e) => setFileForm({ ...fileForm, kind: e.target.value })}>
+                <option value="photo">Foto de fase</option><option value="document">Documento</option><option value="certificate">Certificado</option><option value="contract">Contrato (privado)</option></select>
+              <Input placeholder="Título" value={fileForm.title} onChange={(e) => setFileForm({ ...fileForm, title: e.target.value })} />
+              <Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setFileForm({ ...fileForm, file: e.target.files?.[0] ?? null })} />
+              <Button variant="outline" disabled={busy || !fileForm.file} onClick={() => run(() => uploadLotFile(lot.id, running?.id ?? null, fileForm.kind, fileForm.title, fileForm.file!), "Archivo subido")}>
+                <FileUp className="h-4 w-4 mr-1" />Subir (máx. 10 MB)</Button>
+            </div>)}
+        </Card>
+
+        <Card title="Ficha pública y QR">
+          {canSell ? (
+            <div className="grid gap-2">
+              <Textarea rows={2} placeholder="Historia corta" value={pub.story} onChange={(e) => setPub({ ...pub, story: e.target.value })} />
+              <Input placeholder="Notas de taza" value={pub.notes} onChange={(e) => setPub({ ...pub, notes: e.target.value })} />
+              <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={pub.measurements} onChange={(e) => setPub({ ...pub, measurements: e.target.checked })} />Mostrar mediciones del proceso</label>
+              <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={pub.producer} onChange={(e) => setPub({ ...pub, producer: e.target.checked })} />Mostrar nombre del productor</label>
+              <div className="flex gap-2">
+                <Button disabled={busy} onClick={() => run(() => publishLot(lot.id, true, pub.story || null, pub.notes || null, { measurements: pub.measurements, producer: pub.producer }), "Ficha publicada")}>Publicar</Button>
+                {profile?.is_public && <Button variant="outline" disabled={busy} onClick={() => run(() => publishLot(lot.id, false, null, null, profile.visibility), "Ficha retirada")}>Retirar</Button>}
+              </div>
+            </div>) : null}
+          {profile?.is_public && publicUrl ? (
+            <div className="mt-3 flex items-center gap-3"><QRCodeSVG value={publicUrl} size={96} />
+              <div className="text-xs break-all"><a className="underline" href={publicUrl} target="_blank" rel="noreferrer">{publicUrl}</a>
+                <p className="text-muted-foreground mt-1">Muestra solo origen, proceso y lo que elijas. Nunca inventario, clientes ni precios.</p></div></div>
+          ) : <p className="mt-3 text-sm text-muted-foreground">No publicada: el enlace responde “no encontrado”.</p>}
+          {canSell && profile && (
+            <div className="mt-3 grid gap-1">
+              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${new Date(profile.exported_at).toLocaleDateString()}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
+              <div className="flex gap-2">
+                <Input type="date" max={new Date().toISOString().slice(0, 10)} value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+                <Button variant="outline" disabled={busy || !exportDate} onClick={() => run(() => declareLotExport(lot.id, new Date(`${exportDate}T12:00:00Z`).toISOString()), "Exportación declarada")}>Declarar</Button>
+                {profile.exported_at && <Button variant="ghost" disabled={busy} onClick={() => run(() => declareLotExport(lot.id, null), "Fecha retirada")}>Quitar</Button>}
+              </div>
+            </div>)}
+        </Card>
+
+        <Card title="Sacos con QR">
+          <p className="text-sm mb-2">{sacks.length} sacos registrados.</p>
+          {role !== "consulta" && role !== "productor" && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Input className="w-24" inputMode="numeric" placeholder="Cantidad" value={sackForm.count} onChange={(e) => setSackForm({ ...sackForm, count: e.target.value })} />
+              <Input className="w-24" inputMode="decimal" placeholder="kg/saco" value={sackForm.weight} onChange={(e) => setSackForm({ ...sackForm, weight: e.target.value })} />
+              <Button variant="outline" disabled={busy || !sackForm.count} onClick={() => run(() => createSacks(lot.id, Number(sackForm.count), sackForm.weight ? Number(sackForm.weight) : null), "Sacos creados")}>Crear sacos</Button>
+            </div>)}
+          {sacks.length > 0 && <Button size="sm" onClick={() => void sackLabelsPdf(lot, sacks, window.location.origin)}><Download className="h-4 w-4 mr-1" />Etiquetas PDF</Button>}
+          <p className="mt-2 text-xs text-muted-foreground">Cada saco tiene un código propio. Su QR abre el origen del lote solo si la ficha está publicada.</p>
+        </Card>
+      </div>
     </>
-  );
-}
-
-
-// ───────────── Resumen tab ─────────────
-
-function ResumenTab({
-  lot,
-  farmName,
-  parcelName,
-  phase,
-  available,
-}: {
-  lot: Lot;
-  farmName: string;
-  parcelName: string | null;
-  phase: ProcessPhaseInstance | null;
-  available: number;
-}) {
-  const daysSinceHarvest = daysBetween(lot.created_at);
-  const daysInPhase = phase ? Math.floor(phaseDurationHours(phase) / 24) : null;
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <InfoCard title="Origen" icon={MapPin}>
-        <Row label="Finca" value={farmName} />
-        <Row label="Parcela" value={parcelName ?? "—"} />
-        <Row label="Productor" value={lot.producer_name ?? "—"} />
-        <Row label="Región" value={lot.region ?? "—"} />
-        <Row label="Altitud" value={lot.altitude_m ? `${lot.altitude_m} m` : "—"} />
-        <Row label="Variedad" value={lot.variety} />
-      </InfoCard>
-
-      <InfoCard title="Proceso" icon={Coffee}>
-        <Row label="Tipo" value={PROCESS_LABEL[lot.process_type]} />
-        <Row label="Personalizado" value={lot.is_custom_process ? "Sí" : "No"} />
-        <Row label="Fase actual" value={phase?.name ?? "—"} />
-        <Row label="Días desde cosecha" value={`${daysSinceHarvest} d`} />
-        <Row label="Días en fase actual" value={daysInPhase != null ? `${daysInPhase} d` : "—"} />
-      </InfoCard>
-
-      <InfoCard title="Estado" icon={CheckCircle2}>
-        <Row label="Físico" value={physicalStateLabel[lot.physical_state]} />
-        <Row label="Comercial" value={commercialStateLabel[lot.commercial_state]} />
-        <Row label="Calidad" value={qualityStatusLabel[lot.quality_status]} />
-        <Row label="Humedad" value={lot.current_moisture != null ? `${lot.current_moisture}%` : "—"} />
-        <Row label="Ubicación" value={lot.current_location ?? "—"} />
-      </InfoCard>
-
-      <InfoCard title="Cantidades" icon={Package}>
-        <Row label="Inicial" value={formatKg(lot.qty_initial_kg)} />
-        <Row label="Actual" value={formatKg(lot.qty_current_kg)} />
-        <Row label="Disponible" value={formatKg(available)} accent="success" />
-        <Row label="Reservado" value={formatKg(lot.qty_reserved_kg)} />
-        <Row label="Comprometido" value={formatKg(lot.qty_committed_kg)} />
-        <Row label="Bloqueado" value={formatKg(lot.qty_blocked_kg)} />
-      </InfoCard>
-    </div>
-  );
-}
-
-function InfoCard({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: typeof Coffee;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Icon className="h-4 w-4 text-primary" /> {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1.5 text-sm">{children}</CardContent>
-    </Card>
-  );
-}
-
-function Row({ label, value, accent }: { label: string; value: string; accent?: "success" }) {
-  return (
-    <div className="flex justify-between gap-4 py-1 border-b border-border/40 last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`text-right font-medium ${accent === "success" ? "text-success" : ""}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// ───────────── Proceso tab ─────────────
-
-function ProcesoTab({ lot }: { lot: Lot }) {
-  const instance = mockDb.processInstances.find((p) => p.id === lot.process_instance_id);
-  const allPhases = instance
-    ? getStoreSnapshot().phases.filter((p) => p.process_instance_id === instance.id)
-    : [];
-  const templatePhases = instance?.template_id
-    ? mockDb.processTemplatePhases
-        .filter((p) => p.template_id === instance.template_id)
-        .sort((a, b) => a.order_index - b.order_index)
-    : [];
-
-  // merge: show template phases with status; standalone for custom
-  const items =
-    templatePhases.length > 0
-      ? templatePhases.map((tp) => {
-          const inst = allPhases.find((p) => p.template_phase_id === tp.id);
-          return {
-            name: tp.name,
-            expected: tp.expected_duration_hours,
-            actual: inst ? phaseDurationHours(inst) : null,
-            started_at: inst?.started_at ?? null,
-            ended_at: inst?.ended_at ?? null,
-            isCurrent: inst && !inst.ended_at,
-          };
-        })
-      : allPhases.map((p) => ({
-          name: p.name,
-          expected: null as number | null,
-          actual: phaseDurationHours(p),
-          started_at: p.started_at,
-          ended_at: p.ended_at,
-          isCurrent: !p.ended_at,
-        }));
-
-  if (items.length === 0) {
-    return <EmptyState icon={Clock} title="Sin proceso registrado" description="Aún no se ha iniciado el proceso de este lote." />;
-  }
-
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <ol className="relative border-l-2 border-border ml-3 space-y-6">
-          {items.map((item, i) => {
-            const status = !item.started_at
-              ? "pending"
-              : item.ended_at
-              ? "done"
-              : item.expected && item.actual && item.actual > item.expected
-              ? "overdue"
-              : item.expected && item.actual && item.actual > item.expected * 0.85
-              ? "near"
-              : "ontime";
-
-            const dot =
-              status === "done"
-                ? "bg-success"
-                : status === "overdue"
-                ? "bg-destructive"
-                : status === "near"
-                ? "bg-warning"
-                : status === "ontime"
-                ? "bg-primary"
-                : "bg-muted";
-
-            const label =
-              status === "done"
-                ? "Finalizada"
-                : status === "overdue"
-                ? "Vencida"
-                : status === "near"
-                ? "Cerca del límite"
-                : status === "ontime"
-                ? "En tiempo"
-                : "Pendiente";
-
-            return (
-              <li key={i} className="ml-6">
-                <span
-                  className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full ring-4 ring-background ${dot}`}
-                />
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="font-semibold text-sm">{item.name}</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {item.started_at ? fmtDateTime(item.started_at) : "Aún no iniciada"}
-                    </p>
-                  </div>
-                  <Badge variant={status === "overdue" ? "destructive" : "secondary"} className="text-[10px]">
-                    {label}
-                  </Badge>
-                </div>
-                {(item.expected != null || item.actual != null) && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {item.actual != null && (
-                      <span>Real: {Math.round(item.actual)} h</span>
-                    )}
-                    {item.expected != null && (
-                      <span> · Esperado: {Math.round(item.expected)} h</span>
-                    )}
-                  </div>
-                )}
-                {item.expected && item.actual != null && (
-                  <Progress
-                    value={Math.min(100, (item.actual / item.expected) * 100)}
-                    className="mt-2 h-1.5"
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ───────────── Variables tab ─────────────
-
-interface VarSeriesPoint { ts: number; date: string; value: number }
-interface VarChartConfig {
-  key: string;
-  title: string;
-  unit: string | null;
-  ideal_min: number | null;
-  ideal_max: number | null;
-  data: VarSeriesPoint[];
-}
-
-function VariablesTab({ lot }: { lot: Lot }) {
-  const moistureLogs = useStore((s) => s.moistureLogs);
-  const variableLogs = useStore((s) => s.variableLogs);
-  const wasteLogs = useStore((s) => s.wasteLogs);
-  const definitions = useStore((s) => s.variableDefinitions);
-
-  const lotMoistures = useMemo(
-    () =>
-      moistureLogs
-        .filter((m) => m.lot_id === lot.id)
-        .sort((a, b) => +new Date(a.measured_at) - +new Date(b.measured_at)),
-    [moistureLogs, lot.id],
-  );
-  const lotVarLogs = useMemo(
-    () => variableLogs.filter((v) => v.lot_id === lot.id),
-    [variableLogs, lot.id],
-  );
-  const lotWastes = useMemo(
-    () =>
-      wasteLogs
-        .filter((w) => w.lot_id === lot.id)
-        .sort((a, b) => +new Date(a.registered_at) - +new Date(b.registered_at)),
-    [wasteLogs, lot.id],
-  );
-
-  const seriesByDef = useMemo(() => {
-    const map = new Map<string, VarSeriesPoint[]>();
-    for (const v of lotVarLogs) {
-      if (v.value_number == null) continue;
-      const arr = map.get(v.variable_id) ?? [];
-      arr.push({
-        ts: +new Date(v.measured_at),
-        date: new Date(v.measured_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
-        value: v.value_number,
-      });
-      map.set(v.variable_id, arr);
-    }
-    for (const arr of map.values()) arr.sort((a, b) => a.ts - b.ts);
-    return map;
-  }, [lotVarLogs]);
-
-  const charts = useMemo<VarChartConfig[]>(() => {
-    const out: VarChartConfig[] = [];
-    if (lotMoistures.length > 0) {
-      out.push({
-        key: "humedad",
-        title: "Humedad",
-        unit: "%",
-        ideal_min: 10,
-        ideal_max: 12,
-        data: lotMoistures.map((m) => ({
-          ts: +new Date(m.measured_at),
-          date: new Date(m.measured_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
-          value: m.moisture_pct,
-        })),
-      });
-    }
-    const featured = ["v-temp-masa", "v-temp-tanque", "v-ph", "v-brix", "v-peso"];
-    for (const id of featured) {
-      const def = definitions.find((d) => d.id === id);
-      const data = seriesByDef.get(id) ?? [];
-      if (!def || data.length === 0) continue;
-      out.push({
-        key: id,
-        title: def.name,
-        unit: def.unit,
-        ideal_min: def.ideal_min,
-        ideal_max: def.ideal_max,
-        data,
-      });
-    }
-    if (lotWastes.length > 0) {
-      let acc = 0;
-      out.push({
-        key: "merma",
-        title: "Merma acumulada",
-        unit: "kg",
-        ideal_min: null,
-        ideal_max: null,
-        data: lotWastes.map((w) => {
-          acc += w.qty_kg;
-          return {
-            ts: +new Date(w.registered_at),
-            date: new Date(w.registered_at).toLocaleDateString("es", { day: "2-digit", month: "short" }),
-            value: Math.round(acc * 100) / 100,
-          };
-        }),
-      });
-    }
-    return out;
-  }, [lotMoistures, seriesByDef, definitions, lotWastes]);
-
-  // Build "latest values" rows
-  const latestRows = useMemo(() => {
-    const rows: { name: string; unit: string | null; value: string; ts: string; phase: string | null; tone: "success" | "warning" | "danger" | "neutral" }[] = [];
-    if (lotMoistures.length > 0) {
-      const last = lotMoistures[lotMoistures.length - 1];
-      const tone = last.moisture_pct > 12 ? "warning" : last.moisture_pct < 10 ? "warning" : "success";
-      rows.push({ name: "Humedad", unit: "%", value: `${last.moisture_pct}`, ts: fmtDateTime(last.measured_at), phase: null, tone });
-    }
-    const byVar = new Map<string, typeof lotVarLogs[number]>();
-    for (const v of [...lotVarLogs].sort((a, b) => +new Date(a.measured_at) - +new Date(b.measured_at))) {
-      byVar.set(v.variable_id, v);
-    }
-    for (const [vid, v] of byVar.entries()) {
-      const def = definitions.find((d) => d.id === vid);
-      if (!def) continue;
-      let tone: "success" | "warning" | "danger" | "neutral" = "neutral";
-      const val = v.value_number;
-      if (val != null && (def.ideal_min != null || def.ideal_max != null)) {
-        const out = (def.ideal_min != null && val < def.ideal_min) || (def.ideal_max != null && val > def.ideal_max);
-        tone = out ? "warning" : "success";
-      }
-      rows.push({
-        name: def.name,
-        unit: def.unit,
-        value: val != null ? String(val) : (v.value_text ?? "—"),
-        ts: fmtDateTime(v.measured_at),
-        phase: null,
-        tone,
-      });
-    }
-    return rows;
-  }, [lotMoistures, lotVarLogs, definitions]);
-
-  if (charts.length === 0 && latestRows.length === 0) {
-    return (
-      <EmptyState
-        icon={Beaker}
-        title="Aún sin variables"
-        description="Registra humedad, temperatura, pH u otras variables para ver su evolución."
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Latest values table */}
-      {latestRows.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Thermometer className="h-4 w-4 text-primary" /> Últimos valores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto -mx-3">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="py-1.5 px-3">Variable</th>
-                    <th className="py-1.5 px-3 text-right">Valor</th>
-                    <th className="py-1.5 px-3">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {latestRows.map((r) => (
-                    <tr key={r.name} className="border-t border-border/40">
-                      <td className="py-2 px-3 font-medium">{r.name}</td>
-                      <td className="py-2 px-3 text-right">
-                        <StatusBadge status={r.tone}>
-                          {r.value}{r.unit ? ` ${r.unit}` : ""}
-                        </StatusBadge>
-                      </td>
-                      <td className="py-2 px-3 text-muted-foreground text-xs whitespace-nowrap">{r.ts}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mini-charts grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {charts.map((c) => <MiniChartCard key={c.key} cfg={c} />)}
-      </div>
-    </div>
-  );
-}
-
-function MiniChartCard({ cfg }: { cfg: VarChartConfig }) {
-  const min = cfg.data.reduce((a, b) => Math.min(a, b.value), Infinity);
-  const max = cfg.data.reduce((a, b) => Math.max(a, b.value), -Infinity);
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-base">
-          <span>{cfg.title}</span>
-          <span className="text-xs font-normal text-muted-foreground">
-            {cfg.unit ? `(${cfg.unit})` : ""}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-40">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={cfg.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" fontSize={10} stroke="var(--muted-foreground)" />
-              <YAxis fontSize={10} stroke="var(--muted-foreground)" domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              {cfg.ideal_min != null && (
-                <ReferenceLine y={cfg.ideal_min} stroke="var(--success)" strokeDasharray="3 3" />
-              )}
-              {cfg.ideal_max != null && (
-                <ReferenceLine y={cfg.ideal_max} stroke="var(--success)" strokeDasharray="3 3" />
-              )}
-              <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2} dot />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Mín {Number.isFinite(min) ? min : "—"}{cfg.unit ? ` ${cfg.unit}` : ""}</span>
-          <span>Máx {Number.isFinite(max) ? max : "—"}{cfg.unit ? ` ${cfg.unit}` : ""}</span>
-          {(cfg.ideal_min != null || cfg.ideal_max != null) && (
-            <span>Ideal {cfg.ideal_min ?? "—"} - {cfg.ideal_max ?? "—"}</span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-
-
-// ───────────── Inventario tab ─────────────
-
-function InventarioTab({ lot, available }: { lot: Lot; available: number }) {
-  const yieldPct = calcYieldPct(lot.qty_initial_kg, lot.qty_current_kg);
-  const items = [
-    { label: "Inicial", value: lot.qty_initial_kg, tone: "neutral" as const },
-    { label: "Actual", value: lot.qty_current_kg, tone: "info" as const },
-    { label: "Bloqueado", value: lot.qty_blocked_kg, tone: "warning" as const },
-    { label: "Reservado", value: lot.qty_reserved_kg, tone: "info" as const },
-    { label: "Comprometido", value: lot.qty_committed_kg, tone: "warning" as const },
-    { label: "Vendido", value: lot.qty_sold_kg, tone: "neutral" as const },
-    { label: "Stock seguridad", value: lot.stock_safety_kg, tone: "neutral" as const },
-    { label: "Disponible", value: available, tone: "success" as const },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {items.map((it) => (
-          <Card key={it.label}>
-            <CardContent className="pt-4">
-              <div className="text-xs text-muted-foreground">{it.label}</div>
-              <div className="mt-1 text-lg font-semibold">
-                <StatusBadge status={it.tone}>{formatKg(it.value)}</StatusBadge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-4 w-4 text-primary" /> Rendimiento
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-display font-semibold">
-            {yieldPct != null ? `${yieldPct}%` : "—"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {formatKg(lot.qty_current_kg)} de {formatKg(lot.qty_initial_kg)} iniciales
-          </p>
-          <Progress
-            value={yieldPct ?? 0}
-            className="mt-3 h-2"
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ───────────── Reservas tab ─────────────
-
-function ReservasTab({ lot }: { lot: Lot }) {
-  const reservations = getStoreSnapshot().reservations.filter((r) => r.lot_id === lot.id);
-  if (reservations.length === 0) {
-    return <EmptyState icon={ClipboardList} title="Sin reservas" description="Este lote no tiene reservas activas." />;
-  }
-  return (
-    <div className="space-y-3">
-      {reservations.map((r) => {
-        const customer = getStoreSnapshot().customers.find((c) => c.id === r.customer_id);
-        return (
-          <Card key={r.id}>
-            <CardContent className="pt-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">{customer?.name ?? "Cliente"}</div>
-                <div className="text-xs text-muted-foreground">
-                  Reservado el {fmtDate(r.reserved_at)}
-                  {r.expires_at && ` · vence ${fmtDate(r.expires_at)}`}
-                </div>
-                {r.notes && <p className="mt-1 text-xs text-muted-foreground">{r.notes}</p>}
-              </div>
-              <div className="text-right">
-                <div className="font-semibold">{formatKg(r.qty_kg)}</div>
-                <StatusBadge status={r.status === "activa" ? "info" : r.status === "convertida" ? "success" : "neutral"}>
-                  {r.status}
-                </StatusBadge>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-// ───────────── Calidad tab ─────────────
-
-function CalidadTab({ lot }: { lot: Lot }) {
-  const samples = getQualitySamples().filter((q) => q.lot_id === lot.id);
-  if (samples.length === 0) {
-    return <EmptyState icon={TestTube} title="Sin muestras" description="Aún no hay catación registrada para este lote." />;
-  }
-  return (
-    <div className="space-y-3">
-      {samples.map((s) => (
-        <Card key={s.id}>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold">Muestra · {fmtDate(s.sampled_at)}</div>
-                <div className="text-xs text-muted-foreground">Catador: {s.cupper ?? "—"}</div>
-              </div>
-              <div className="text-right">
-                <div className="font-display text-2xl font-semibold">{s.score ?? "—"}</div>
-                <StatusBadge status={sampleStatusTone(s.status)}>{sampleStatusLabel[s.status]}</StatusBadge>
-              </div>
-            </div>
-            {s.notes && <p className="mt-2 text-sm">{s.notes}</p>}
-            {s.defects && <p className="mt-1 text-xs text-destructive">Defectos: {s.defects}</p>}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-// ───────────── Mermas tab ─────────────
-
-function MermasTab({ lot }: { lot: Lot }) {
-  const wastes = getStoreSnapshot().wasteLogs.filter((w) => w.lot_id === lot.id);
-  if (wastes.length === 0) {
-    return <EmptyState icon={Trash2} title="Sin mermas" description="No hay pérdidas registradas para este lote." />;
-  }
-  const total = wastes.reduce((acc, w) => acc + w.qty_kg, 0);
-  return (
-    <div className="space-y-3">
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Total de mermas</div>
-          <div className="text-2xl font-display font-semibold text-destructive">{formatKg(total)}</div>
-        </CardContent>
-      </Card>
-      {wastes.map((w) => (
-        <Card key={w.id}>
-          <CardContent className="pt-4 flex items-start justify-between gap-3">
-            <div>
-              <div className="font-semibold">{w.reason}</div>
-              <div className="text-xs text-muted-foreground">{fmtDateTime(w.registered_at)}</div>
-              {w.notes && <p className="mt-1 text-xs text-muted-foreground">{w.notes}</p>}
-            </div>
-            <div className="font-semibold text-destructive">{formatKg(w.qty_kg)}</div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-// ───────────── Historial tab ─────────────
-
-interface TimelineEvent {
-  date: string;
-  type: string;
-  title: string;
-  description: string;
-  tone: "success" | "info" | "warning" | "danger" | "neutral";
-}
-
-function HistorialTab({ lot }: { lot: Lot }) {
-  const events = useMemo<TimelineEvent[]>(() => {
-    const list: TimelineEvent[] = [];
-    list.push({
-      date: lot.created_at,
-      type: "Lote",
-      title: "Lote creado",
-      description: `${lot.lot_code} · ${lot.friendly_name}`,
-      tone: "success",
-    });
-    if (lot.harvest_ticket_id) {
-      const ht = getStoreSnapshot().harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
-      if (ht) {
-        list.push({
-          date: ht.intake_datetime,
-          type: ht.kind === "harvest" ? "Cosecha" : "Recibo",
-          title: ht.kind === "harvest" ? "Cosecha registrada" : "Recibo en beneficio",
-          description: `${ht.qty_original} ${getUnits().find((u) => u.id === ht.uom_original_id)?.symbol ?? ""}${ht.qty_kg ? ` · ${formatKg(ht.qty_kg)}` : " · pendiente kg"}`,
-          tone: "info",
-        });
-      }
-    }
-    getStoreSnapshot().phases
-      .filter((p) => p.process_instance_id === lot.process_instance_id)
-      .forEach((p) => {
-        list.push({
-          date: p.started_at,
-          type: "Fase",
-          title: `Inicio: ${p.name}`,
-          description: p.notes ?? "",
-          tone: "info",
-        });
-        if (p.ended_at) {
-          list.push({
-            date: p.ended_at,
-            type: "Fase",
-            title: `Fin: ${p.name}`,
-            description: "",
-            tone: "success",
-          });
-        }
-      });
-    getStoreSnapshot().moistureLogs
-      .filter((m) => m.lot_id === lot.id)
-      .forEach((m) =>
-        list.push({
-          date: m.measured_at,
-          type: "Humedad",
-          title: `Humedad ${m.moisture_pct}%`,
-          description: m.notes ?? "",
-          tone: m.moisture_pct > 13 ? "warning" : "neutral",
-        }),
-      );
-    getStoreSnapshot().variableLogs
-      .filter((v) => v.lot_id === lot.id)
-      .forEach((v) => {
-        const def = getStoreSnapshot().variableDefinitions.find((d) => d.id === v.variable_id);
-        list.push({
-          date: v.measured_at,
-          type: "Variable",
-          title: `${def?.name ?? "Variable"}: ${v.value_number ?? v.value_text}`,
-          description: v.notes ?? "",
-          tone: "neutral",
-        });
-      });
-    getStoreSnapshot().stockMovements
-      .filter((s) => s.lot_id === lot.id)
-      .forEach((s) =>
-        list.push({
-          date: s.created_at,
-          type: "Inventario",
-          title: `${s.movement_type} · ${formatKg(s.qty_kg)}`,
-          description: s.reason ?? "",
-          tone: s.movement_type === "merma" ? "danger" : "info",
-        }),
-      );
-    getStoreSnapshot().reservations
-      .filter((r) => r.lot_id === lot.id)
-      .forEach((r) => {
-        const customer = getStoreSnapshot().customers.find((c) => c.id === r.customer_id);
-        list.push({
-          date: r.reserved_at,
-          type: "Reserva",
-          title: `Reserva ${customer?.name ?? ""}`,
-          description: `${formatKg(r.qty_kg)}`,
-          tone: "info",
-        });
-      });
-    getQualitySamples()
-      .filter((q) => q.lot_id === lot.id)
-      .forEach((q) =>
-        list.push({
-          date: q.sampled_at,
-          type: "Calidad",
-          title: `Catación ${q.score ?? ""}`,
-          description: q.notes ?? "",
-          tone: q.status === "aprobado" ? "success" : "neutral",
-        }),
-      );
-    getStoreSnapshot().alerts
-      .filter((a) => a.lot_id === lot.id)
-      .forEach((a) =>
-        list.push({
-          date: a.created_at,
-          type: "Alerta",
-          title: a.title,
-          description: a.message,
-          tone: a.severity === "danger" ? "danger" : a.severity === "warning" ? "warning" : "info",
-        }),
-      );
-    return list.sort((a, b) => +new Date(b.date) - +new Date(a.date));
-  }, [lot]);
-
-  if (events.length === 0) {
-    return <EmptyState icon={History} title="Sin historial" description="Aún no hay eventos registrados." />;
-  }
-
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <ol className="relative border-l-2 border-border ml-3 space-y-5">
-          {events.map((e, i) => (
-            <li key={i} className="ml-6">
-              <span className={`absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full ring-4 ring-background ${
-                e.tone === "success" ? "bg-success" :
-                e.tone === "danger" ? "bg-destructive" :
-                e.tone === "warning" ? "bg-warning" :
-                e.tone === "info" ? "bg-primary" : "bg-muted"
-              }`} />
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">{e.type}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  <Calendar className="inline h-3 w-3 mr-1" />
-                  {fmtDateTime(e.date)}
-                </span>
-              </div>
-              <h4 className="mt-1 font-semibold text-sm">{e.title}</h4>
-              {e.description && <p className="text-xs text-muted-foreground">{e.description}</p>}
-            </li>
-          ))}
-        </ol>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ───────────── Trazabilidad tab ─────────────
-
-function TrazabilidadTab({ lot }: { lot: Lot }) {
-  const lots = useStore((s) => s.lots);
-  const parent = lot.parent_lot_id ? lots.find((l) => l.id === lot.parent_lot_id) : null;
-  const children = lots.filter((l) => l.parent_lot_id === lot.id);
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <GitBranch className="h-4 w-4 text-primary" /> Árbol de trazabilidad
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {parent ? (
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Lote padre</div>
-              <LotChip lot={parent} />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No tiene lote padre. Es un lote original.</p>
-          )}
-
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Lote actual</div>
-            <LotChip lot={lot} highlight />
-          </div>
-
-          {children.length > 0 ? (
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                Lotes hijos ({children.length})
-              </div>
-              <div className="space-y-2">
-                {children.map((c) => (
-                  <LotChip key={c.id} lot={c} />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No tiene divisiones ni mezclas registradas.</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LotChip({ lot, highlight }: { lot: Lot; highlight?: boolean }) {
-  return (
-    <Link
-      to="/lots/$id"
-      params={{ id: lot.id }}
-      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition hover:border-primary/50 ${
-        highlight ? "border-primary bg-primary/5" : "border-border bg-card"
-      }`}
-    >
-      <div>
-        <div className="font-mono text-xs text-muted-foreground">{lot.lot_code}</div>
-        <div className="font-medium text-sm">{lot.friendly_name}</div>
-      </div>
-      <div className="text-xs text-muted-foreground">{formatKg(lot.qty_current_kg)}</div>
-    </Link>
-  );
-}
-
-// ───────────── QR público tab ─────────────
-
-function QrTab({ lot }: { lot: Lot }) {
-  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/public/lot/${lot.lot_code}`;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <QrCode className="h-4 w-4 text-primary" /> Ficha pública del lote
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-center space-y-4">
-        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-2xl border border-border bg-card p-3">
-          <QRCodeSVG value={url} size={168} />
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">URL pública</div>
-          <code className="text-sm break-all">{url}</code>
-        </div>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Comparte esta ficha con tostadores y consumidores. Lo que se muestra se controla desde Trazabilidad.
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button asChild>
-            <Link to="/public/lot/$code" params={{ code: lot.lot_code }} target="_blank">Abrir ficha pública</Link>
-          </Button>
-          <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(url); toast.success("Enlace copiado"); }}>
-            Copiar enlace
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

@@ -106,3 +106,21 @@ export async function signedFileUrl(path: string) {
   if (error) throw new Error(friendlyError(error));
   return data.signedUrl;
 }
+
+// ───── Additional business operations used by the unified screens ─────
+export const createLot = (name: string, qty: number, farm: string | null, parcel: string | null, variety: string, process: string, state: string, opKey: string) =>
+  rpc<CloudLot>("create_lot", { _org: requireOrg(), _friendly_name: name, _qty_kg: qty, _farm_id: farm, _parcel_id: parcel, _variety: variety, _process_type: process, _physical_state: state, _harvest_ticket_id: null, _op_key: opKey });
+export const logMoisture = (lot: string, pct: number, device: string | null, notes: string | null) => rpc("log_moisture", { _lot: lot, _pct: pct, _device: device, _notes: notes });
+export const logWaste = (lot: string, qty: number, type: string, reason: string, destination: string) =>
+  rpc("log_waste", { _lot: lot, _qty: qty, _waste_type: type, _reason: reason, _destination: destination });
+export const adjustInventory = (lot: string, delta: number, reason: string) => rpc("adjust_inventory", { _lot: lot, _delta: delta, _reason: reason });
+export const splitLot = (lot: string, parts: { qty_kg: number; name?: string }[]) => rpc("split_lot", { _lot: lot, _parts: parts });
+export const mergeLots = (lots: string[], name: string) => rpc("merge_lots", { _lots: lots, _name: name });
+export const saveProcessTemplate = (template: string | null, name: string, processType: string, description: string | null, phases: unknown[]) =>
+  rpc("save_process_template", { _org: requireOrg(), _template: template, _name: name, _process_type: processType, _description: description, _phases: phases });
+export const setReservationTerms = (id: string, delivery: string | null, conditions: string | null) =>
+  rpc("set_reservation_terms", { _id: id, _delivery: delivery, _conditions: conditions });
+export const setLotLocation = (lot: string, location: string) => rpc("set_lot_location", { _lot: lot, _location: location });
+export const resolveAlert = (id: string) => rpc("resolve_alert", { _id: id });
+export const createReservationFull = (a: { lot: string; customer: string; qty: number; price: number | null; currency: string | null; priceUnit: string; expires: string | null; notes: string | null }, opKey: string) =>
+  rpc<{ id: string }>("create_reservation", { _lot: a.lot, _customer: a.customer, _qty: a.qty, _price: a.price, _currency: a.currency, _expires_at: a.expires, _notes: a.notes, _price_unit: a.priceUnit, _op_key: opKey });
