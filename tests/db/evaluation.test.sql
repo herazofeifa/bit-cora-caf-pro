@@ -92,7 +92,7 @@ begin
   perform pg_temp.eq('sample: merge links', (select count(*) from public.lot_links k join public.lots x on x.id = k.child_lot_id where x.organization_id = SA and k.kind = 'merge'), 2);
   perform pg_temp.is('sample: has quality-blocked lot', (select bool_or(commercial_state = 'bloqueado_calidad')::text from public.lots where organization_id = SA), 'true');
   perform pg_temp.is('sample: has in-process lot', (select bool_or(commercial_state = 'en_proceso')::text from public.lots where organization_id = SA), 'true');
-  perform pg_temp.eq('sample: out-of-range alerts', (select count(*) from public.alerts where organization_id = SA) >= 2 and true, 1);
+  perform pg_temp.is('sample: out-of-range alerts (>=2)', ((select count(*) from public.alerts where organization_id = SA) >= 2)::text, 'true');
   perform pg_temp.eq('sample: overdue process', (select count(*) from public.overdue_phases(SA) where elapsed_days > 20), 1);
   perform pg_temp.is('sample: automatic waste from weight difference', (select (count(*) >= 5)::text from public.waste_logs where organization_id = SA), 'true');
   perform pg_temp.eq('sample: sacks', (select count(*) from public.sacks where organization_id = SA), 2);
@@ -128,7 +128,7 @@ begin
   perform pg_temp.as_anon();
   pub := public.public_lot_view(t);
   perform pg_temp.is('public sample page has exported_at', (pub->>'exported_at' is not null)::text, 'true');
-  perform pg_temp.is('public sample page hides contract', (pub->'files')::text like '%contract%' and true or false, 'false');
+  perform pg_temp.is('public sample page hides contract', ((pub->'files')::text like '%contract%')::text, 'false');
   perform pg_temp.is('public page has no customers/prices', (pub::text ~* 'Nordic|precio|price')::text, 'false');
 
   -- evaluator can operate in both spaces
