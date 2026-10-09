@@ -75,8 +75,9 @@ const persisted = loadPersisted();
 
 const state: ConfigState = {
   organization: { ...DEFAULT_ORG, ...(persisted.organization ?? {}) },
-  farms: Array.isArray(persisted.farms) && persisted.farms.length > 0 ? persisted.farms! : [...mockDb.farms],
-  parcels: Array.isArray(persisted.parcels) && persisted.parcels.length > 0 ? persisted.parcels! : [...mockDb.parcels],
+  // Farms and parcels are loaded from Lovable Cloud after sign-in (see src/lib/cloud.ts).
+  farms: [],
+  parcels: [],
   units: Array.isArray(persisted.units) && persisted.units.length > 0 ? persisted.units! : [...mockDb.units],
   settings: {
     ...DEFAULT_SETTINGS,
@@ -98,7 +99,9 @@ const subscribe = (l: () => void) => {
 function persist() {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const { farms: _f, parcels: _p, ...rest } = state;
+    void _f; void _p;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
   } catch {}
 }
 
@@ -203,8 +206,18 @@ export function setOrganization(next: Organization) {
 
 const ORG_ID = mockDb.organizations[0]?.id ?? "org-1";
 
-function uid(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+function uid(_prefix: string) {
+  return crypto.randomUUID();
+}
+
+/** Cloud → local mirror (no local persistence). */
+export function replaceFarmsFromCloud(next: Farm[]) {
+  state.farms = next;
+  listeners.forEach((l) => l());
+}
+export function replaceParcelsFromCloud(next: Parcel[]) {
+  state.parcels = next;
+  listeners.forEach((l) => l());
 }
 
 export function addFarm(): Farm {
@@ -274,8 +287,6 @@ export function resetAll() {
     try { window.localStorage.removeItem(STORAGE_KEY); } catch {}
   }
   state.organization = { ...DEFAULT_ORG };
-  state.farms = [...mockDb.farms];
-  state.parcels = [...mockDb.parcels];
   state.units = [...mockDb.units];
   state.settings = {
     ...DEFAULT_SETTINGS,

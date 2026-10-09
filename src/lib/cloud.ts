@@ -109,8 +109,8 @@ const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 export async function cloudSaveFarms(next: Farm[], prev: Farm[]) {
   const org = requireOrg();
   for (const f of next) {
-    const row = { ...pick(f, FARM_COLS), organization_id: org, country: f.country || "Costa Rica" };
-    const res = isUuid(f.id) && prev.some((p) => p.id === f.id)
+    const row = { ...pick(f, FARM_COLS), organization_id: org, country: f.country || "Costa Rica", ...(isUuid(f.id) ? { id: f.id } : {}) };
+    const res = prev.some((p) => p.id === f.id)
       ? await supabase.from("farms").update({ ...row, updated_at: new Date().toISOString() }).eq("id", f.id)
       : await supabase.from("farms").insert(row);
     if (res.error) throw friendly(res.error);
@@ -127,8 +127,8 @@ export async function cloudSaveFarms(next: Farm[], prev: Farm[]) {
 export async function cloudSaveParcels(next: Parcel[], prev: Parcel[]) {
   const org = requireOrg();
   for (const p of next) {
-    const row = { ...pick(p, PARCEL_COLS), organization_id: org };
-    const res = isUuid(p.id) && prev.some((x) => x.id === p.id)
+    const row = { ...pick(p, PARCEL_COLS), organization_id: org, ...(isUuid(p.id) ? { id: p.id } : {}) };
+    const res = prev.some((x) => x.id === p.id)
       ? await supabase.from("parcels").update({ ...row, updated_at: new Date().toISOString() }).eq("id", p.id)
       : await supabase.from("parcels").insert(row);
     if (res.error) throw friendly(res.error);
