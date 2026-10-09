@@ -44,10 +44,10 @@ Reglas clave (ver `docs/ESTADO_ENTREGA.md`):
 |---|---|
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run test` | pruebas unitarias (Vitest) |
-| `bun run test:db` | levanta un PostgreSQL desechable, aplica todas las migraciones, ejecuta `tests/db/core.test.sql` y la prueba de concurrencia |
+| `bun run test:db` | levanta un PostgreSQL desechable, aplica todas las migraciones, ejecuta `tests/db/core.test.sql`, `closing.test.sql`, `audit.test.sql` y las pruebas de concurrencia (reservas y vencimiento) |
 | `bun run build` | build de producción |
 
-`test:db` no usa credenciales ni toca ninguna base real. `initdb` no puede ejecutarse como root.
+`test:db` no usa credenciales ni toca ninguna base real. `initdb` no puede ejecutarse como root (en un contenedor root: `setpriv --reuid=1000 --regid=1000 --clear-groups bash tests/db/run-local.sh`).
 
 ## Configuración del copiloto (OpenAI)
 El copiloto (`/copiloto`) llama directamente a la API de OpenAI desde el servidor.
