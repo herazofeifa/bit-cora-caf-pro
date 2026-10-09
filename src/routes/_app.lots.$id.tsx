@@ -64,9 +64,12 @@ function CloudLotPage() {
     sources: { lot_code: string; kind: string; qty_kg: number }[];
     phases: { lot_code: string; inherited: boolean; name: string; status: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[] };
   const [lineage, setLineage] = useState<Lineage | null>(null);
+  const [lastQ, setLastQ] = useState<{ status: string; score: number | null; sampled_at: string; data: QualityData | null } | null>(null);
   const load = useCallback(async () => {
     try {
       const l = await getLot(id); setLot(l); if (!l) return;
+      void supabase.from("quality_samples").select("status,score,sampled_at,data").eq("lot_id", id).order("sampled_at", { ascending: false }).limit(1).maybeSingle()
+        .then(({ data }) => setLastQ((data ?? null) as never));
       void supabase.rpc("lot_lineage" as never, { _lot: id } as never).then(({ data }) => setLineage((data ?? null) as Lineage | null));
       const [p, v, r, f, s, t, c, pp] = await Promise.all([
         supabase.from("process_phases").select("*").eq("lot_id", id).order("started_at"),
@@ -207,6 +210,8 @@ function CloudLotPage() {
         </Card>
 
         <Card title="Calidad y liberación">
+          {lastQ && <p className="text-sm mb-2">Última evaluación ({new Date(lastQ.sampled_at).toLocaleDateString()}): {lastQ.status}{lastQ.score != null && ` · SCA ${lastQ.score}`} · Defectos: {qualitySummary(lastQ.data).defects}
+            {qualitySummary(lastQ.data).sca && <span className="block text-xs text-muted-foreground">{qualitySummary(lastQ.data).sca}</span>}</p>}
           {canProcess && <details className="mb-3"><summary className="text-sm cursor-pointer font-medium">Registrar evaluación de calidad (SCA, defectos)</summary><div className="mt-2"><QualityForm fixedLot={lot.id} onSaved={() => void load()} /></div></details>}
           {canProcess ? (
             <div className="flex flex-wrap gap-2">

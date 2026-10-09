@@ -61,7 +61,7 @@ export interface LotSheet {
   origins?: { farm: string; parcel: string | null; region: string | null; altitude_m: number | null }[];
   sources?: { lot_code: string; kind: string; qty_kg: number }[];
   phases: { name: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[];
-  quality: { sampled_at: string; status: string; score: number | null; notes?: string | null }[];
+  quality: { sampled_at: string; status: string; score: number | null; notes?: string | null; defects?: string | null }[];
   photos: { title: string; dataUrl: string }[];
   story?: string | null; tasting?: string | null; publicUrl?: string | null;
 }
