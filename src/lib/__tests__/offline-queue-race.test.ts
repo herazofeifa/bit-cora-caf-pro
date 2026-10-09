@@ -33,10 +33,8 @@ describe("cola offline: cambio de entorno durante el envío", () => {
     await flushing;
 
     expect(sent.length).toBe(1); // second item of the old queue was NOT sent
-    expect(q.useQueue).toBeDefined();
     // the new partition's list was not touched by the old reply
-    const { items } = await import("../offline-queue").then(() => ({ items: [] as unknown[] }));
-    expect(items).toEqual([]);
+    expect(q.getQueueSnapshot()).toEqual([]);
   });
 
   it("los envíos usan la organización guardada en cada elemento, no la activa", async () => {

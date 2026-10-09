@@ -30,6 +30,7 @@ let partition: string | null = null;
 let partitionOrg: string | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
+export const getQueueSnapshot = () => items;
 export const useQueue = () =>
   useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => items, () => items);
 
