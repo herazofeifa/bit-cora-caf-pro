@@ -111,7 +111,7 @@ function CloudReports() {
     setSharing(true);
     try {
       const safe = tables.filter((t) => t.title !== "Reservas activas");
-      const s = await publishReportSnapshot(`Resumen ${flt.from} a ${flt.to}`, { filters: filterLabels, tables: safe }, days);
+      const s = await publishReportSnapshot(`Resumen ${flt.from} a ${flt.to}`, { filters: Object.fromEntries(Object.entries(filterLabels).filter(([k]) => k !== "Cliente")), tables: safe }, days);
       const url = `${window.location.origin}/r/${s.token}`;
       await navigator.clipboard?.writeText(url).catch(() => {});
       toast.success("Enlace público creado y copiado"); setShareOpen(false); void load();
