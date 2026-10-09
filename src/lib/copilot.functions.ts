@@ -26,10 +26,15 @@ const TOOLS = [
     parameters: obj({ desde: { type: "string" }, hasta: { type: "string" } }) },
   { type: "function", name: "resumen_comprador", strict: true, description: "Historial de reservas y entregas de un cliente por nombre (búsqueda parcial).",
     parameters: obj({ nombre: { type: "string" } }) },
+  { type: "function", name: "sacos_disponibles", strict: true, description: "Café libre en kg y su equivalencia en sacos usando el peso de saco CONFIGURADO por la organización, más los sacos físicos etiquetados. Filtra por variedad (vacío = todas).",
+    parameters: obj({ variedad: { type: "string" } }) },
   { type: "function", name: "buscar_lote", strict: true, description: "Datos de un lote por código (ej. LAV-2026-001): kg, estados, fases y última humedad.",
     parameters: obj({ codigo: { type: "string" } }) },
 ];
 
+const MAX_INPUT_CHARS = 12000;
+const MAX_OUTPUT_TOKENS = 900;
+const GLOBAL_MS = 40000;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 async function runTool(sb: Sb, org: string, name: string, args: Record<string, string>) {
   switch (name) {
@@ -78,6 +83,26 @@ async function runTool(sb: Sb, org: string, name: string, args: Record<string, s
       }
       return { encontrado: true, clientes: out };
     }
+    case "sacos_disponibles": {
+      const v = String(args.variedad ?? "").slice(0, 60).replace(/[%_,()]/g, " ").trim();
+      let qy = sb.from("lots").select("id,lot_code,variety,qty_free_kg,commercial_state").eq("organization_id", org).gt("qty_free_kg", 0);
+      if (v) qy = qy.ilike("variety", `%${v}%`);
+      const [{ data: lots, error }, { data: st }] = await Promise.all([qy, sb.from("org_settings").select("settings").eq("organization_id", org).maybeSingle()]);
+      if (error) throw error;
+      const raw = Number((st?.settings as { default_sack_kg?: unknown } | null)?.default_sack_kg);
+      const sackKg = Number.isFinite(raw) && raw > 0 ? raw : null; // never assume a default weight
+      const ids = (lots ?? []).map((l: { id: string }) => l.id);
+      const { data: sacks } = ids.length ? await sb.from("sacks").select("lot_id,weight_kg").in("lot_id", ids) : { data: [] };
+      const libre = (lots ?? []).reduce((a: number, l: { qty_free_kg: number }) => a + +l.qty_free_kg, 0);
+      return {
+        variedad: v || "(todas)", libre_kg: libre, lotes: (lots ?? []).map((l: { lot_code: string; variety: string; qty_free_kg: number }) => ({ lote: l.lot_code, variedad: l.variety, libre_kg: +l.qty_free_kg })),
+        peso_saco_configurado_kg: sackKg,
+        equivalencia_sacos: sackKg ? Math.floor((libre / sackKg) * 100) / 100 : null,
+        sacos_fisicos_etiquetados: (sacks ?? []).length,
+        nota: sackKg ? "equivalencia_sacos es kg libres ÷ peso de saco configurado; NO es un conteo físico. sacos_fisicos_etiquetados son etiquetas QR creadas (pueden incluir café reservado)."
+          : "La organización no ha configurado el peso por saco en Ajustes; solo se puede informar en kg y las etiquetas físicas.",
+      };
+    }
     case "buscar_lote": {
       const { data: l, error } = await sb.from("lots").select("id,lot_code,friendly_name,variety,process_type,physical_state,commercial_state,quality_status,qty_current_kg,qty_free_kg,qty_reserved_kg,qty_committed_kg,qty_sold_kg,current_moisture").eq("organization_id", org).ilike("lot_code", String(args.codigo).slice(0, 40)).maybeSingle();
       if (error) throw error; if (!l) return { encontrado: false };
@@ -91,6 +116,7 @@ async function runTool(sb: Sb, org: string, name: string, args: Record<string, s
 const SYSTEM = (today: string, orgName: string) => `Eres el copiloto de Bitácora Café Pro para el microbeneficio "${orgName}". Hoy es ${today}.
 Responde en español claro y breve, para productores. Usa SOLO datos obtenidos con las herramientas; si no hay registros, dilo ("no hay registros de…") y no inventes cifras.
 Indica siempre unidades (kg) y moneda. Para "mes pasado" o "este año" calcula las fechas tú mismo. Si sugieres algo, explica en qué dato te basas.
+Si preguntan por sacos, distingue SIEMPRE la equivalencia (kg ÷ peso configurado) de los sacos físicos etiquetados; si no hay peso configurado, dilo y responde en kg.
 No puedes modificar datos: si te piden registrar o cambiar algo, indica la pantalla de la app donde hacerlo.`;
 
 export const askCopilot = createServerFn({ method: "POST" })
@@ -100,6 +126,11 @@ export const askCopilot = createServerFn({ method: "POST" })
     const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) return { ok: false as const, error: "El copiloto no está configurado: falta la clave de OpenAI (OPENAI_API_KEY) en los secretos del proyecto." };
     const sb = context.supabase as unknown as Sb;
+    const totalChars = data.messages.reduce((a, x) => a + x.content.length, 0);
+    if (totalChars > MAX_INPUT_CHARS) return { ok: false as const, error: `La conversación es demasiado larga (${totalChars} caracteres; máximo ${MAX_INPUT_CHARS}). Empieza una nueva.` };
+    const { data: quota, error: qErr } = await sb.rpc("copilot_take_quota", { _org: data.organizationId });
+    if (qErr) return { ok: false as const, error: "No perteneces a esa organización." };
+    if (!quota?.ok) return { ok: false as const, error: `Alcanzaste el límite de preguntas al copiloto (${quota?.limit_hour} por hora, ${quota?.limit_day} por día). Intenta más tarde.` };
     const { data: ms } = await sb.rpc("my_memberships", {});
     const m = (ms ?? []).find((x: { organization_id: string }) => x.organization_id === data.organizationId);
     if (!m) return { ok: false as const, error: "No perteneces a esa organización." };
@@ -112,16 +143,18 @@ export const askCopilot = createServerFn({ method: "POST" })
     const items: any[] = data.messages.map((x) => ({ role: x.role, content: x.content }));
     const used: string[] = [];
     const started = Date.now();
+    const deadline = AbortSignal.timeout(GLOBAL_MS); // one budget for every round, including tool calls
     for (let step = 0; step < 6; step++) {
+      if (deadline.aborted) return { ok: false as const, error: "La consulta tardó demasiado. Intenta una pregunta más concreta." };
       let resp: Response;
       try {
         resp = await fetch("https://api.openai.com/v1/responses", {
-          method: "POST", signal: AbortSignal.timeout(45000),
+          method: "POST", signal: deadline,
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, instructions: SYSTEM(today, m.organization_name), input: items, tools: TOOLS, store: false }),
+          body: JSON.stringify({ model, instructions: SYSTEM(today, m.organization_name), input: items, tools: TOOLS, store: false, max_output_tokens: MAX_OUTPUT_TOKENS }),
         });
       } catch (e) {
-        const timeout = (e as Error)?.name === "TimeoutError";
+        const timeout = (e as Error)?.name === "TimeoutError" || deadline.aborted;
         return { ok: false as const, error: timeout ? "OpenAI tardó demasiado en responder. Intenta de nuevo." : "No se pudo conectar con OpenAI." };
       }
       if (!resp.ok) {
@@ -134,7 +167,8 @@ export const askCopilot = createServerFn({ method: "POST" })
           : resp.status === 429 ? "OpenAI limitó las solicitudes o la cuenta no tiene saldo. Espera un momento o revisa la cuenta de OpenAI."
           : resp.status >= 500 ? "OpenAI tiene un problema temporal. Intenta más tarde."
           : `OpenAI rechazó la solicitud (${resp.status}).`;
-        console.error("copilot openai", resp.status, body.slice(0, 300));
+        // log only status + OpenAI error code; never the prompt, the answer or the key
+        console.error("copilot openai", resp.status, (body.match(/"code":\s*"([^"]+)"/) ?? [])[1] ?? "");
         return { ok: false as const, error: msg ?? msg2 };
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
