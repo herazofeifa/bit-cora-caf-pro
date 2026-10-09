@@ -85,6 +85,13 @@
       "when": 1791587898304,
       "tag": "0011_lineage_guards_apply",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791588247681,
+      "tag": "0012_quality_units_copilot_quota",
+      "breakpoints": true
     }
   ]
 }

@@ -41,14 +41,15 @@ export const listLots = async () => {
   return (data ?? []) as unknown as CloudLot[];
 };
 export const getLot = async (id: string) => {
-  const { data, error } = await supabase.from("lots").select("*").eq("id", id).maybeSingle();
+  // Scoped to the ACTIVE organization: membership in another org (e.g. the other evaluation space) never shows its lot here.
+  const { data, error } = await supabase.from("lots").select("*").eq("id", id).eq("organization_id", requireOrg()).maybeSingle();
   if (error) throw new Error(friendlyError(error));
   return data as unknown as CloudLot | null;
 };
 
-export const registerHarvest = (data: Record<string, unknown>, targetLot: string | null, lotName: string | null, opKey: string) =>
+export const registerHarvest = (data: Record<string, unknown>, targetLot: string | null, lotName: string | null, opKey: string, org?: string) =>
   rpc<{ ticket_id: string; lot_id: string; lot_code: string; qty_kg: number }>("register_harvest", {
-    _org: requireOrg(), _data: data, _target_lot: targetLot, _lot_name: lotName, _op_key: opKey,
+    _org: org ?? requireOrg(), _data: data, _target_lot: targetLot, _lot_name: lotName, _op_key: opKey,
   });
 export const releaseLot = (lot: string, reason?: string) => rpc("release_lot_for_sale", { _lot: lot, _reason: reason ?? null });
 export const startPhase = (lot: string, name: string, template: string | null, expected: number | null, opKey: string) =>

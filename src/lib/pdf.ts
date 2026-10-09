@@ -61,7 +61,7 @@ export interface LotSheet {
   origins?: { farm: string; parcel: string | null; region: string | null; altitude_m: number | null }[];
   sources?: { lot_code: string; kind: string; qty_kg: number }[];
   phases: { name: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[];
-  quality: { sampled_at: string; status: string; score: number | null; notes?: string | null }[];
+  quality: { sampled_at: string; status: string; score: number | null; notes?: string | null; defects?: string | null }[];
   photos: { title: string; dataUrl: string }[];
   story?: string | null; tasting?: string | null; publicUrl?: string | null;
 }
@@ -88,8 +88,8 @@ export async function lotSheetPdf(s: LotSheet) {
   autoTable(doc, { startY: 66, head: [["Fase", "Inicio", "Fin", "Entra kg", "Sale kg"]], headStyles: { fillColor: [74, 52, 38] }, styles: { fontSize: 8 },
     body: s.phases.length ? s.phases.map((p) => [p.name, new Date(p.started_at).toLocaleString(), p.ended_at ? new Date(p.ended_at).toLocaleString() : "en curso", p.weight_in_kg ?? "", p.weight_out_kg ?? ""]) : [["Sin fases", "", "", "", ""]] });
   let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
-  autoTable(doc, { startY: y, head: [["Fecha", "Resultado", "SCA", "Notas"]], headStyles: { fillColor: [74, 52, 38] }, styles: { fontSize: 8 },
-    body: s.quality.length ? s.quality.map((q) => [new Date(q.sampled_at).toLocaleDateString(), q.status, q.score ?? "", q.notes ?? ""]) : [["Sin evaluaciones", "", "", ""]] });
+  autoTable(doc, { startY: y, head: [["Fecha", "Resultado", "SCA", "Defectos", "Atributos y notas"]], headStyles: { fillColor: [74, 52, 38] }, styles: { fontSize: 8 },
+    body: s.quality.length ? s.quality.map((q) => [new Date(q.sampled_at).toLocaleDateString(), q.status, q.score ?? "", q.defects ?? "", q.notes ?? ""]) : [["Sin evaluaciones", "", "", "", ""]] });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   for (const p of s.photos) {
     if (y > 220) { doc.addPage(); y = 20; }

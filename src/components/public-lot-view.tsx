@@ -10,10 +10,11 @@ export interface PublicLot {
   origins?: { farm: string | null; region: string | null; country: string; parcel: string | null; altitude_m: number | null; producer: string | null }[];
   is_blend?: boolean;
   measurements: { label: string; value: number; unit: string | null; at: string }[] | null;
-  moisture: number | null; quality: { score: number | null; notes: string | null; at: string } | null;
+  moisture: number | null; quality: { score: number | null; notes: string | null; cupping?: string | null; at: string; sca?: Record<string, number> | null; defects?: { primary?: number | null; secondary?: number | null } | null } | null;
   files: { id: string; kind: string; title: string; mime: string; url?: string }[]; exported_at: string | null; generated_at?: string;
 }
 
+import { SCA_ATTRS as SCA } from "@/components/quality-form";
 const PROCESS: Record<string, string> = { lavado: "Lavado", honey: "Honey", natural: "Natural", anaerobico: "Anaeróbico" };
 const Row = ({ icon: I, label, value }: { icon: typeof MapPin; label: string; value: React.ReactNode }) =>
   value ? <div className="flex gap-3 py-2 border-b border-border"><I className="h-5 w-5 text-muted-foreground shrink-0" /><div><div className="eyebrow">{label}</div><div>{value}</div></div></div> : null;
@@ -41,7 +42,9 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
         <Row icon={Calendar} label="Cosecha" value={lot.harvest?.first && `${lot.harvest.first}${lot.harvest.last && lot.harvest.last !== lot.harvest.first ? ` a ${lot.harvest.last}` : ""}${lot.harvest.season ? ` · temporada ${lot.harvest.season}` : ""}`} />
         <Row icon={Droplet} label="Humedad" value={lot.moisture != null ? `${lot.moisture}%` : null} />
         <Row icon={Award} label="Puntaje SCA" value={lot.quality?.score != null ? `${lot.quality.score}${lot.quality.notes ? ` · ${lot.quality.notes}` : ""}` : null} />
-        <Row icon={Award} label="Notas de taza" value={lot.tasting_notes} />
+        <Row icon={Award} label="Perfil sensorial SCA" value={lot.quality?.sca ? SCA.filter(([k]) => lot.quality!.sca![k] != null).map(([k, l]) => `${l} ${lot.quality!.sca![k]}`).join(" · ") : null} />
+        <Row icon={Award} label="Defectos" value={lot.quality?.defects && (lot.quality.defects.primary != null || lot.quality.defects.secondary != null) ? `${lot.quality.defects.primary ?? 0} primarios · ${lot.quality.defects.secondary ?? 0} secundarios` : null} />
+        <Row icon={Award} label="Notas de taza" value={lot.tasting_notes ?? lot.quality?.cupping} />
       </div>
       {lot.phases.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Proceso</h2>
