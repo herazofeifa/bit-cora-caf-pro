@@ -29,7 +29,6 @@ begin
   raise notice 'ok - %', _label;
 end $$;
 
-insert into auth.users (id, email) select u::uuid, u || '@audit.local' from unnest(array[
 
 insert into auth.users (id, email) select u::uuid, u || '@eval.local' from unnest(array[
   '13000000-0000-0000-0000-000000000001','13000000-0000-0000-0000-000000000002','13000000-0000-0000-0000-000000000003']) u;
