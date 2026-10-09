@@ -73,7 +73,7 @@ function CloudLotPage() {
       void (async () => {
         const { data: lin } = await supabase.rpc("lot_lineage" as never, { _lot: id } as never);
         setLineage((lin ?? null) as Lineage | null);
-        const qs = await lotQualityWithLineage(l, (lin ?? null) as Lineage | null);
+        const qs = await lotQualityWithLineage({ id: l.id, organization_id: cloud.orgId ?? "" }, (lin ?? null) as Lineage | null);
         setAllQ(qs);
         setLastQ(qs.filter((x) => !x.source_code).at(-1) ?? qs.filter((x) => x.status === "aprobado").at(-1) ?? null);
       })();
@@ -92,7 +92,7 @@ function CloudLotPage() {
       setCustomers(c.data ?? []); setProfile(pp.data as never);
       if (pp.data) setPub((x) => ({ ...x, story: pp.data!.short_story ?? "", notes: pp.data!.tasting_notes ?? "" }));
     } catch (e) { toast.error(friendlyError(e)); }
-  }, [id]);
+  }, [id, cloud.orgId]);
   useEffect(() => {
     if (!cloud.orgId) return; void load();
     const ch = supabase.channel(`lot-${id}`)
