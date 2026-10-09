@@ -2,120 +2,73 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole, getOrgId, useCloudState } from "@/lib/cloud";
-import { loadDemoData, resetOperationalData } from "@/lib/store";
 import { createTeamUser } from "@/lib/users.functions";
 import { isEvaluatorAccount, useMemberships } from "@/lib/auth";
 import { EvaluationAccountCard } from "@/components/evaluation-account-card";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
-import {
-  Building2, MapPin, Leaf, Users, Scale, Droplets, Workflow, Beaker, Bell, Eye, RefreshCw,
-  Plus, Trash2, RotateCcw, Save, Undo2,
-} from "lucide-react";
+import { Building2, MapPin, Leaf, Users, Scale, Droplets, Workflow, Beaker, Plus, Trash2, Save, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmAction } from "@/components/confirm-action";
-import { mockDb } from "@/data/mock-data";
-import { useStore, getStoreSnapshot } from "@/lib/store";
-import {
-  roleLabel, roleDescription, useCurrentRole, type AppRole,
-} from "@/lib/permissions";
-import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
-import {
-  useOrganization, useFarms, useParcels, useUnits, useAppSettings,
-  setOrganization, replaceUnits, setSettings,
-  addFarm, addParcel,
-  resetSettings, resetAll, DEFAULT_SETTINGS,
-  type AppSettings, type Organization,
-} from "@/lib/app-config-store";
-import type { Farm, Parcel, Unit } from "@/types/domain";
+import { LoadState, SimpleTable, selectCls } from "@/components/ops-ui";
+import { roleLabel, roleDescription, useCurrentRole, type AppRole } from "@/lib/permissions";
+import { useFarms, useParcels, addFarm, addParcel } from "@/lib/app-config-store";
+import { DEFAULT_ORG_SETTINGS, loadOrgSettings, saveOrgSettings, sel, useOrgQuery } from "@/lib/org-data";
+import { friendlyError, requireOrg } from "@/lib/ops-cloud";
+import type { Farm, Parcel } from "@/types/domain";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
     meta: [
       { title: "Ajustes — Bitácora Café Pro" },
-      { name: "description", content: "Configura organización, unidades, alertas y permisos." },
+      { name: "description", content: "Fincas, parcelas, equipo, conversiones de unidades, humedad, stock bajo y plantillas de la organización." },
+      { property: "og:title", content: "Ajustes — Bitácora Café Pro" },
+      { property: "og:description", content: "Configuración de la organización." },
     ],
   }),
   component: SettingsPage,
 });
 
+async function countRefs(col: "farm_id" | "parcel_id", id: string) {
+  const [l, t] = await Promise.all([
+    supabase.from("lots").select("id", { count: "exact", head: true }).eq(col, id),
+    supabase.from("harvest_tickets").select("id", { count: "exact", head: true }).eq(col, id),
+  ]);
+  return { lotsUsing: l.count ?? 0, ticketsUsing: t.count ?? 0 };
+}
+
 function SettingsPage() {
   const role = useCurrentRole();
   const evaluator = isEvaluatorAccount(useMemberships());
-
   return (
     <>
-      <PageHeader
-        eyebrow="AJUSTES"
-        title="Ajustes"
-        subtitle="Organización, unidades, alertas, permisos y sincronización."
-        action={
-          <div className="flex flex-wrap gap-2">
-          <ConfirmAction
-            destructive
-            title="Restablecer todos los ajustes"
-            description="Se restablecen los ajustes locales de este dispositivo (organización, unidades y reglas). Fincas, parcelas y clientes guardados en la nube no se tocan."
-            confirmLabel="Restablecer"
-            trigger={
-              <Button variant="outline" className="h-10 rounded-xl">
-                <RotateCcw className="size-4" /> Restablecer todo
-              </Button>
-            }
-            onConfirm={() => { resetAll(); toast.success("Ajustes restablecidos"); }}
-          />
-          {!evaluator && <ConfirmAction
-            title="Cargar datos de demostración"
-            description="Reemplaza los lotes y registros guardados solo en este dispositivo por un conjunto de ejemplo. No se sube nada a la nube."
-            confirmLabel="Cargar demo"
-            trigger={<Button variant="outline" className="h-10 rounded-xl">Datos demo</Button>}
-            onConfirm={() => { loadDemoData(); toast.success("Datos de demostración cargados en este dispositivo"); }}
-          />}
-          <ConfirmAction
-            destructive
-            title="Vaciar datos locales"
-            description="Borra los lotes y registros guardados solo en este dispositivo para tu usuario."
-            confirmLabel="Vaciar"
-            trigger={<Button variant="outline" className="h-10 rounded-xl">Vaciar local</Button>}
-            onConfirm={() => { resetOperationalData(); toast.success("Datos locales vaciados"); }}
-          />
-          </div>
-        }
-      />
-
+      <PageHeader eyebrow="AJUSTES" title="Ajustes" subtitle="Todo se guarda para la organización elegida y se ve al instante en los demás dispositivos." />
       <Tabs defaultValue="org">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="org"><Building2 className="size-4" /> Organización</TabsTrigger>
           <TabsTrigger value="farms"><MapPin className="size-4" /> Fincas</TabsTrigger>
           <TabsTrigger value="parcels"><Leaf className="size-4" /> Parcelas</TabsTrigger>
           <TabsTrigger value="users"><Users className="size-4" /> Usuarios y roles</TabsTrigger>
-          <TabsTrigger value="units"><Scale className="size-4" /> Unidades</TabsTrigger>
-          <TabsTrigger value="moisture"><Droplets className="size-4" /> Humedad</TabsTrigger>
-          <TabsTrigger value="processes"><Workflow className="size-4" /> Procesos</TabsTrigger>
+          <TabsTrigger value="units"><Scale className="size-4" /> Conversiones</TabsTrigger>
+          <TabsTrigger value="limits"><Droplets className="size-4" /> Humedad y stock</TabsTrigger>
+          <TabsTrigger value="processes"><Workflow className="size-4" /> Plantillas</TabsTrigger>
           <TabsTrigger value="variables"><Beaker className="size-4" /> Variables</TabsTrigger>
-          <TabsTrigger value="alerts"><Bell className="size-4" /> Alertas</TabsTrigger>
-          <TabsTrigger value="public"><Eye className="size-4" /> Trazabilidad pública</TabsTrigger>
-          <TabsTrigger value="sync"><RefreshCw className="size-4" /> Sincronización</TabsTrigger>
         </TabsList>
-
         <TabsContent value="org" className="mt-4"><OrgSection /></TabsContent>
         <TabsContent value="farms" className="mt-4"><FarmsSection /></TabsContent>
         <TabsContent value="parcels" className="mt-4"><ParcelsSection /></TabsContent>
         <TabsContent value="users" className="mt-4">{evaluator ? <p className="text-sm text-muted-foreground">La cuenta de evaluación no gestiona usuarios ni roles.</p> : <><UsersRolesSection currentRole={role} /><EvaluationAccountCard /></>}</TabsContent>
         <TabsContent value="units" className="mt-4"><UnitsSection /></TabsContent>
-        <TabsContent value="moisture" className="mt-4"><MoistureSection /></TabsContent>
-        <TabsContent value="processes" className="mt-4"><ProcessTemplatesSection /></TabsContent>
+        <TabsContent value="limits" className="mt-4"><LimitsSection /></TabsContent>
+        <TabsContent value="processes" className="mt-4"><Card className="p-4 text-sm">Las plantillas se editan con versiones en el <Link to="/processes/custom-builder" className="underline">editor de plantillas</Link>.</Card></TabsContent>
         <TabsContent value="variables" className="mt-4"><VariablesSection /></TabsContent>
-        <TabsContent value="alerts" className="mt-4"><AlertRulesSection /></TabsContent>
-        <TabsContent value="public" className="mt-4"><PublicSection /></TabsContent>
-        <TabsContent value="sync" className="mt-4"><SyncSection /></TabsContent>
       </Tabs>
     </>
   );
@@ -156,36 +109,6 @@ function SaveBar({ dirty, onSave, onDiscard, extra }: { dirty: boolean; onSave: 
   );
 }
 
-// ───────────── Organización ─────────────
-
-function OrgSection() {
-  const org = useOrganization();
-  const { draft, setDraft, dirty, reset } = useDraft<Organization>(org);
-  return (
-    <Card className="p-4 space-y-3">
-      <div>
-        <Label>Nombre de la organización</Label>
-        <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>País</Label>
-          <Input value={draft.country} onChange={(e) => setDraft({ ...draft, country: e.target.value })} />
-        </div>
-        <div>
-          <Label>Región</Label>
-          <Input value={draft.region} onChange={(e) => setDraft({ ...draft, region: e.target.value })} />
-        </div>
-      </div>
-      <SaveBar
-        dirty={dirty}
-        onDiscard={reset}
-        onSave={() => { setOrganization(draft); toast.success("Organización guardada"); }}
-      />
-    </Card>
-  );
-}
-
 // ───────────── Fincas ─────────────
 
 function FarmsSection() {
@@ -195,10 +118,8 @@ function FarmsSection() {
   const update = (id: string, patch: Partial<Farm>) =>
     setDraft((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
 
-  const tryRemove = (f: Farm) => {
-    const snap = getStoreSnapshot();
-    const lotsUsing = snap.lots.filter((l) => l.farm_id === f.id).length;
-    const ticketsUsing = snap.harvestTickets.filter((t) => t.farm_id === f.id).length;
+  const tryRemove = async (f: Farm) => {
+    const { lotsUsing, ticketsUsing } = await countRefs("farm_id", f.id);
     if (lotsUsing > 0 || ticketsUsing > 0) {
       toast.error(`No se puede borrar "${f.name}": tiene ${lotsUsing} lote(s) y ${ticketsUsing} recibo(s) asociados.`);
       return;
@@ -276,10 +197,8 @@ function ParcelsSection() {
   const update = (id: string, patch: Partial<Parcel>) =>
     setDraft((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
 
-  const tryRemove = (p: Parcel) => {
-    const snap = getStoreSnapshot();
-    const lotsUsing = snap.lots.filter((l) => l.parcel_id === p.id).length;
-    const ticketsUsing = snap.harvestTickets.filter((t) => t.parcel_id === p.id).length;
+  const tryRemove = async (p: Parcel) => {
+    const { lotsUsing, ticketsUsing } = await countRefs("parcel_id", p.id);
     if (lotsUsing > 0 || ticketsUsing > 0) {
       toast.error(`No se puede borrar "${p.name}": tiene ${lotsUsing} lote(s) y ${ticketsUsing} recibo(s) asociados.`);
       return;
@@ -469,290 +388,100 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
 
 // ───────────── Unidades ─────────────
 
+// ───────────── Organización (solo lectura del registro real) ─────────────
+function OrgSection() {
+  const org = useOrgQuery<{ name: string; country: string; region: string | null; is_demo: boolean; eval_kind: string | null } | null>("s-org",
+    async (o) => (await supabase.from("organizations").select("name,country,region,is_demo,eval_kind").eq("id", o).maybeSingle()).data, [], null);
+  return (
+    <Card className="p-4 text-sm space-y-1">
+      <LoadState loading={org.loading} error={org.error} />
+      {org.data && <><div className="font-serif text-xl">{org.data.name}</div><div>{org.data.country}{org.data.region ? ` · ${org.data.region}` : ""}</div>
+        {org.data.eval_kind && <div className="text-muted-foreground">Entorno de evaluación ({org.data.eval_kind === "blank" ? "en blanco" : "con datos de ejemplo"}).</div>}</>}
+    </Card>
+  );
+}
+
+// ───────────── Conversiones de unidades por organización ─────────────
+type U = { id: string; name: string; symbol: string; unit_type: string; kg_factor: number | null; is_configurable: boolean; notes: string | null };
 function UnitsSection() {
-  const units = useUnits();
-  const { draft, setDraft, dirty, reset } = useDraft<Unit[]>(units);
-
-  const update = (id: string, patch: Partial<Unit>) =>
-    setDraft((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
-
+  const can = useCan("settings.manage");
+  const us = useOrgQuery<U[]>("s-units", (o) => sel("units", "*", o, "name", true), ["units"], []);
+  const [n, setN] = useState({ name: "", symbol: "", kg: "" });
+  const save = async (id: string, kg: string) => {
+    const { error } = await supabase.from("units").update({ kg_factor: kg === "" ? null : Number(kg) }).eq("id", id);
+    if (error) toast.error(friendlyError(error)); else toast.success("Conversión guardada");
+  };
   return (
-    <div className="space-y-3">
-      <Card className="p-0 divide-y divide-border">
-        {draft.map((u) => (
-          <div key={u.id} className="p-3 grid grid-cols-1 md:grid-cols-[1fr_120px_140px] gap-2 items-end">
-            <div>
-              <div className="font-medium text-sm">{u.name} <span className="text-muted-foreground">({u.symbol})</span></div>
-              <div className="text-xs text-muted-foreground">{u.notes}</div>
-            </div>
-            <div>
-              <Label className="text-xs">kg por unidad</Label>
-              <Input
-                type="number" step="0.01"
-                value={u.kg_factor ?? ""}
-                placeholder={u.kg_factor == null ? "Sin definir" : ""}
-                disabled={!u.is_configurable}
-                onChange={(e) => update(u.id, { kg_factor: e.target.value === "" ? null : Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">litros por unidad</Label>
-              <Input
-                type="number" step="0.01"
-                value={u.liters_factor ?? ""}
-                disabled={!u.is_configurable}
-                onChange={(e) => update(u.id, { liters_factor: e.target.value === "" ? null : Number(e.target.value) })}
-              />
-            </div>
-          </div>
-        ))}
-        <div className="p-3 text-xs text-muted-foreground">
-          Las unidades del sistema (como kg) no son configurables. Para fanega/cajuela, cada finca define su factor.
-        </div>
-      </Card>
-      <SaveBar
-        dirty={dirty}
-        onDiscard={reset}
-        onSave={() => { replaceUnits(draft); toast.success("Unidades guardadas"); }}
-      />
-    </div>
+    <Card className="p-4 space-y-3">
+      <p className="text-sm text-muted-foreground">Cuántos kg equivale cada unidad de recibo (cajuela, lata, saco…). Se usa al registrar cosecha.</p>
+      <LoadState loading={us.loading} error={us.error} empty={!us.data.length} />
+      {us.data.length > 0 && <SimpleTable head={["Unidad", "Símbolo", "Kg por unidad", ""]} rows={us.data.map((u) => [u.name, u.symbol,
+        <Input key={u.id + String(u.kg_factor)} className="w-28" inputMode="decimal" defaultValue={u.kg_factor ?? ""} disabled={!can || u.symbol === "kg"} onBlur={(e) => { if (e.target.value !== String(u.kg_factor ?? "")) void save(u.id, e.target.value); }} />,
+        can && u.symbol !== "kg" ? <Button size="sm" variant="ghost" onClick={async () => { const { error } = await supabase.from("units").delete().eq("id", u.id); if (error) toast.error(friendlyError(error)); }}><Trash2 className="size-4" /></Button> : null])} />}
+      {can && <div className="flex flex-wrap gap-2">
+        <Input className="w-40" placeholder="Nombre (Cajuela)" value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} />
+        <Input className="w-24" placeholder="Símbolo" value={n.symbol} onChange={(e) => setN({ ...n, symbol: e.target.value })} />
+        <Input className="w-28" placeholder="Kg" inputMode="decimal" value={n.kg} onChange={(e) => setN({ ...n, kg: e.target.value })} />
+        <Button disabled={!n.name || !n.symbol || !(Number(n.kg) > 0)} onClick={async () => {
+          const { error } = await supabase.from("units").insert({ organization_id: requireOrg(), name: n.name, symbol: n.symbol, unit_type: "volumen", kg_factor: Number(n.kg), is_configurable: true });
+          if (error) toast.error(friendlyError(error)); else { toast.success("Unidad agregada"); setN({ name: "", symbol: "", kg: "" }); }
+        }}><Plus className="size-4" /> Agregar</Button>
+      </div>}
+    </Card>
   );
 }
 
-// ───────────── Humedad ─────────────
-
-function MoistureSection() {
-  const settings = useAppSettings();
-  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
+// ───────────── Humedad y stock bajo ─────────────
+function LimitsSection() {
+  const can = useCan("settings.manage");
+  const st = useOrgQuery("s-lim", loadOrgSettings, ["org_settings"], DEFAULT_ORG_SETTINGS);
+  const [d, setD] = useState(DEFAULT_ORG_SETTINGS);
+  useEffect(() => { setD(st.data); }, [st.data]);
+  const dirty = JSON.stringify(d) !== JSON.stringify(st.data);
+  const valid = d.moisture_min > 0 && d.moisture_max > d.moisture_min && d.moisture_max <= 100 && d.low_stock_kg >= 0;
+  const num = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: Number(e.target.value) });
   return (
-    <Card className="p-4 space-y-3">
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label>Mínimo ideal (%)</Label>
-          <Input type="number" step="0.1" value={draft.moisture_ideal_min}
-            onChange={(e) => setDraft({ ...draft, moisture_ideal_min: Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Máximo ideal (%)</Label>
-          <Input type="number" step="0.1" value={draft.moisture_ideal_max}
-            onChange={(e) => setDraft({ ...draft, moisture_ideal_max: Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Margen de aviso (%)</Label>
-          <Input type="number" step="0.1" value={draft.moisture_warn_margin}
-            onChange={(e) => setDraft({ ...draft, moisture_warn_margin: Number(e.target.value) })} />
-        </div>
+    <Card className="p-4 space-y-3 max-w-xl">
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Humedad mínima %</Label><Input inputMode="decimal" value={d.moisture_min} onChange={num("moisture_min")} disabled={!can} /></div>
+        <div><Label>Humedad máxima %</Label><Input inputMode="decimal" value={d.moisture_max} onChange={num("moisture_max")} disabled={!can} /></div>
+        <div><Label>Umbral de stock bajo (kg libres)</Label><Input inputMode="decimal" value={d.low_stock_kg} onChange={num("low_stock_kg")} disabled={!can} /></div>
+        <div><Label>Peso por saco (kg)</Label><Input inputMode="decimal" value={d.default_sack_kg} onChange={num("default_sack_kg")} disabled={!can} /></div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Fuera del rango ideal se genera una alerta de humedad. Por encima del margen, se considera crítico.
-      </p>
-      <SaveBar
-        dirty={dirty}
-        onDiscard={reset}
-        onSave={() => { setSettings(draft); toast.success("Humedad guardada"); }}
-        extra={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDraft({
-              ...draft,
-              moisture_ideal_min: DEFAULT_SETTINGS.moisture_ideal_min,
-              moisture_ideal_max: DEFAULT_SETTINGS.moisture_ideal_max,
-              moisture_warn_margin: DEFAULT_SETTINGS.moisture_warn_margin,
-            })}
-          >
-            <RotateCcw className="size-4" /> Valores por defecto
-          </Button>
-        }
-      />
+      <p className="text-xs text-muted-foreground">Humedad por debajo del mínimo y lotes liberados con menos kg libres que el umbral generan alertas automáticas.</p>
+      {!valid && <p className="text-xs text-destructive">Revisa los valores: el máximo debe ser mayor que el mínimo.</p>}
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" disabled={!dirty} onClick={() => setD(st.data)}><Undo2 className="size-4" /> Descartar</Button>
+        <Button size="sm" disabled={!dirty || !can || !valid} onClick={async () => { try { await saveOrgSettings(requireOrg(), d); toast.success("Ajustes guardados"); } catch (e) { toast.error(friendlyError(e)); } }}><Save className="size-4" /> Guardar</Button>
+      </div>
     </Card>
   );
 }
 
-// ───────────── Procesos / Variables ─────────────
-
-function ProcessTemplatesSection() {
-  return (
-    <Card className="p-0 divide-y divide-border">
-      {mockDb.processTemplates.map((t) => (
-        <div key={t.id} className="p-3 text-sm">
-          <div className="font-medium">{t.name}</div>
-          <div className="text-xs text-muted-foreground">{t.description ?? "—"}</div>
-        </div>
-      ))}
-    </Card>
-  );
-}
-
+// ───────────── Variables ─────────────
+type VD = { id: string; name: string; unit: string | null; value_type: string; category: string; active: boolean; config: { min?: number; max?: number } };
 function VariablesSection() {
-  const defs = useStore((s) => s.variableDefinitions);
-  return (
-    <Card className="p-0 divide-y divide-border">
-      {defs.map((v) => (
-        <div key={v.id} className="p-3 text-sm">
-          <div className="font-medium">{v.name} <span className="text-muted-foreground text-xs">· {v.category}</span></div>
-          <div className="text-xs text-muted-foreground">
-            {v.unit ?? "—"} · ideal {v.ideal_min ?? "—"}–{v.ideal_max ?? "—"}
-            {v.alert_if_missing && " · alerta si falta"}
-            {v.alert_if_out_of_range && " · alerta fuera de rango"}
-          </div>
-        </div>
-      ))}
-    </Card>
-  );
-}
-
-// ───────────── Reglas de alertas ─────────────
-
-const ALERT_RULE_GROUPS: { title: string; rules: { key: string; label: string }[] }[] = [
-  { title: "Tiempo", rules: [
-    { key: "phase_near_max", label: "Fase cerca del máximo" },
-    { key: "phase_overdue", label: "Fase fuera de tiempo" },
-    { key: "lot_no_movement", label: "Lote sin movimiento" },
-    { key: "lot_missing_variable", label: "Lote sin variable requerida" },
-    { key: "drying_too_long", label: "Secado más largo de lo esperado" },
-  ]},
-  { title: "Calidad", rules: [
-    { key: "moisture_above", label: "Humedad sobre rango" },
-    { key: "moisture_below", label: "Humedad bajo rango" },
-    { key: "ph_out_of_range", label: "pH fuera de rango" },
-    { key: "temp_out_of_range", label: "Temperatura fuera de rango" },
-    { key: "water_activity_high", label: "Actividad de agua alta" },
-    { key: "quality_pending", label: "Calidad pendiente" },
-  ]},
-  { title: "Inventario", rules: [
-    { key: "low_inventory", label: "Inventario disponible bajo" },
-    { key: "reservation_near_expiry", label: "Reserva por vencer" },
-    { key: "reservation_expired", label: "Reserva vencida" },
-    { key: "over_reservation", label: "Intento de sobre-reserva" },
-    { key: "blocked_for_sale", label: "Café bloqueado para venta" },
-  ]},
-  { title: "Proceso", rules: [
-    { key: "missing_required_variable", label: "Variable requerida faltante" },
-    { key: "phase_finished_outside", label: "Fase finalizada fuera de rango" },
-    { key: "experimental_deviation", label: "Proceso experimental con alta desviación" },
-    { key: "waste_above_avg", label: "Mermas sobre promedio histórico" },
-  ]},
-];
-
-function AlertRulesSection() {
-  const settings = useAppSettings();
-  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
-  return (
-    <div className="space-y-4">
-      {ALERT_RULE_GROUPS.map((g) => (
-        <Card key={g.title} className="p-4">
-          <h3 className="font-semibold text-sm mb-3">{g.title}</h3>
-          <div className="space-y-2">
-            {g.rules.map((r) => (
-              <div key={r.key} className="flex items-center justify-between">
-                <span className="text-sm">{r.label}</span>
-                <Switch
-                  checked={draft.alert_rules[r.key] ?? true}
-                  onCheckedChange={(v) =>
-                    setDraft({ ...draft, alert_rules: { ...draft.alert_rules, [r.key]: v } })
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        </Card>
-      ))}
-      <SaveBar
-        dirty={dirty}
-        onDiscard={reset}
-        onSave={() => { setSettings(draft); toast.success("Reglas de alertas guardadas"); }}
-        extra={
-          <Button variant="ghost" size="sm" onClick={() => { resetSettings(); toast.success("Reglas restablecidas"); }}>
-            <RotateCcw className="size-4" /> Restablecer reglas
-          </Button>
-        }
-      />
-    </div>
-  );
-}
-
-// ───────────── Trazabilidad pública ─────────────
-
-function PublicSection() {
-  const settings = useAppSettings();
-  const { draft, setDraft, dirty, reset } = useDraft<AppSettings>(settings);
-  const fields: { key: keyof AppSettings["public_default_visible"]; label: string }[] = [
-    { key: "availability", label: "Disponibilidad" },
-    { key: "moisture", label: "Humedad" },
-    { key: "quality", label: "Calidad" },
-    { key: "tasting_notes", label: "Notas de cata" },
-    { key: "photos", label: "Fotos" },
-    { key: "process_details", label: "Detalles del proceso" },
-  ];
+  const can = useCan("process_template.manage");
+  const vs = useOrgQuery<VD[]>("s-vars", (o) => sel("variable_definitions", "*", o, "name", true), ["variable_definitions"], []);
+  const [n, setN] = useState({ name: "", unit: "", category: "proceso", min: "", max: "" });
   return (
     <Card className="p-4 space-y-3">
-      <p className="text-xs text-muted-foreground">Valores por defecto para la ficha pública de cada lote.</p>
-      {fields.map((f) => (
-        <div key={f.key} className="flex items-center justify-between">
-          <span className="text-sm">{f.label}</span>
-          <Switch
-            checked={draft.public_default_visible[f.key]}
-            onCheckedChange={(v) =>
-              setDraft({ ...draft, public_default_visible: { ...draft.public_default_visible, [f.key]: v } })
-            }
-          />
-        </div>
-      ))}
-      <SaveBar
-        dirty={dirty}
-        onDiscard={reset}
-        onSave={() => { setSettings(draft); toast.success("Trazabilidad pública guardada"); }}
-      />
+      <LoadState loading={vs.loading} error={vs.error} empty={!vs.data.length} emptyText="Sin variables propias. Las fases de plantilla ya traen las suyas." />
+      {vs.data.length > 0 && <SimpleTable head={["Variable", "Unidad", "Categoría", "Rango", "Activa"]} rows={vs.data.map((v) => [v.name, v.unit ?? "—", v.category,
+        v.config?.min != null ? `${v.config.min}–${v.config.max}` : "—",
+        <input type="checkbox" checked={v.active} disabled={!can} onChange={async (e) => { const { error } = await supabase.from("variable_definitions").update({ active: e.target.checked }).eq("id", v.id); if (error) toast.error(friendlyError(error)); }} />])} />}
+      {can && <div className="flex flex-wrap gap-2">
+        <Input className="w-40" placeholder="Nombre" value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} />
+        <Input className="w-20" placeholder="Unidad" value={n.unit} onChange={(e) => setN({ ...n, unit: e.target.value })} />
+        <select className={selectCls + " w-36"} value={n.category} onChange={(e) => setN({ ...n, category: e.target.value })}>{["proceso", "calidad", "secado", "ambiente"].map((c) => <option key={c}>{c}</option>)}</select>
+        <Input className="w-20" placeholder="Mín" value={n.min} onChange={(e) => setN({ ...n, min: e.target.value })} />
+        <Input className="w-20" placeholder="Máx" value={n.max} onChange={(e) => setN({ ...n, max: e.target.value })} />
+        <Button disabled={!n.name} onClick={async () => {
+          const { error } = await supabase.from("variable_definitions").insert({ organization_id: requireOrg(), name: n.name, unit: n.unit || null, value_type: "number", category: n.category,
+            config: { min: n.min === "" ? undefined : Number(n.min), max: n.max === "" ? undefined : Number(n.max) }, active: true });
+          if (error) toast.error(friendlyError(error)); else { toast.success("Variable agregada"); setN({ ...n, name: "", unit: "", min: "", max: "" }); }
+        }}><Plus className="size-4" /> Agregar</Button>
+      </div>}
     </Card>
-  );
-}
-
-// ───────────── Sincronización ─────────────
-
-function SyncSection() {
-  const { items, online } = useSyncQueue();
-  const pending = items.filter((i) => i.status === "pending" || i.status === "syncing").length;
-  const failed = items.filter((i) => i.status === "failed").length;
-
-  return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold">Estado de sincronización</div>
-            <div className="text-xs text-muted-foreground">
-              {online ? "En línea" : "Sin conexión"} · {pending} pendientes · {failed} fallidos
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => { clearSynced(); toast.success("Limpieza realizada"); }}>
-            Limpiar sincronizados
-          </Button>
-        </div>
-      </Card>
-
-      <Card className="p-0 divide-y divide-border">
-        <div className="p-3 text-sm font-semibold">Registros pendientes de sincronizar</div>
-        {items.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground text-center">
-            No hay registros en cola. Cuando trabajes sin conexión, aparecerán aquí para sincronizarse luego.
-          </div>
-        ) : (
-          items.map((i) => (
-            <div key={i.id} className="p-3 grid grid-cols-1 md:grid-cols-[1fr_120px_120px_auto] items-center gap-2 text-sm">
-              <div>
-                <div className="font-medium">{i.entity} · {i.action}</div>
-                <div className="text-xs text-muted-foreground">{new Date(i.created_at).toLocaleString("es")}</div>
-              </div>
-              <div className="text-xs uppercase">{i.status}</div>
-              <div className="text-xs text-muted-foreground">intentos: {i.attempts}</div>
-              <Button size="sm" variant="outline" onClick={() => retrySync(i.id)} disabled={i.status === "syncing"}>
-                Reintentar
-              </Button>
-            </div>
-          ))
-        )}
-      </Card>
-    </div>
   );
 }
