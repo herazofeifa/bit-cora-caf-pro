@@ -17,4 +17,5 @@ for f in $(ls "$ROOT"/drizzle/migrations/*.sql | sort); do
   psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"
 done
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/core.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
+psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/closing.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
 bash "$ROOT/tests/db/concurrency.sh"
