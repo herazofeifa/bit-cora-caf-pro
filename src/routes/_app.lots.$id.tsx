@@ -20,7 +20,6 @@ import {
   Trash2,
   ClipboardList,
   Plus,
-  Move,
   Boxes,
   Pause,
   Play,
@@ -320,7 +319,6 @@ function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | 
   );
 }
 
-// "Move" icon kept for compatibility with old imports
 
 // ───────────── Resumen tab ─────────────
 
