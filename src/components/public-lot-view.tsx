@@ -6,7 +6,9 @@ export interface PublicLot {
   farm: { name: string; region: string | null; country: string; altitude_m: number | null } | null;
   parcel: { name: string; altitude_m: number | null } | null; producer: string | null;
   harvest: { first: string | null; last: string | null; season: string | null } | null;
-  phases: { name: string; started_at: string; ended_at: string | null }[];
+  phases: { name: string; started_at: string; ended_at: string | null; inherited?: boolean }[];
+  origins?: { farm: string | null; region: string | null; country: string; parcel: string | null; altitude_m: number | null; producer: string | null }[];
+  is_blend?: boolean;
   measurements: { label: string; value: number; unit: string | null; at: string }[] | null;
   moisture: number | null; quality: { score: number | null; notes: string | null; at: string } | null;
   files: { id: string; kind: string; title: string; mime: string; url?: string }[]; exported_at: string | null; generated_at?: string;
@@ -28,6 +30,9 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
       </header>
       {photos.length > 0 && <div className="grid grid-cols-2 gap-2">{photos.map((p) => <img key={p.id} src={p.url} alt={p.title} className="rounded-lg aspect-square object-cover w-full" loading="lazy" />)}</div>}
       {lot.story && <p className="font-serif text-lg leading-relaxed">{lot.story}</p>}
+      {(lot.origins?.length ?? 0) > 1 && (
+        <section className="rounded-xl border border-border bg-card p-4"><h2 className="font-serif text-xl mb-2">{lot.is_blend ? "Mezcla de varios orígenes" : "Orígenes"}</h2>
+          <ul className="text-sm space-y-1">{lot.origins!.map((o, i) => <li key={i}>{[o.farm, o.parcel, o.region, o.country].filter(Boolean).join(" · ")}{o.altitude_m ? ` · ${o.altitude_m} m s. n. m.` : ""}{o.producer ? ` · ${o.producer}` : ""}</li>)}</ul></section>)}
       <div className="rounded-xl border border-border bg-card p-4">
         <Row icon={MapPin} label="Finca" value={lot.farm && `${lot.farm.name}${lot.farm.region ? `, ${lot.farm.region}` : ""} · ${lot.farm.country}`} />
         <Row icon={Sprout} label="Parcela" value={lot.parcel?.name} />
@@ -41,7 +46,7 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
       {lot.phases.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Proceso</h2>
           <ol className="border-l border-border ml-2 space-y-3">{lot.phases.map((p, i) => (
-            <li key={i} className="pl-4"><div className="font-medium">{p.name}</div>
+            <li key={i} className="pl-4"><div className="font-medium">{p.name}{p.inherited && <span className="text-xs text-muted-foreground"> · lote de origen</span>}</div>
               <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleDateString()}{p.ended_at ? ` – ${new Date(p.ended_at).toLocaleDateString()}` : " · en curso"}</div></li>))}</ol>
         </section>)}
       {lot.measurements && lot.measurements.length > 0 && (
