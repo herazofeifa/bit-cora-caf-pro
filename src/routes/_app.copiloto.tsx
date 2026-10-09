@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_app/copiloto")({
 });
 
 type Msg = { role: "user" | "assistant"; content: string; meta?: string; error?: boolean };
-const EXAMPLES = ["¿Cuánto café libre tengo por variedad?", "¿Qué procesos están atrasados?", "¿Cuántos kg entregué el mes pasado?",
+const EXAMPLES = ["¿Cuánto café libre tengo por variedad?", "¿Cuántos sacos de Geisha hay disponibles?", "¿Qué procesos están atrasados?", "¿Cuántos kg entregué el mes pasado?",
   "¿Cuál es mi precio promedio ponderado este año?", "Resume las compras del cliente Tostador Demo"];
 
 // Minimal typing for the browser speech API (not available in every browser).
