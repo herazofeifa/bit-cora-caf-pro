@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_app/reports")({
 });
 
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
-const yearStart = `${new Date().getFullYear()}-01-01`;
+const yearStart = `${crDay().slice(0, 4)}-01-01`;
 
 function CloudReports() {
   const cloud = useCloudState(); const farms = useFarms(); const role = useCurrentRole();
