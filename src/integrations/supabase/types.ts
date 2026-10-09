@@ -1610,6 +1610,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _assert_no_open_phase: { Args: { _lots: string[] }; Returns: undefined }
       _assert_qty: { Args: { _label?: string; _q: number }; Returns: undefined }
       _lock_reservation: {
         Args: { _id: string }
@@ -2084,6 +2085,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lot_lineage: { Args: { _lot: string }; Returns: Json }
       merge_lots: {
         Args: { _lots: string[]; _name: string }
         Returns: {
