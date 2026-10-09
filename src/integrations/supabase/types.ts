@@ -116,6 +116,35 @@ export type Database = {
           },
         ]
       }
+      copilot_usage: {
+        Row: {
+          created_at: string
+          id: number
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copilot_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           contact_name: string | null
@@ -1697,6 +1726,7 @@ export type Database = {
       _seed_eval_base: { Args: { _org: string }; Returns: undefined }
       _seed_eval_sample: { Args: { _org: string }; Returns: Json }
       _seed_process_templates: { Args: { _org: string }; Returns: undefined }
+      _valid_quality_data: { Args: { _d: Json }; Returns: Json }
       adjust_inventory: {
         Args: { _delta: number; _lot: string; _reason: string }
         Returns: {
@@ -1835,6 +1865,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      copilot_take_quota: { Args: { _org: string }; Returns: Json }
       create_demo_environment: { Args: never; Returns: string }
       create_lot: {
         Args: {
