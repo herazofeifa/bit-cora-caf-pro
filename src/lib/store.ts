@@ -85,8 +85,9 @@ function assignState(next: Partial<State> & { qualitySamples?: unknown[]; public
     (state as unknown as Record<string, unknown>)[k] = Array.isArray(v) ? v : base[k];
   }
   (state as State & { qualitySamples?: unknown[] }).qualitySamples = Array.isArray(next.qualitySamples) ? next.qualitySamples : [];
-  for (const key of Object.keys(publicProfiles)) delete publicProfiles[key];
-  Object.assign(publicProfiles, next.publicProfiles ?? {});
+  const pp = profilesHolder();
+  for (const key of Object.keys(pp)) delete pp[key];
+  Object.assign(pp, next.publicProfiles ?? {});
 }
 
 /** Loads the local cache of the signed-in user (or clears everything on sign-out). */
@@ -1043,11 +1044,6 @@ export interface CreateQualitySampleInput {
   attachment_urls?: string[];
 }
 
-if (!(state as State & { qualitySamples?: import("@/types/domain").QualitySample[] }).qualitySamples) {
-  (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples = [
-    ...mockDb.qualitySamples,
-  ];
-}
 
 export function getQualitySamples(): import("@/types/domain").QualitySample[] {
   return (state as State & { qualitySamples: import("@/types/domain").QualitySample[] }).qualitySamples;
@@ -1201,11 +1197,15 @@ export function updateQualitySampleStatus(id: string, status: import("@/types/do
 
 // ───────────── Lot public profiles (privacy-controlled) ─────────────
 
-const publicProfiles: Record<string, LotPublicProfile> =
-  (persistedOps.publicProfiles as Record<string, LotPublicProfile> | undefined) ?? {};
+const publicProfiles: Record<string, LotPublicProfile> = profilesHolder();
 
 function getPublicProfilesForPersist(): Record<string, LotPublicProfile> {
-  try { return publicProfiles; } catch { return {}; }
+  return profilesHolder();
+}
+
+function profilesHolder(): Record<string, LotPublicProfile> {
+  const g = globalThis as { __bcpProfiles?: Record<string, LotPublicProfile> };
+  return (g.__bcpProfiles ??= {});
 }
 
 function defaultPublicProfile(lotId: string): LotPublicProfile {
