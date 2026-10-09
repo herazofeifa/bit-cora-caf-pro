@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const session = useSession();
+  const navigate = useNavigate();
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
