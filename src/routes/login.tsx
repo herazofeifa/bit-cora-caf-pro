@@ -26,8 +26,6 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const session = useSession();
-  const [mode, setMode] = useState<"in" | "up">("in");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,14 +37,8 @@ function LoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        await makeFirst({ data: { email, password, full_name: name } });
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo entrar");
     } finally {
@@ -70,17 +62,11 @@ function LoginPage() {
           </div>
           <h1 className="text-2xl font-semibold">Bitácora Café Pro</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "in" ? "Tu bitácora digital de campo y beneficio" : "Configurá el primer administrador"}
+            Tu bitácora digital de campo y beneficio
           </p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          {mode === "up" && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl" required />
-            </div>
-          )}
           <div className="space-y-2">
             <Label htmlFor="email">Correo</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" className="h-12 rounded-xl" required />
@@ -90,13 +76,11 @@ function LoginPage() {
             <Input id="password" type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="h-12 rounded-xl" required />
           </div>
           <Button type="submit" disabled={busy} className="w-full h-12 rounded-xl text-base">
-            {mode === "in" ? "Entrar" : "Crear administrador"}
+            Entrar
           </Button>
           <div className="flex items-center justify-between text-sm">
             <span className="text-xs text-muted-foreground">Acceso solo con cuenta asignada</span>
-            {mode === "in" && (
-              <button type="button" className="text-muted-foreground" onClick={forgot}>¿Olvidaste tu contraseña?</button>
-            )}
+            <button type="button" className="text-muted-foreground" onClick={forgot}>¿Olvidaste tu contraseña?</button>
           </div>
         </form>
       </div>
