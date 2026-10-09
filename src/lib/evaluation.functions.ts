@@ -83,12 +83,18 @@ export const provisionEvaluator = createServerFn({ method: "POST" })
     const uid = created.user.id;
     let result: { blank_org: string; sample_org: string; created: boolean; sample_files: { id: string; path: string; kind: string }[] };
     try {
-      const { error: urErr } = await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: "consulta" });
+      // handle_new_user already adds the 'consulta' row; keep this idempotent so it never collides.
+      const { error: urErr } = await supabaseAdmin.from("user_roles").upsert({ user_id: uid, role: "consulta" }, { onConflict: "user_id,role", ignoreDuplicates: true });
       if (urErr) throw new Error(urErr.message);
       const { data: res, error: pErr } = await ctx.supabase.rpc("provision_evaluation", { _source_org: data.organizationId, _evaluator: uid });
       if (pErr) throw new Error(pErr.message);
+      // A concurrent request may have won: only keep this account if it is the effective evaluator.
+      const { data: eff } = await ctx.supabase.from("evaluation_spaces").select("evaluator_user").eq("source_org", data.organizationId).maybeSingle();
+      if (eff?.evaluator_user !== uid) throw new Error("Otra solicitud ya creó la cuenta evaluadora");
       result = res;
     } catch (e) {
+      // Compensate ONLY the account created by this request (never a previous evaluator).
+      await supabaseAdmin.from("memberships").delete().eq("user_id", uid);
       await supabaseAdmin.from("user_roles").delete().eq("user_id", uid);
       await supabaseAdmin.auth.admin.deleteUser(uid);
       console.error("provisionEvaluator rolled back", e);
