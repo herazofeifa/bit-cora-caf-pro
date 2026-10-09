@@ -150,7 +150,7 @@ begin
   perform pg_temp.expect_fail(format('select public.create_reservation(%L, %L, 1)', l2.id, cust), '%Permiso denegado%');
   perform pg_temp.expect_fail(format('insert into public.customers (organization_id, name) values (%L, %L)', A, 'X'), '%row-level security%');
   perform pg_temp.expect_fail(format('update public.lots set qty_current_kg = 9999 where id = %L', l.id), '%permission denied%');
-  perform pg_temp.eq('consulta can read own org lots', (select count(*) from public.lots where organization_id = A) > 0 then 1 else 0 end, 1);
+  perform pg_temp.eq('consulta can read own org lots', case when (select count(*) from public.lots where organization_id = A) > 0 then 1 else 0 end, 1);
 
   -- Isolation: org B admin sees nothing of A and cannot act on it
   perform pg_temp.as_user(adminB);
