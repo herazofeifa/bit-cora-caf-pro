@@ -26,7 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createCustomer, deleteCustomer, updateCustomer, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import { cloudCreateCustomer, cloudDeleteCustomer, cloudUpdateCustomer, useCloudState } from "@/lib/cloud";
 import { customerTypeLabel } from "@/lib/helpers";
 import type { Customer, CustomerType } from "@/types/domain";
 
@@ -110,8 +111,13 @@ function CustomersPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => {
-                      try { deleteCustomer(c.id); toast.success("Cliente eliminado."); }
-                      catch (e) { toast.error((e as Error).message); }
+                      if (reservations.some((r) => r.customer_id === c.id && (r.status === "reservada" || r.status === "confirmada" || r.status === "activa"))) {
+                        toast.error("Este cliente tiene reservas activas.");
+                        return;
+                      }
+                      cloudDeleteCustomer(c.id)
+                        .then(() => toast.success("Cliente eliminado."))
+                        .catch((e: Error) => toast.error(e.message));
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -172,14 +178,21 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
       country: data.country || null,
       notes: data.notes || null,
     };
-    if (initial) {
-      updateCustomer(initial.id, payload);
-      toast.success("Cliente actualizado");
-    } else {
-      createCustomer(payload);
-      toast.success("Cliente creado");
+    setSaving(true);
+    try {
+      if (initial) {
+        await cloudUpdateCustomer(initial.id, payload);
+        toast.success("Cliente actualizado");
+      } else {
+        await cloudCreateCustomer(payload);
+        toast.success("Cliente creado");
+      }
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
     }
-    onClose();
   }
 
   return (
