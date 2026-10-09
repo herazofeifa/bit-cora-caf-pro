@@ -9,58 +9,49 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
-import { Route as AppAssistantRouteImport } from './routes/_app.assistant'
-import { Route as AppAuditRouteImport } from './routes/_app.audit'
-import { Route as AppCopilotoRouteImport } from './routes/_app.copiloto'
-import { Route as AppCustomersRouteImport } from './routes/_app.customers'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppFreeCoffeeRouteImport } from './routes/_app.free-coffee'
-import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
-import { Route as AppIntakeRouteImport } from './routes/_app.intake'
-import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
-import { Route as AppLotsRouteImport } from './routes/_app.lots'
-import { Route as AppProcessControlRouteImport } from './routes/_app.process-control'
-import { Route as AppProcessesRouteImport } from './routes/_app.processes'
-import { Route as AppQualityRouteImport } from './routes/_app.quality'
-import { Route as AppReportsRouteImport } from './routes/_app.reports'
-import { Route as AppReservationsRouteImport } from './routes/_app.reservations'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppTraceabilityRouteImport } from './routes/_app.traceability'
-import { Route as AppVariablesRouteImport } from './routes/_app.variables'
-import { Route as AppWasteRouteImport } from './routes/_app.waste'
-import { Route as RTokenRouteImport } from './routes/r.$token'
-import { Route as STokenRouteImport } from './routes/s.$token'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as TTokenRouteImport } from './routes/t.$token'
-import { Route as AppHarvestNewRouteImport } from './routes/_app.harvest.new'
-import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
-import { Route as AppLotsIndexRouteImport } from './routes/_app.lots.index'
-import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
+import { Route as STokenRouteImport } from './routes/s.$token'
+import { Route as RTokenRouteImport } from './routes/r.$token'
+import { Route as AppWasteRouteImport } from './routes/_app.waste'
+import { Route as AppVariablesRouteImport } from './routes/_app.variables'
+import { Route as AppTraceabilityRouteImport } from './routes/_app.traceability'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppReservationsRouteImport } from './routes/_app.reservations'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppQualityRouteImport } from './routes/_app.quality'
+import { Route as AppProcessesRouteImport } from './routes/_app.processes'
+import { Route as AppProcessControlRouteImport } from './routes/_app.process-control'
+import { Route as AppLotsRouteImport } from './routes/_app.lots'
+import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
+import { Route as AppIntakeRouteImport } from './routes/_app.intake'
+import { Route as AppHarvestRouteImport } from './routes/_app.harvest'
+import { Route as AppFreeCoffeeRouteImport } from './routes/_app.free-coffee'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppCopilotoRouteImport } from './routes/_app.copiloto'
+import { Route as AppAuditRouteImport } from './routes/_app.audit'
+import { Route as AppAssistantRouteImport } from './routes/_app.assistant'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppOperacionIndexRouteImport } from './routes/_app.operacion.index'
-import { Route as AppOperacionCosechaRouteImport } from './routes/_app.operacion.cosecha'
-import { Route as AppOperacionReportesRouteImport } from './routes/_app.operacion.reportes'
-import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
-import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
+import { Route as AppLotsIndexRouteImport } from './routes/_app.lots.index'
 import { Route as PublicLotCodeRouteImport } from './routes/public.lot.$code'
+import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
+import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
+import { Route as AppOperacionReportesRouteImport } from './routes/_app.operacion.reportes'
+import { Route as AppOperacionCosechaRouteImport } from './routes/_app.operacion.cosecha'
+import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
+import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
+import { Route as AppHarvestNewRouteImport } from './routes/_app.harvest.new'
 import { Route as AppOperacionLoteIdRouteImport } from './routes/_app.operacion.lote.$id'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -68,119 +59,18 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppAlertsRoute = AppAlertsRouteImport.update({
-  id: '/alerts',
-  path: '/alerts',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAssistantRoute = AppAssistantRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAuditRoute = AppAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCopilotoRoute = AppCopilotoRouteImport.update({
-  id: '/copiloto',
-  path: '/copiloto',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCustomersRoute = AppCustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFreeCoffeeRoute = AppFreeCoffeeRouteImport.update({
-  id: '/free-coffee',
-  path: '/free-coffee',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHarvestRoute = AppHarvestRouteImport.update({
-  id: '/harvest',
-  path: '/harvest',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppIntakeRoute = AppIntakeRouteImport.update({
-  id: '/intake',
-  path: '/intake',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppInventoryRoute = AppInventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLotsRoute = AppLotsRouteImport.update({
-  id: '/lots',
-  path: '/lots',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProcessControlRoute = AppProcessControlRouteImport.update({
-  id: '/process-control',
-  path: '/process-control',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProcessesRoute = AppProcessesRouteImport.update({
-  id: '/processes',
-  path: '/processes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppQualityRoute = AppQualityRouteImport.update({
-  id: '/quality',
-  path: '/quality',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReportsRoute = AppReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReservationsRoute = AppReservationsRouteImport.update({
-  id: '/reservations',
-  path: '/reservations',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTraceabilityRoute = AppTraceabilityRouteImport.update({
-  id: '/traceability',
-  path: '/traceability',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppVariablesRoute = AppVariablesRouteImport.update({
-  id: '/variables',
-  path: '/variables',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppWasteRoute = AppWasteRouteImport.update({
-  id: '/waste',
-  path: '/waste',
-  getParentRoute: () => AppRoute,
-} as any)
-const RTokenRoute = RTokenRouteImport.update({
-  id: '/r/$token',
-  path: '/r/$token',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const STokenRoute = STokenRouteImport.update({
-  id: '/s/$token',
-  path: '/s/$token',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TTokenRoute = TTokenRouteImport.update({
@@ -188,29 +78,144 @@ const TTokenRoute = TTokenRouteImport.update({
   path: '/t/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppHarvestNewRoute = AppHarvestNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AppHarvestRoute,
+const STokenRoute = STokenRouteImport.update({
+  id: '/s/$token',
+  path: '/s/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppIntakeNewRoute = AppIntakeNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AppIntakeRoute,
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppWasteRoute = AppWasteRouteImport.update({
+  id: '/waste',
+  path: '/waste',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVariablesRoute = AppVariablesRouteImport.update({
+  id: '/variables',
+  path: '/variables',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTraceabilityRoute = AppTraceabilityRouteImport.update({
+  id: '/traceability',
+  path: '/traceability',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReservationsRoute = AppReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQualityRoute = AppQualityRouteImport.update({
+  id: '/quality',
+  path: '/quality',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProcessesRoute = AppProcessesRouteImport.update({
+  id: '/processes',
+  path: '/processes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProcessControlRoute = AppProcessControlRouteImport.update({
+  id: '/process-control',
+  path: '/process-control',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLotsRoute = AppLotsRouteImport.update({
+  id: '/lots',
+  path: '/lots',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryRoute = AppInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntakeRoute = AppIntakeRouteImport.update({
+  id: '/intake',
+  path: '/intake',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHarvestRoute = AppHarvestRouteImport.update({
+  id: '/harvest',
+  path: '/harvest',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFreeCoffeeRoute = AppFreeCoffeeRouteImport.update({
+  id: '/free-coffee',
+  path: '/free-coffee',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCustomersRoute = AppCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCopilotoRoute = AppCopilotoRouteImport.update({
+  id: '/copiloto',
+  path: '/copiloto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOperacionIndexRoute = AppOperacionIndexRouteImport.update({
+  id: '/operacion/',
+  path: '/operacion/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppLotsIndexRoute = AppLotsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppLotsRoute,
 } as any)
-const AppLotsIdRoute = AppLotsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppLotsRoute,
+const PublicLotCodeRoute = PublicLotCodeRouteImport.update({
+  id: '/public/lot/$code',
+  path: '/public/lot/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppOperacionIndexRoute = AppOperacionIndexRouteImport.update({
-  id: '/operacion/',
-  path: '/operacion/',
+const AppVariablesNewRoute = AppVariablesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppVariablesRoute,
+} as any)
+const AppVariablesLogRoute = AppVariablesLogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => AppVariablesRoute,
+} as any)
+const AppOperacionReportesRoute = AppOperacionReportesRouteImport.update({
+  id: '/operacion/reportes',
+  path: '/operacion/reportes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOperacionCosechaRoute = AppOperacionCosechaRouteImport.update({
@@ -218,25 +223,20 @@ const AppOperacionCosechaRoute = AppOperacionCosechaRouteImport.update({
   path: '/operacion/cosecha',
   getParentRoute: () => AppRoute,
 } as any)
-const AppOperacionReportesRoute = AppOperacionReportesRouteImport.update({
-  id: '/operacion/reportes',
-  path: '/operacion/reportes',
-  getParentRoute: () => AppRoute,
+const AppLotsIdRoute = AppLotsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppLotsRoute,
 } as any)
-const AppVariablesLogRoute = AppVariablesLogRouteImport.update({
-  id: '/log',
-  path: '/log',
-  getParentRoute: () => AppVariablesRoute,
-} as any)
-const AppVariablesNewRoute = AppVariablesNewRouteImport.update({
+const AppIntakeNewRoute = AppIntakeNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => AppVariablesRoute,
+  getParentRoute: () => AppIntakeRoute,
 } as any)
-const PublicLotCodeRoute = PublicLotCodeRouteImport.update({
-  id: '/public/lot/$code',
-  path: '/public/lot/$code',
-  getParentRoute: () => rootRouteImport,
+const AppHarvestNewRoute = AppHarvestNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppHarvestRoute,
 } as any)
 const AppOperacionLoteIdRoute = AppOperacionLoteIdRouteImport.update({
   id: '/operacion/lote/$id',
@@ -502,25 +502,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app': {
-      id: '/_app'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -530,165 +516,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/alerts': {
-      id: '/_app/alerts'
-      path: '/alerts'
-      fullPath: '/alerts'
-      preLoaderRoute: typeof AppAlertsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/assistant': {
-      id: '/_app/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AppAssistantRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/audit': {
-      id: '/_app/audit'
-      path: '/audit'
-      fullPath: '/audit'
-      preLoaderRoute: typeof AppAuditRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/copiloto': {
-      id: '/_app/copiloto'
-      path: '/copiloto'
-      fullPath: '/copiloto'
-      preLoaderRoute: typeof AppCopilotoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/customers': {
-      id: '/_app/customers'
-      path: '/customers'
-      fullPath: '/customers'
-      preLoaderRoute: typeof AppCustomersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/free-coffee': {
-      id: '/_app/free-coffee'
-      path: '/free-coffee'
-      fullPath: '/free-coffee'
-      preLoaderRoute: typeof AppFreeCoffeeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/harvest': {
-      id: '/_app/harvest'
-      path: '/harvest'
-      fullPath: '/harvest'
-      preLoaderRoute: typeof AppHarvestRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/intake': {
-      id: '/_app/intake'
-      path: '/intake'
-      fullPath: '/intake'
-      preLoaderRoute: typeof AppIntakeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/inventory': {
-      id: '/_app/inventory'
-      path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof AppInventoryRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/lots': {
-      id: '/_app/lots'
-      path: '/lots'
-      fullPath: '/lots'
-      preLoaderRoute: typeof AppLotsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/process-control': {
-      id: '/_app/process-control'
-      path: '/process-control'
-      fullPath: '/process-control'
-      preLoaderRoute: typeof AppProcessControlRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/processes': {
-      id: '/_app/processes'
-      path: '/processes'
-      fullPath: '/processes'
-      preLoaderRoute: typeof AppProcessesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/quality': {
-      id: '/_app/quality'
-      path: '/quality'
-      fullPath: '/quality'
-      preLoaderRoute: typeof AppQualityRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/reports': {
-      id: '/_app/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof AppReportsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/reservations': {
-      id: '/_app/reservations'
-      path: '/reservations'
-      fullPath: '/reservations'
-      preLoaderRoute: typeof AppReservationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/traceability': {
-      id: '/_app/traceability'
-      path: '/traceability'
-      fullPath: '/traceability'
-      preLoaderRoute: typeof AppTraceabilityRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/variables': {
-      id: '/_app/variables'
-      path: '/variables'
-      fullPath: '/variables'
-      preLoaderRoute: typeof AppVariablesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/waste': {
-      id: '/_app/waste'
-      path: '/waste'
-      fullPath: '/waste'
-      preLoaderRoute: typeof AppWasteRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/r/$token': {
-      id: '/r/$token'
-      path: '/r/$token'
-      fullPath: '/r/$token'
-      preLoaderRoute: typeof RTokenRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/s/$token': {
-      id: '/s/$token'
-      path: '/s/$token'
-      fullPath: '/s/$token'
-      preLoaderRoute: typeof STokenRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/t/$token': {
@@ -698,19 +544,166 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/harvest/new': {
-      id: '/_app/harvest/new'
-      path: '/new'
-      fullPath: '/harvest/new'
-      preLoaderRoute: typeof AppHarvestNewRouteImport
-      parentRoute: typeof AppHarvestRoute
+    '/s/$token': {
+      id: '/s/$token'
+      path: '/s/$token'
+      fullPath: '/s/$token'
+      preLoaderRoute: typeof STokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/intake/new': {
-      id: '/_app/intake/new'
-      path: '/new'
-      fullPath: '/intake/new'
-      preLoaderRoute: typeof AppIntakeNewRouteImport
-      parentRoute: typeof AppIntakeRoute
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/waste': {
+      id: '/_app/waste'
+      path: '/waste'
+      fullPath: '/waste'
+      preLoaderRoute: typeof AppWasteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/variables': {
+      id: '/_app/variables'
+      path: '/variables'
+      fullPath: '/variables'
+      preLoaderRoute: typeof AppVariablesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/traceability': {
+      id: '/_app/traceability'
+      path: '/traceability'
+      fullPath: '/traceability'
+      preLoaderRoute: typeof AppTraceabilityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reservations': {
+      id: '/_app/reservations'
+      path: '/reservations'
+      fullPath: '/reservations'
+      preLoaderRoute: typeof AppReservationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quality': {
+      id: '/_app/quality'
+      path: '/quality'
+      fullPath: '/quality'
+      preLoaderRoute: typeof AppQualityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/processes': {
+      id: '/_app/processes'
+      path: '/processes'
+      fullPath: '/processes'
+      preLoaderRoute: typeof AppProcessesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/process-control': {
+      id: '/_app/process-control'
+      path: '/process-control'
+      fullPath: '/process-control'
+      preLoaderRoute: typeof AppProcessControlRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/lots': {
+      id: '/_app/lots'
+      path: '/lots'
+      fullPath: '/lots'
+      preLoaderRoute: typeof AppLotsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory': {
+      id: '/_app/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AppInventoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/intake': {
+      id: '/_app/intake'
+      path: '/intake'
+      fullPath: '/intake'
+      preLoaderRoute: typeof AppIntakeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/harvest': {
+      id: '/_app/harvest'
+      path: '/harvest'
+      fullPath: '/harvest'
+      preLoaderRoute: typeof AppHarvestRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/free-coffee': {
+      id: '/_app/free-coffee'
+      path: '/free-coffee'
+      fullPath: '/free-coffee'
+      preLoaderRoute: typeof AppFreeCoffeeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/customers': {
+      id: '/_app/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof AppCustomersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/copiloto': {
+      id: '/_app/copiloto'
+      path: '/copiloto'
+      fullPath: '/copiloto'
+      preLoaderRoute: typeof AppCopilotoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assistant': {
+      id: '/_app/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alerts': {
+      id: '/_app/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/operacion/': {
+      id: '/_app/operacion/'
+      path: '/operacion'
+      fullPath: '/operacion/'
+      preLoaderRoute: typeof AppOperacionIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/lots/': {
       id: '/_app/lots/'
@@ -719,18 +712,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLotsIndexRouteImport
       parentRoute: typeof AppLotsRoute
     }
-    '/_app/lots/$id': {
-      id: '/_app/lots/$id'
-      path: '/$id'
-      fullPath: '/lots/$id'
-      preLoaderRoute: typeof AppLotsIdRouteImport
-      parentRoute: typeof AppLotsRoute
+    '/public/lot/$code': {
+      id: '/public/lot/$code'
+      path: '/public/lot/$code'
+      fullPath: '/public/lot/$code'
+      preLoaderRoute: typeof PublicLotCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/operacion/': {
-      id: '/_app/operacion/'
-      path: '/operacion'
-      fullPath: '/operacion/'
-      preLoaderRoute: typeof AppOperacionIndexRouteImport
+    '/_app/variables/new': {
+      id: '/_app/variables/new'
+      path: '/new'
+      fullPath: '/variables/new'
+      preLoaderRoute: typeof AppVariablesNewRouteImport
+      parentRoute: typeof AppVariablesRoute
+    }
+    '/_app/variables/log': {
+      id: '/_app/variables/log'
+      path: '/log'
+      fullPath: '/variables/log'
+      preLoaderRoute: typeof AppVariablesLogRouteImport
+      parentRoute: typeof AppVariablesRoute
+    }
+    '/_app/operacion/reportes': {
+      id: '/_app/operacion/reportes'
+      path: '/operacion/reportes'
+      fullPath: '/operacion/reportes'
+      preLoaderRoute: typeof AppOperacionReportesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/operacion/cosecha': {
@@ -740,33 +747,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperacionCosechaRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/operacion/reportes': {
-      id: '/_app/operacion/reportes'
-      path: '/operacion/reportes'
-      fullPath: '/operacion/reportes'
-      preLoaderRoute: typeof AppOperacionReportesRouteImport
-      parentRoute: typeof AppRoute
+    '/_app/lots/$id': {
+      id: '/_app/lots/$id'
+      path: '/$id'
+      fullPath: '/lots/$id'
+      preLoaderRoute: typeof AppLotsIdRouteImport
+      parentRoute: typeof AppLotsRoute
     }
-    '/_app/variables/log': {
-      id: '/_app/variables/log'
-      path: '/log'
-      fullPath: '/variables/log'
-      preLoaderRoute: typeof AppVariablesLogRouteImport
-      parentRoute: typeof AppVariablesRoute
-    }
-    '/_app/variables/new': {
-      id: '/_app/variables/new'
+    '/_app/intake/new': {
+      id: '/_app/intake/new'
       path: '/new'
-      fullPath: '/variables/new'
-      preLoaderRoute: typeof AppVariablesNewRouteImport
-      parentRoute: typeof AppVariablesRoute
+      fullPath: '/intake/new'
+      preLoaderRoute: typeof AppIntakeNewRouteImport
+      parentRoute: typeof AppIntakeRoute
     }
-    '/public/lot/$code': {
-      id: '/public/lot/$code'
-      path: '/public/lot/$code'
-      fullPath: '/public/lot/$code'
-      preLoaderRoute: typeof PublicLotCodeRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/harvest/new': {
+      id: '/_app/harvest/new'
+      path: '/new'
+      fullPath: '/harvest/new'
+      preLoaderRoute: typeof AppHarvestNewRouteImport
+      parentRoute: typeof AppHarvestRoute
     }
     '/_app/operacion/lote/$id': {
       id: '/_app/operacion/lote/$id'
