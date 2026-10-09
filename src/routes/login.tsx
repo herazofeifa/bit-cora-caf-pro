@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { useServerFn } from "@tanstack/react-start";
+import { needsFirstAdmin, createFirstAdmin } from "@/lib/users.functions";
 import { startAuth, useSession } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
@@ -33,7 +34,12 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { startAuth(); }, []);
+  const checkFirst = useServerFn(needsFirstAdmin);
+  const makeFirst = useServerFn(createFirstAdmin);
+  useEffect(() => {
+    startAuth();
+    checkFirst().then((r) => setMode(r.needed ? "up" : "in")).catch(() => {});
+  }, [checkFirst]);
   useEffect(() => { if (session) navigate({ to: "/dashboard", replace: true }); }, [session, navigate]);
 
   const submit = async (e: React.FormEvent) => {
@@ -44,12 +50,9 @@ function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: window.location.origin + "/login", data: { full_name: name } },
-        });
+        await makeFirst({ data: { email, password, full_name: name } });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        if (!data.session) toast.success("Revisá tu correo para confirmar la cuenta.");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo entrar");
@@ -58,14 +61,9 @@ function LoginPage() {
     }
   };
 
-  const google = async () => {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/login" });
-    if (r.error) toast.error("No se pudo entrar con Google");
-  };
-
   const forgot = async () => {
     if (!email) return toast.info("Escribí tu correo primero.");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/login" });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
     if (error) toast.error(error.message); else toast.success("Te enviamos un correo para cambiar la contraseña.");
   };
 
@@ -79,14 +77,9 @@ function LoginPage() {
           </div>
           <h1 className="text-2xl font-semibold">Bitácora Café Pro</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "in" ? "Tu bitácora digital de campo y beneficio" : "Creá tu cuenta"}
+            {mode === "in" ? "Tu bitácora digital de campo y beneficio" : "Configurá el primer administrador"}
           </p>
         </div>
-
-        <Button type="button" variant="outline" className="w-full h-12 rounded-xl mb-4" onClick={google}>
-          Continuar con Google
-        </Button>
-        <div className="text-center text-xs text-muted-foreground mb-4">o con tu correo</div>
 
         <form onSubmit={submit} className="space-y-4">
           {mode === "up" && (
@@ -101,15 +94,13 @@ function LoginPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <Input id="password" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="h-12 rounded-xl" required />
+            <Input id="password" type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="h-12 rounded-xl" required />
           </div>
           <Button type="submit" disabled={busy} className="w-full h-12 rounded-xl text-base">
-            {mode === "in" ? "Entrar" : "Crear cuenta"}
+            {mode === "in" ? "Entrar" : "Crear administrador"}
           </Button>
           <div className="flex items-center justify-between text-sm">
-            <button type="button" className="text-primary font-medium" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-              {mode === "in" ? "Crear cuenta" : "Ya tengo cuenta"}
-            </button>
+            <span className="text-xs text-muted-foreground">Acceso solo con cuenta asignada</span>
             {mode === "in" && (
               <button type="button" className="text-muted-foreground" onClick={forgot}>¿Olvidaste tu contraseña?</button>
             )}
