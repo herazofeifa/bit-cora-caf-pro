@@ -93,7 +93,11 @@ function CustomersPage() {
         <Input className="pl-9" placeholder="Buscar cliente, contacto o email…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {filtered.length === 0 ? (
+      {cloud.status === "loading" ? (
+        <p className="text-sm text-muted-foreground">Cargando clientes…</p>
+      ) : cloud.status === "error" ? (
+        <p className="text-sm text-destructive">No se pudieron cargar los clientes: {cloud.error}</p>
+      ) : filtered.length === 0 ? (
         <EmptyState icon={Users} title="Sin clientes aún" description="Agrega tu primer cliente para empezar a registrar reservas y ventas." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
