@@ -41,7 +41,7 @@ function AlertsPage() {
         <Section title={`Alertas ${show === "open" ? "abiertas" : ""} (${rows.length})`}>
           <LoadState loading={al.loading} error={al.error} empty={!rows.length} emptyText="Todo en orden." />
           {rows.length > 0 && <SimpleTable head={["Fecha", "Tipo", "Lote", "Mensaje", ""]} rows={rows.map((a) => [fmtDate(a.created_at), kindLabel[a.kind] ?? a.kind,
-            a.lot_id ? <LotLink id={a.lot_id} code={code(a.lot_id)} /> : "—", <span className={a.severity === "alta" ? "text-destructive" : ""}>{a.message}</span>,
+            a.lot_id ? <LotLink id={a.lot_id} code={code(a.lot_id)} /> : "—", <span className={a.severity === "critical" ? "text-destructive" : ""}>{a.message}</span>,
             a.resolved_at ? <span className="text-xs text-muted-foreground">Resuelta {fmtDate(a.resolved_at)}</span>
               : can ? <Button size="sm" variant="outline" onClick={async () => { try { await resolveAlert(a.id); toast.success("Alerta resuelta"); } catch (e) { toast.error(friendlyError(e)); } }}>Resolver</Button> : null])} />}
         </Section>

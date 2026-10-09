@@ -68,11 +68,11 @@ function CloudHarvestPage() {
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
   }
 
-  if (cloud.status !== "ready") return <p className="text-muted-foreground">Cargando datos del servidor…</p>;
+  if (cloud.status !== "ready") return <p className="text-muted-foreground">Cargando…</p>;
 
   return (
     <>
-      <PageHeader eyebrow="COSECHA · SERVIDOR" title="Registrar cosecha" subtitle="El recibo y el ingreso al lote se guardan juntos en el servidor. Sin señal, queda como borrador y se envía después." />
+      <PageHeader eyebrow="COSECHA" title="Registrar cosecha" subtitle="El recibo y el ingreso al lote se guardan juntos. Sin señal, queda como borrador y se envía después." />
       {farms.length === 0 && <p className="mb-4 rounded-lg border border-border p-3 text-sm">Primero agrega una finca en <Link to="/settings" className="underline">Ajustes</Link>.</p>}
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2 rounded-xl border border-border bg-card p-4 md:p-6">
         <div><Label>Finca</Label><select className={sel} value={f.farm_id} onChange={(e) => setF({ ...f, farm_id: e.target.value, parcel_id: "" })}>
@@ -116,7 +116,7 @@ function CloudHarvestPage() {
               <span className={q.status === "rejected" ? "text-destructive" : q.status === "sent" ? "text-primary" : "text-muted-foreground"}>
                 {q.status === "pending" && <><CloudOff className="inline h-4 w-4 mr-1" />Pendiente (no enviado aún)</>}
                 {q.status === "sending" && "Enviando…"}
-                {q.status === "sent" && `Confirmado por el servidor · ${q.result ?? ""}`}
+                {q.status === "sent" && `Guardado · ${q.result ?? ""}`}
                 {q.status === "rejected" && `Rechazado: ${q.error}`}
               </span>
               {q.status === "rejected" && <span className="flex gap-1">

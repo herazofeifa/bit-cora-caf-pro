@@ -17,12 +17,12 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const actions: { label: string; icon: typeof Sprout; to: string }[] = [
-  { label: "Registrar cosecha", icon: Sprout, to: "/harvest/new" },
-  { label: "Registrar recibo", icon: PackageOpen, to: "/intake/new" },
+  { label: "Registrar cosecha", icon: Sprout, to: "/harvest" },
+  { label: "Ver recibos", icon: PackageOpen, to: "/intake" },
   { label: "Crear lote", icon: Boxes, to: "/lots" },
-  { label: "Registrar humedad", icon: Droplets, to: "/assistant" },
-  { label: "Registrar variable", icon: Gauge, to: "/variables/new" },
-  { label: "Mover fase", icon: ArrowRightLeft, to: "/process-control" },
+  { label: "Registrar humedad", icon: Droplets, to: "/variables" },
+  { label: "Registrar variable", icon: Gauge, to: "/variables" },
+  { label: "Mover fase", icon: ArrowRightLeft, to: "/processes" },
   { label: "Registrar merma", icon: Trash2, to: "/waste" },
   { label: "Reservar café", icon: BookmarkCheck, to: "/reservations" },
   { label: "Ver café libre", icon: Coffee, to: "/free-coffee" },
@@ -49,7 +49,7 @@ export function QuickActionFab() {
         </SheetHeader>
 
         <Link
-          to="/assistant"
+          to="/copiloto"
           onClick={() => setOpen(false)}
           className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3.5 hover:bg-primary/10 transition"
         >
@@ -57,8 +57,8 @@ export function QuickActionFab() {
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-foreground">Abrir asistente guiado</div>
-            <div className="text-xs text-muted-foreground">Te llevamos paso a paso.</div>
+            <div className="font-semibold text-foreground">Preguntar al copiloto</div>
+            <div className="text-xs text-muted-foreground">Pregunta en español sobre tus datos.</div>
           </div>
         </Link>
 

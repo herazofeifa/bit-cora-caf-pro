@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+const GUIDED = [{ to: "/harvest", l: "Registrar cosecha" }, { to: "/variables", l: "Registrar humedad" }, { to: "/waste", l: "Registrar merma" }, { to: "/reservations", l: "Reservar café" }] as const;
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Mic, MicOff, Send } from "lucide-react";
@@ -56,6 +57,7 @@ function CopilotPage() {
   return (
     <>
       <PageHeader eyebrow="COPILOTO" title="Pregúntale a tu bitácora" subtitle="Responde con los registros reales de tu organización. Solo consulta: no cambia datos." />
+      <div className="flex flex-wrap gap-2 mb-4"><span className="text-sm text-muted-foreground self-center">Para registrar, paso a paso:</span>{GUIDED.map((g) => <Link key={g.to} to={g.to} className="rounded-full border border-border px-3 py-1.5 text-sm hover:bg-accent">{g.l}</Link>)}</div>
       <div className="rounded-xl border border-border bg-card p-4 min-h-[300px] space-y-3">
         {msgs.length === 0 && <div className="flex flex-wrap gap-2">{EXAMPLES.map((e) => <Button key={e} size="sm" variant="outline" onClick={() => void send(e)}>{e}</Button>)}</div>}
         {msgs.map((m, i) => (
@@ -73,7 +75,7 @@ function CopilotPage() {
         {voice && <Button type="button" variant="outline" onClick={toggleVoice} aria-label="Dictar">{listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button>}
         <Button type="submit" disabled={busy || !text.trim()} aria-label="Enviar"><Send className="h-4 w-4" /></Button>
       </form>
-      <p className="mt-2 text-xs text-muted-foreground">Usa la API de OpenAI desde el servidor. Cada pregunta tiene un costo en la cuenta de OpenAI del autor.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Usa la API de OpenAI. Cada pregunta tiene un costo en la cuenta de OpenAI del autor.</p>
     </>
   );
 }

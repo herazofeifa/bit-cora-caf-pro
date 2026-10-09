@@ -78,3 +78,30 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 - Verificado en el navegador: la tarjeta «Cuenta para profesores» aparece en Ajustes para el administrador.
 - **No verificado:** creación real de la cuenta y los espacios en la base real (espera a que el autor escriba la contraseña), subida de foto/certificado de ejemplo, selector con la cuenta real, tiempo real entre dos dispositivos.
 - Recorrido: `docs/RECORRIDO_EVALUACION.md`.
+
+## Cierre: una sola aplicación con datos persistidos (9 oct 2026)
+
+**Qué cambió**
+- Se eliminó el menú «Operación (servidor)» y la caché local de todas las rutas accesibles. Cada módulo (Inicio, Cosecha, Recibos, Lotes, Procesos, Editor de plantillas, Variables/humedad, Calidad, Mermas, Inventario, Café libre, Clientes, Reservas, Reportes, Trazabilidad, Alertas, Auditoría, Ajustes, Copiloto) lee y escribe solo la organización elegida, con actualización en vivo entre sesiones (lotes, reservas, fases, mediciones de variables y humedad, catálogos, archivos, ajustes).
+- Direcciones antiguas redirigen a la vista equivalente: `/operacion` → Inicio, `/operacion/cosecha`, `/harvest/new`, `/intake/new` → Cosecha, `/operacion/reportes` → Reportes, `/operacion/lote/:id` → `/lots/:id`, `/variables/new|log` → Variables (pestaña), `/process-control` → Procesos (fases en curso), `/assistant` → Copiloto (con accesos guiados a cosecha, humedad, merma y reserva). `/public/lot/:code` ya no expone datos (las fichas públicas se abren por token QR `/t/…`).
+- Inicio usa el nombre del usuario, la organización y el rol reales.
+- Ajustes: fincas/parcelas, conversiones de unidades por organización, umbral de stock bajo, rango de humedad y peso por saco persistidos; variables propias; el editor visual de plantillas guarda versiones reales (`save_process_template`).
+- Reservas: fecha de entrega pactada y condiciones, distintas del vencimiento; precio, moneda (USD/CRC) y unidad.
+- Inventario: movimientos con hora y autor, ubicación del lote con historial auditado (`set_lot_location`), ajuste con motivo.
+- Alertas automáticas: stock bajo (se resuelve sola al recuperarse) y humedad bajo el mínimo; resolver alertas registra quién.
+- Ficha de lote en PDF con origen, fases, calidad, fotos marcadas para la ficha y QR público; etiquetas de saco y reportes ya existían.
+- Pantallas antiguas guardadas solo como referencia en `legacy/` (fuera de la compilación).
+
+**Pruebas ejecutadas**
+- Base de datos desechable: 211 comprobaciones `ok` (incluye 12 nuevas en `tests/db/unified.test.sql`: alerta de stock bajo sin duplicados y autorresuelta, entrega pactada separada del vencimiento y no anterior a la reserva, alerta de humedad, ubicación auditada, permisos de consulta). Esta prueba encontró y corrigió un error real: la alerta de stock usaba un nivel no permitido y habría bloqueado reservas.
+- Vitest: 11 pruebas. Compilación de tipos y build sin errores.
+- Navegador (sesión del administrador): las 22 rutas cargan sin errores de página en escritorio; Inicio, Lotes y Reservas en móvil (390 px) con barra inferior y botón «Registrar». Ninguna pantalla muestra «Paco», «servidor» ni «caché».
+- Entorno demo ficticio creado por el administrador (`create_demo_environment`, organización «Demo evaluación 09/10 22:59»): Inicio 320 kg libres, Inventario 670/320/50/0/300/100 kg, reservas activa y entregada, trazabilidad y proceso atrasado coherentes.
+- Subida real de foto JPG y certificado PDF a un lote del demo; lectura con enlace firmado: HTTP 200, `image/jpeg`.
+- Copiloto con OpenAI real: «¿Cuánto café libre tengo por variedad y cuántos kg entregué este año?» → Caturra 320 kg libres (50 reservados), Geisha 0 (300 en proceso), 100 kg entregados a USD 6,50/kg: coincide con la base. Latencia medida 8,8 s (otra consulta 10,2 s); no se promete menos de 3 s. El proyecto de OpenAI no tiene acceso a `gpt-4.1-mini`; el copiloto prueba modelos alternativos en orden automáticamente.
+
+**Limitaciones honestas**
+- La cuenta de profesores y sus dos espacios **no se han creado**: requiere que el autor escriba la contraseña en Ajustes → Usuarios y roles → «Cuenta de evaluación». Por eso el selector de los dos entornos no se probó con la cuenta real.
+- Actualización en vivo entre dos dispositivos físicos y funcionamiento sin conexión en un teléfono real no se probaron (solo en navegador automatizado).
+- La organización demo de prueba y sus 2 archivos quedan en la base; el autor puede ignorarla (solo es visible para él).
+- La ejecución de CI en GitHub no se verificó desde aquí.

@@ -4,7 +4,6 @@
 - Every operational table carries organization_id with RLS via is_org_member/has_org_role; why: tenant isolation is enforced by the database, not the UI.
 - The user's role comes from public.memberships (my_membership()); never from localStorage; why: client state is forgeable.
 - audit_log is append-only and written server-side with auth.uid() and now(); why: trustworthy history.
-- Modules not yet on Lovable Cloud keep a per-user local cache (bcp.ops-data.v2:<uid>) cleared on sign-out; legacy keys are kept as backup and never uploaded; why: no cross-user leakage during the migration.
 - Demo data loads only by explicit user action; why: never mix demo with real records.
 - Shared-data access lives in src/lib/cloud.ts; why: one path for reads/writes/realtime.
 - DB tests run on a disposable local PostgreSQL via tests/db/run-local.sh; why: the sandbox DB user cannot assume the authenticated role.
@@ -12,9 +11,11 @@
 - Retriable RPCs take an _op_key stored in operation_keys bound to actor + operation + md5 of the canonical argument array; a reused key with other data or another actor is rejected; why: repeated taps apply once and a key can never return someone else's or a different result.
 - A generic _same_org_refs trigger guards every cross-table reference; why: no function or direct write can link another organization's rows.
 - Anonymous pages (/t, /s, /r) read only through SECURITY DEFINER projections returning NULL for private/unknown tokens; why: identical 404 and no private columns.
-- Server-backed screens live under /operacion and use src/lib/ops-cloud.ts; legacy screens still use the per-user local cache; why: incremental migration without breaking existing UI.
+- Every product screen reads only the selected organization through src/lib/org-data.ts (useOrgQuery: generation-checked fetch + realtime filtered by organization_id) and writes through src/lib/ops-cloud.ts RPCs; old local-cache screens live in /legacy outside the build and old URLs redirect to their equivalent; why: one source of truth, no second version of the data.
 - The copilot calls the OpenAI API from a server function with read-only, allowlisted tools run under the user's RLS session; why: the author's requirement and no arbitrary SQL or writes.
 - The offline queue (IndexedDB, per user+org) holds only harvests and measurements; why: inventory/reservations must be decided online.
 - src/lib/cloud.ts applies a response only if it belongs to the current generation (bumped on every start/stop); why: late replies must not repopulate data after logout or organization switch.
 - Team visibility (profiles/user_roles) is self or an administrator sharing an organization, via can_see_user(); team actions take the selected organization and check has_org_role server-side; why: no global-admin cross-organization reads.
 - Evaluation spaces (organizations.eval_kind) are created only by provision_evaluation, once per source org, seeded through the business RPCs; the evaluator is a member only of those two orgs and they cannot manage members; why: committee access fully isolated from real data.
+
+- Automatic alerts (low stock from org_settings.low_stock_kg, moisture below moisture_min) are raised by database triggers using the alerts severity vocabulary (info/warning/critical); why: they fire for every write path, including other devices.

@@ -104,7 +104,9 @@ export const askCopilot = createServerFn({ method: "POST" })
     const m = (ms ?? []).find((x: { organization_id: string }) => x.organization_id === data.organizationId);
     if (!m) return { ok: false as const, error: "No perteneces a esa organización." };
 
-    const model = process.env["OPENAI_MODEL"] || "gpt-4.1-mini";
+    // Some OpenAI projects only enable certain models: fall back in order when one is not available.
+    const models = [process.env["OPENAI_MODEL"], "gpt-4.1-mini", "gpt-4o-mini", "gpt-5-mini", "gpt-4.1", "gpt-4o"].filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
+    let model = models.shift()!;
     const today = new Date().toISOString().slice(0, 10);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = data.messages.map((x) => ({ role: x.role, content: x.content }));
@@ -124,12 +126,16 @@ export const askCopilot = createServerFn({ method: "POST" })
       }
       if (!resp.ok) {
         const body = await resp.text().catch(() => "");
-        const msg = resp.status === 401 ? "La clave de OpenAI no es válida."
+        if ((resp.status === 403 || resp.status === 404) && /model_not_found|does not have access to model/.test(body) && models.length) {
+          model = models.shift()!; step--; continue;
+        }
+        const msg = /model_not_found|does not have access to model/.test(body) ? "La cuenta de OpenAI no tiene acceso a ningún modelo compatible. Habilita gpt-4.1-mini o gpt-4o-mini en el proyecto de OpenAI." : null;
+        const msg2 = resp.status === 401 ? "La clave de OpenAI no es válida."
           : resp.status === 429 ? "OpenAI limitó las solicitudes o la cuenta no tiene saldo. Espera un momento o revisa la cuenta de OpenAI."
           : resp.status >= 500 ? "OpenAI tiene un problema temporal. Intenta más tarde."
           : `OpenAI rechazó la solicitud (${resp.status}).`;
         console.error("copilot openai", resp.status, body.slice(0, 300));
-        return { ok: false as const, error: msg };
+        return { ok: false as const, error: msg ?? msg2 };
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const json: any = await resp.json();

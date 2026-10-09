@@ -64,6 +64,13 @@
       "when": 1791585902256,
       "tag": "0008_unified_product_closing",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791587432888,
+      "tag": "0009_alert_severity_fix",
+      "breakpoints": true
     }
   ]
 }

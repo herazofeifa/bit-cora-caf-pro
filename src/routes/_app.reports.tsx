@@ -112,7 +112,7 @@ function CloudReports() {
 
   return (
     <>
-      <PageHeader eyebrow="REPORTES · SERVIDOR" title="Reportes" subtitle="Datos actuales del servidor. Las cantidades están en kg; los precios, por kg en su moneda."
+      <PageHeader eyebrow="REPORTES" title="Reportes" subtitle="Datos actuales de la organización. Las cantidades están en kg; los precios, por kg en su moneda."
         action={<div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={csv}><Download className="h-4 w-4 mr-1" />CSV</Button>
           <Button onClick={() => void reportPdf("Reporte de operación", filterLabels, tables, `reporte-${flt.from}-${flt.to}.pdf`)}><FileText className="h-4 w-4 mr-1" />PDF</Button>

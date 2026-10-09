@@ -16,7 +16,7 @@ import {
   logPhaseVariable, newOpKey, publishLot, declareLotExport, recordQuality, releaseLot, signedFileUrl, startPhase, uploadLotFile, type CloudLot,
 } from "@/lib/ops-cloud";
 import { enqueue, flushQueue } from "@/lib/offline-queue";
-import { sackLabelsPdf } from "@/lib/pdf";
+import { lotSheetPdf, sackLabelsPdf } from "@/lib/pdf";
 import { commercialStateLabel } from "@/lib/helpers";
 import type { CommercialState } from "@/types/domain";
 
@@ -83,6 +83,9 @@ function CloudLotPage() {
     const ch = supabase.channel(`lot-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "lots", filter: `id=eq.${id}` }, () => void load())
       .on("postgres_changes", { event: "*", schema: "public", table: "reservations", filter: `lot_id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "process_phases", filter: `lot_id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "variable_logs", filter: `lot_id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "files", filter: `lot_id=eq.${id}` }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [cloud.orgId, id, load]);
@@ -105,7 +108,24 @@ function CloudLotPage() {
   return (
     <>
       <Link to="/lots" className="text-sm text-muted-foreground inline-flex items-center gap-1 mb-3"><ArrowLeft className="h-4 w-4" />Lotes</Link>
-      <PageHeader eyebrow={lot.lot_code} title={lot.friendly_name} subtitle={`${lot.variety || "—"} · ${lot.process_type} · ${lot.physical_state}`} />
+      <PageHeader eyebrow={lot.lot_code} title={lot.friendly_name} subtitle={`${lot.variety || "—"} · ${lot.process_type} · ${lot.physical_state}`}
+        action={<Button variant="outline" disabled={busy} onClick={() => run(async () => {
+          const [farm, parcel, q] = await Promise.all([
+            lot.farm_id ? supabase.from("farms").select("name,region,altitude_m").eq("id", lot.farm_id).maybeSingle() : Promise.resolve({ data: null }),
+            lot.parcel_id ? supabase.from("parcels").select("name,altitude_m").eq("id", lot.parcel_id).maybeSingle() : Promise.resolve({ data: null }),
+            supabase.from("quality_samples").select("sampled_at,status,score,data").eq("lot_id", lot.id).order("sampled_at"),
+          ]);
+          const photos: { title: string; dataUrl: string }[] = [];
+          for (const f of files.filter((x) => x.public_selected && x.mime_type.startsWith("image/") && x.mime_type !== "image/webp")) {
+            const blob = await (await fetch(await signedFileUrl(f.storage_path))).blob();
+            photos.push({ title: f.title, dataUrl: await new Promise<string>((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.readAsDataURL(blob); }) });
+          }
+          const fd = farm.data as { name: string; region: string | null; altitude_m: number | null } | null;
+          const pd = parcel.data as { name: string; altitude_m: number | null } | null;
+          await lotSheetPdf({ lot: { ...lot, created_at: lot.created_at }, origin: { farm: fd?.name, region: fd?.region, parcel: pd?.name, altitude: pd?.altitude_m ?? fd?.altitude_m },
+            phases, quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: { notes?: string; cupping?: string } | null }[]).map((x) => ({ ...x, notes: [x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
+            photos, story: profile?.short_story, tasting: profile?.tasting_notes, publicUrl: profile?.is_public ? publicUrl : null });
+        }, "Ficha PDF generada")}><Download className="h-4 w-4 mr-1" />Ficha PDF</Button>} />
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-6 text-sm">
         {[["Actual", lot.qty_current_kg], ["Libre", lot.qty_free_kg], ["Reservado", lot.qty_reserved_kg], ["Comprometido", lot.qty_committed_kg], ["Vendido", lot.qty_sold_kg]].map(([k, v]) => (
