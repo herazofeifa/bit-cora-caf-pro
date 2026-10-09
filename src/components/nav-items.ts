@@ -4,7 +4,6 @@ import {
   PackageOpen,
   Boxes,
   Workflow,
-  Activity,
   Beaker,
   Warehouse,
   Coffee,
@@ -17,8 +16,6 @@ import {
   Settings,
   Bell,
   ScrollText,
-  Sparkles,
-  Cloud,
   Bot,
   type LucideIcon,
 } from "lucide-react";
@@ -39,16 +36,7 @@ export const navGroups: NavGroup[] = [
     label: "Inicio",
     items: [
       { to: "/dashboard", label: "Inicio", icon: Home },
-      { to: "/assistant", label: "Asistente", icon: Sparkles },
       { to: "/copiloto", label: "Copiloto", icon: Bot },
-    ],
-  },
-  {
-    label: "Operación (servidor)",
-    items: [
-      { to: "/operacion", label: "Lotes y procesos", icon: Cloud },
-      { to: "/operacion/cosecha", label: "Registrar cosecha", icon: Sprout },
-      { to: "/operacion/reportes", label: "Reportes y PDF", icon: BarChart3 },
     ],
   },
   {
@@ -64,7 +52,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/lots", label: "Lotes", icon: Boxes },
       { to: "/processes", label: "Procesos", icon: Workflow },
-      { to: "/process-control", label: "Control de proceso", icon: Activity },
       { to: "/quality", label: "Calidad", icon: Award },
       { to: "/waste", label: "Mermas", icon: Trash2 },
     ],
