@@ -4,6 +4,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ROLES = ["administrador", "encargado_beneficio", "productor", "comercial", "consulta"] as const;
 
+const newUser = z.object({
+  email: z.string().trim().email().max(255),
+  password: z.string().min(8).max(72),
+  full_name: z.string().trim().min(1).max(100),
+});
+
 /** Admin only: creates a team account with a role. */
 export const createTeamUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

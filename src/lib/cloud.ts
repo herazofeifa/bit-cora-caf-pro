@@ -100,16 +100,15 @@ export async function cloudDeleteCustomer(id: string) {
 }
 
 // ───────────── Farms & parcels (Settings "Guardar cambios") ─────────────
-const FARM_COLS = ["name", "region", "country", "owner_name", "altitude_m", "notes"] as const;
-const PARCEL_COLS = ["farm_id", "name", "variety", "altitude_m", "area_ha", "notes"] as const;
-const pick = <T extends object>(o: T, cols: readonly string[]) =>
-  Object.fromEntries(cols.map((c) => [c, (o as Record<string, unknown>)[c] ?? null]));
 const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
 export async function cloudSaveFarms(next: Farm[], prev: Farm[]) {
   const org = requireOrg();
   for (const f of next) {
-    const row = { ...pick(f, FARM_COLS), organization_id: org, country: f.country || "Costa Rica", ...(isUuid(f.id) ? { id: f.id } : {}) };
+    const row = {
+      name: f.name, region: f.region, country: f.country || "Costa Rica", owner_name: f.owner_name,
+      altitude_m: f.altitude_m, notes: f.notes, organization_id: org, ...(isUuid(f.id) ? { id: f.id } : {}),
+    };
     const res = prev.some((p) => p.id === f.id)
       ? await supabase.from("farms").update({ ...row, updated_at: new Date().toISOString() }).eq("id", f.id)
       : await supabase.from("farms").insert(row);
@@ -127,7 +126,10 @@ export async function cloudSaveFarms(next: Farm[], prev: Farm[]) {
 export async function cloudSaveParcels(next: Parcel[], prev: Parcel[]) {
   const org = requireOrg();
   for (const p of next) {
-    const row = { ...pick(p, PARCEL_COLS), organization_id: org, ...(isUuid(p.id) ? { id: p.id } : {}) };
+    const row = {
+      farm_id: p.farm_id, name: p.name, variety: p.variety, altitude_m: p.altitude_m, area_ha: p.area_ha,
+      notes: p.notes, organization_id: org, ...(isUuid(p.id) ? { id: p.id } : {}),
+    };
     const res = prev.some((x) => x.id === p.id)
       ? await supabase.from("parcels").update({ ...row, updated_at: new Date().toISOString() }).eq("id", p.id)
       : await supabase.from("parcels").insert(row);
