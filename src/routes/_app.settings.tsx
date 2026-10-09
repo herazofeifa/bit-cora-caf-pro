@@ -55,6 +55,7 @@ function SettingsPage() {
         title="Ajustes"
         subtitle="Organización, unidades, alertas, permisos y sincronización."
         action={
+          <div className="flex flex-wrap gap-2">
           <ConfirmAction
             destructive
             title="Restablecer todos los ajustes"
@@ -82,6 +83,7 @@ function SettingsPage() {
             trigger={<Button variant="outline" className="h-10 rounded-xl">Vaciar local</Button>}
             onConfirm={() => { resetOperationalData(); toast.success("Datos locales vaciados"); }}
           />
+          </div>
         }
       />
 
