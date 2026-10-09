@@ -153,3 +153,12 @@ Cuenta profesores@bitacoracafe.example y sus dos entornos: creados por el autor;
 - Respuesta REAL del copiloto con la misma pregunta, sesión del autor en su demo propia (no hay acceso de agente a la cuenta de profesores): fermentación de 22 días y USD 6,50/kg sobre 100 kg, que coincide con la base. Esa entrega también es de hoy, el mismo caso límite. Latencia mostrada 3,2 s, o 4,1 s de extremo a extremo. Pendiente: que el profesor repita la pregunta en su demo.
 - La respuesta errónea anterior (2,7 s) no cuenta como cumplimiento de latencia. Solo se cuentan las respuestas correctas: 3,2 a 10 s. No se garantiza menos de 3 s.
 - Ejemplo de comprador del copiloto: usa el primer cliente REAL de la organización elegida; si no hay clientes, pide escribir el nombre. Se quitó el nombre fijo.
+
+## Exportación de reportes y roles (09/10/2026, 23:50 UTC)
+
+- CSV: las columnas son ahora la unión estable de todas las secciones; las celdas que faltan quedan vacías. Los textos que empiezan por = + - @ se neutralizan con un apóstrofo; los números no se tocan. Pruebas en src/lib/__tests__/export-csv.test.ts: filas heterogéneas, café libre 118/160, USD 6,8 y CRC 4000 separados, fórmulas. Descarga REAL en la demo propia del autor: 12 columnas, con Variedad, kg libres, Estado, Cliente, Moneda, Entregas, kg entregados y Precio presentes.
+- PDF: arma cada tabla con sus propios encabezados y no comparte el fallo; descarga REAL revisada como texto.
+- Compartir: diálogo de la app con días 1–90, detalle de lo que incluye y de que no lleva clientes, reservas activas ni el filtro de cliente, y botones Crear enlace/Cancelar; sin prompt/confirm del navegador. Probado abriendo y cancelando; no se creó ningún enlace.
+- Reportes descarta respuestas de otra organización o sesión (contador de generación) y vacía los datos al cambiar de entorno.
+- Roles: hay 5 roles internos (Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta). El comprador NO tiene cuenta ni portal privado: consulta la trazabilidad por QR (/t, /s) y por copias de reporte con caducidad (/r). Es un ajuste respecto a la memoria inicial que el autor aprobó explícitamente. Justificación: menos superficie de acceso, ninguna cuenta externa que administrar, y el comprador ve solo lo que el productor publica.
+- GitHub (herazofeifa/bit-cora-caf-pro) sincronizado por el autor; el CI de GitHub sigue pendiente de verificar y no se declara aprobado.

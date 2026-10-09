@@ -171,7 +171,7 @@ function CloudReports() {
           <DialogHeader><DialogTitle>Compartir copia pública del reporte</DialogTitle>
             <DialogDescription>Se guarda una copia fija de los totales de este periodo ({flt.from} a {flt.to}). Cualquiera con el enlace podrá verla hasta que venza o la revoques.</DialogDescription></DialogHeader>
           <ul className="text-sm list-disc pl-5 space-y-1">
-            <li>Incluye: producción, inventario, procesos, mermas, calidad y ventas entregadas por moneda.</li>
+            <li>Incluye: cosecha por finca y variedad, café libre por variedad, inventario por estado comercial, mermas por tipo y ventas entregadas por moneda (kg y precio ponderado).</li>
             <li>No incluye: clientes, reservas activas ni datos personales.</li>
           </ul>
           <div className="grid gap-1"><Label htmlFor="share-days">Días disponible (1–90)</Label>
