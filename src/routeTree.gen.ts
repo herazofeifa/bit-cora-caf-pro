@@ -38,6 +38,7 @@ import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppAssistantRouteImport } from './routes/_app.assistant'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppOperacionIndexRouteImport } from './routes/_app.operacion.index'
+import { Route as AppLotsIndexRouteImport } from './routes/_app.lots.index'
 import { Route as PublicLotCodeRouteImport } from './routes/public.lot.$code'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
 import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
@@ -192,6 +193,11 @@ const AppOperacionIndexRoute = AppOperacionIndexRouteImport.update({
   path: '/operacion/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLotsIndexRoute = AppLotsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppLotsRoute,
+} as any)
 const PublicLotCodeRoute = PublicLotCodeRouteImport.update({
   id: '/public/lot/$code',
   path: '/public/lot/$code',
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
+  '/lots/': typeof AppLotsIndexRoute
   '/operacion/': typeof AppOperacionIndexRoute
   '/operacion/lote/$id': typeof AppOperacionLoteIdRoute
 }
@@ -292,7 +299,6 @@ export interface FileRoutesByTo {
   '/harvest': typeof AppHarvestRouteWithChildren
   '/intake': typeof AppIntakeRouteWithChildren
   '/inventory': typeof AppInventoryRoute
-  '/lots': typeof AppLotsRouteWithChildren
   '/process-control': typeof AppProcessControlRoute
   '/processes': typeof AppProcessesRoute
   '/quality': typeof AppQualityRoute
@@ -313,6 +319,7 @@ export interface FileRoutesByTo {
   '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
+  '/lots': typeof AppLotsIndexRoute
   '/operacion': typeof AppOperacionIndexRoute
   '/operacion/lote/$id': typeof AppOperacionLoteIdRoute
 }
@@ -354,6 +361,7 @@ export interface FileRoutesById {
   '/_app/variables/log': typeof AppVariablesLogRoute
   '/_app/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
+  '/_app/lots/': typeof AppLotsIndexRoute
   '/_app/operacion/': typeof AppOperacionIndexRoute
   '/_app/operacion/lote/$id': typeof AppOperacionLoteIdRoute
 }
@@ -395,6 +403,7 @@ export interface FileRouteTypes {
     | '/variables/log'
     | '/variables/new'
     | '/public/lot/$code'
+    | '/lots/'
     | '/operacion/'
     | '/operacion/lote/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -413,7 +422,6 @@ export interface FileRouteTypes {
     | '/harvest'
     | '/intake'
     | '/inventory'
-    | '/lots'
     | '/process-control'
     | '/processes'
     | '/quality'
@@ -434,6 +442,7 @@ export interface FileRouteTypes {
     | '/variables/log'
     | '/variables/new'
     | '/public/lot/$code'
+    | '/lots'
     | '/operacion'
     | '/operacion/lote/$id'
   id:
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/_app/variables/log'
     | '/_app/variables/new'
     | '/public/lot/$code'
+    | '/_app/lots/'
     | '/_app/operacion/'
     | '/_app/operacion/lote/$id'
   fileRoutesById: FileRoutesById
@@ -695,6 +705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperacionIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/lots/': {
+      id: '/_app/lots/'
+      path: '/'
+      fullPath: '/lots/'
+      preLoaderRoute: typeof AppLotsIndexRouteImport
+      parentRoute: typeof AppLotsRoute
+    }
     '/public/lot/$code': {
       id: '/public/lot/$code'
       path: '/public/lot/$code'
@@ -787,10 +804,12 @@ const AppIntakeRouteWithChildren = AppIntakeRoute._addFileChildren(
 
 interface AppLotsRouteChildren {
   AppLotsIdRoute: typeof AppLotsIdRoute
+  AppLotsIndexRoute: typeof AppLotsIndexRoute
 }
 
 const AppLotsRouteChildren: AppLotsRouteChildren = {
   AppLotsIdRoute: AppLotsIdRoute,
+  AppLotsIndexRoute: AppLotsIndexRoute,
 }
 
 const AppLotsRouteWithChildren =
