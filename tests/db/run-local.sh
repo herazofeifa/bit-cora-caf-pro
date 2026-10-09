@@ -22,4 +22,5 @@ psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/audit.test.sql" 2>
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/evaluation.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/unified.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/lineage.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
+psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/quality_harvest.test.sql" 2>&1 | sed 's/^psql:[^ ]* //'
 bash "$ROOT/tests/db/concurrency.sh"
