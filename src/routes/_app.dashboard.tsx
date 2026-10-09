@@ -30,7 +30,7 @@ function Dashboard() {
   const tickets = useOrgQuery<Ticket[]>("d-tk", (o) => sel("harvest_tickets", "id,harvest_date,qty_kg,variety,lot_id,created_at", o, "created_at", false, 5), ["harvest_tickets"], []);
   const alerts = useOrgQuery<Alert[]>("d-al", async (o) => (await sel<(Alert & { resolved_at: string | null })[]>("alerts", "id,message,severity,created_at,lot_id,resolved_at", o, "created_at", false, 50)).filter((a) => !a.resolved_at), ["alerts"], []);
   const res = useOrgQuery<Res[]>("d-res", (o) => sel("reservations", "id,status,qty_kg", o, "reserved_at"), ["reservations"], []);
-  const openPh = useOrgQuery<{ lot_id: string }[]>("d-open", async (o) => (await sel<{ lot_id: string; status: string }[]>("process_phases", "lot_id,status", o)).filter((p) => p.status !== "finished"), ["process_phases"], []);
+  const openPh = useOrgQuery<{ lot_id: string }[]>("d-open", async (o) => (await sel<{ lot_id: string; status: string }[]>("process_phases", "lot_id,status", o, "started_at")).filter((p) => p.status !== "finished"), ["process_phases"], []);
   const overdue = useOrgQuery("d-ov", () => overduePhases(), ["process_phases"], [] as Awaited<ReturnType<typeof overduePhases>>);
 
   const L = lots.data; const sum = (f: (l: Lot) => number) => L.reduce((a, l) => a + Number(f(l) || 0), 0);
