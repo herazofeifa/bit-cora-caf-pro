@@ -11,7 +11,7 @@ pg_ctl -D "$PGDIR" -o "-p $PORT -k /tmp" -l "$PGDIR/log" start >/dev/null
 trap 'pg_ctl -D "$PGDIR" stop -m fast >/dev/null; rm -rf "$PGDIR"' EXIT
 export DATABASE_URL="postgresql://postgres@localhost:$PORT/postgres?host=/tmp"
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/bootstrap.sql"
-for f in $(ls "$ROOT"/drizzle/migrations/*.sql ${EXTRA_MIGRATIONS:-} | sort -t/ -k99); do
+for f in $(ls "$ROOT"/drizzle/migrations/*.sql ${EXTRA_MIGRATIONS:-} | sort); do
   echo "applying $(basename "$f")"
   # drizzle statement breakpoints are SQL comments; psql runs the file as-is
   psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"

@@ -41,6 +41,7 @@ insert into public.memberships (organization_id, user_id, role) values
   ('02000000-0000-0000-0000-0000000000b1', '22000000-0000-0000-0000-000000000002', 'consulta');
 -- legacy global admin mirror for B's admin: must NOT grant cross-org visibility any more
 insert into public.user_roles (user_id, role) values ('22000000-0000-0000-0000-000000000001', 'administrador');
+insert into public.farms (id, organization_id, name) values ('42100000-0000-0000-0000-000000000001', '02000000-0000-0000-0000-0000000000a1', 'Finca Audit');
 insert into public.customers (id, organization_id, name) values ('32000000-0000-0000-0000-000000000001', '02000000-0000-0000-0000-0000000000a1', 'Tostador');
 
 do $$
@@ -78,10 +79,10 @@ begin
   perform pg_temp.eq('stock reduced once', (select qty_current_kg from public.lots where id = l.id), 40);
 
   perform pg_temp.as_user(admin);
-  h := public.register_harvest(A, '{"kind":"recibo","harvest_date":"2026-01-10","qty":20,"uom":"kg"}'::jsonb, null, 'Cosecha idem', 'key-harvest-1');
-  perform pg_temp.is('harvest retry same payload', (public.register_harvest(A, '{"kind":"recibo","harvest_date":"2026-01-10","qty":20,"uom":"kg"}'::jsonb, null, 'Cosecha idem', 'key-harvest-1'))->>'lot_id', h->>'lot_id');
+  h := public.register_harvest(A, '{"farm_id":"42100000-0000-0000-0000-000000000001","harvest_date":"2026-01-10","qty":20,"uom":"kg"}'::jsonb, null, 'Cosecha idem', 'key-harvest-1');
+  perform pg_temp.is('harvest retry same payload', (public.register_harvest(A, '{"farm_id":"42100000-0000-0000-0000-000000000001","harvest_date":"2026-01-10","qty":20,"uom":"kg"}'::jsonb, null, 'Cosecha idem', 'key-harvest-1'))->>'lot_id', h->>'lot_id');
   perform pg_temp.expect_fail(format('select public.register_harvest(%L, %L::jsonb, null, %L, %L)', A,
-    '{"kind":"recibo","harvest_date":"2026-01-10","qty":25,"uom":"kg"}', 'Cosecha idem', 'key-harvest-1'), '%datos distintos%');
+    '{"farm_id":"42100000-0000-0000-0000-000000000001","harvest_date":"2026-01-10","qty":25,"uom":"kg"}', 'Cosecha idem', 'key-harvest-1'), '%datos distintos%');
 
   -- 3. Expiry: past dates rejected; expired reservations cannot be confirmed/delivered
   perform pg_temp.as_user(com);
