@@ -40,41 +40,24 @@ interface State {
   stockMovements: StockMovement[];
 }
 
-const OPS_STORAGE_KEY = "bcp.ops-data.v1";
+// Local (per-user, per-device) cache for modules that are not yet backed by
+// Lovable Cloud. Keyed by user id so one person never sees another's data.
+// The legacy key "bcp.ops-data.v1" is left untouched as a backup and is never uploaded.
+const OPS_KEY_PREFIX = "bcp.ops-data.v2:";
+export const LEGACY_OPS_KEY = "bcp.ops-data.v1";
+let currentUserId: string | null = null;
 
-function loadOps(): Record<string, unknown> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(OPS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+function emptyState(): State {
+  return {
+    harvestTickets: [], lots: [], audit: [], phases: [], variableLogs: [],
+    // Variable definitions are the default catalog (not demo data).
+    variableDefinitions: [...mockDb.variableDefinitions],
+    moistureLogs: [], wasteLogs: [], alerts: [], customers: [], reservations: [], stockMovements: [],
+  };
 }
 
-const persistedOps = loadOps();
-function pick<T>(key: string, fallback: T[]): T[] {
-  const v = persistedOps[key];
-  return Array.isArray(v) ? (v as T[]) : fallback;
-}
-
-const state: State = {
-  harvestTickets: pick("harvestTickets", [...mockDb.harvestTickets]),
-  lots: pick("lots", [...mockDb.lots]),
-  audit: pick("audit", []),
-  phases: pick("phases", [...mockDb.processPhaseInstances]),
-  variableLogs: pick("variableLogs", [...mockDb.variableLogs]),
-  variableDefinitions: pick("variableDefinitions", [...mockDb.variableDefinitions]),
-  moistureLogs: pick("moistureLogs", [...mockDb.moistureLogs]),
-  wasteLogs: pick("wasteLogs", [...mockDb.wasteLogs]),
-  alerts: pick("alerts", [...mockDb.alerts]),
-  customers: pick("customers", [...mockDb.customers]),
-  reservations: pick("reservations", [...mockDb.reservations]),
-  stockMovements: pick("stockMovements", [...mockDb.stockMovements]),
-};
-if (Array.isArray(persistedOps.qualitySamples)) {
-  (state as State & { qualitySamples?: unknown[] }).qualitySamples = persistedOps.qualitySamples as unknown[];
-}
+const state: State = emptyState();
+(state as State & { qualitySamples?: unknown[] }).qualitySamples = [];
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
@@ -82,9 +65,11 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 function persistOps() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !currentUserId) return;
   try {
-    window.localStorage.setItem(OPS_STORAGE_KEY, JSON.stringify({ ...state, publicProfiles: getPublicProfilesForPersist() }));
+    const { customers: _c, ...rest } = state; // customers live in Lovable Cloud
+    void _c;
+    window.localStorage.setItem(OPS_KEY_PREFIX + currentUserId, JSON.stringify({ ...rest, publicProfiles: getPublicProfilesForPersist() }));
   } catch {}
 }
 const emit = () => {
@@ -92,11 +77,51 @@ const emit = () => {
   listeners.forEach((l) => l());
 };
 
-/** Clears all saved operational data and reloads the demo dataset. */
+function assignState(next: Partial<State> & { qualitySamples?: unknown[]; publicProfiles?: Record<string, LotPublicProfile> }) {
+  const base = emptyState();
+  for (const k of Object.keys(base) as (keyof State)[]) {
+    if (k === "customers") continue;
+    const v = next[k];
+    (state as unknown as Record<string, unknown>)[k] = Array.isArray(v) ? v : base[k];
+  }
+  (state as State & { qualitySamples?: unknown[] }).qualitySamples = Array.isArray(next.qualitySamples) ? next.qualitySamples : [];
+  for (const key of Object.keys(publicProfiles)) delete publicProfiles[key];
+  Object.assign(publicProfiles, next.publicProfiles ?? {});
+}
+
+/** Loads the local cache of the signed-in user (or clears everything on sign-out). */
+export function hydrateOpsForUser(userId: string | null) {
+  currentUserId = userId;
+  let saved: Record<string, unknown> = {};
+  if (userId && typeof window !== "undefined") {
+    try { saved = JSON.parse(window.localStorage.getItem(OPS_KEY_PREFIX + userId) ?? "{}"); } catch { saved = {}; }
+  }
+  assignState(saved as Partial<State>);
+  if (!userId) state.customers = [];
+  listeners.forEach((l) => l());
+}
+
+/** Explicit, user-triggered demo dataset (never loaded automatically). */
+export function loadDemoData() {
+  assignState({
+    harvestTickets: [...mockDb.harvestTickets], lots: [...mockDb.lots], phases: [...mockDb.processPhaseInstances],
+    variableLogs: [...mockDb.variableLogs], moistureLogs: [...mockDb.moistureLogs], wasteLogs: [...mockDb.wasteLogs],
+    alerts: [...mockDb.alerts], reservations: [...mockDb.reservations], stockMovements: [...mockDb.stockMovements],
+    qualitySamples: [...mockDb.qualitySamples],
+  });
+  emit();
+}
+
+/** Clears this user's local cache on this device. */
 export function resetOperationalData() {
-  if (typeof window === "undefined") return;
-  try { window.localStorage.removeItem(OPS_STORAGE_KEY); } catch {}
-  window.location.reload();
+  assignState({});
+  emit();
+}
+
+/** Customers come from Lovable Cloud; other local modules read them from here. */
+export function setCustomersFromCloud(rows: Customer[]) {
+  state.customers = rows;
+  listeners.forEach((l) => l());
 }
 
 function shallowEqual<T>(a: T, b: T): boolean {
