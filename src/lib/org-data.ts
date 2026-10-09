@@ -71,5 +71,13 @@ export async function saveOrgSettings(org: string, s: OrgSettings) {
 }
 
 export const fmtKg = (n: number | null | undefined) => `${Number(n ?? 0).toLocaleString("es-CR", { maximumFractionDigits: 1 })} kg`;
-export const fmtDate = (s: string | null | undefined) => (s ? new Date(s).toLocaleString("es-CR", { dateStyle: "medium", timeStyle: "short" }) : "—");
-export const fmtDay = (s: string | null | undefined) => (s ? new Date(s.length === 10 ? s + "T12:00:00" : s).toLocaleDateString("es-CR") : "—");
+/** Prototype time zone: Costa Rica (UTC−6, no DST). */
+export const APP_TZ = "America/Costa_Rica";
+/** Timestamp: "9 oct 2026, 17:21 (hora de Costa Rica)". */
+export const fmtDate = (s: string | Date | null | undefined) => (s ? `${new Date(s).toLocaleString("es-CR", { timeZone: APP_TZ, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })} (hora de Costa Rica)` : "—");
+/** Day only: "6 oct 2026". Plain dates (AAAA-MM-DD) are shown as-is, never shifted by time zone. */
+export const fmtDay = (s: string | null | undefined) => {
+  if (!s) return "—";
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T12:00:00Z") : new Date(s);
+  return d.toLocaleDateString("es-CR", { timeZone: /^\d{4}-\d{2}-\d{2}$/.test(s) ? "UTC" : APP_TZ, day: "numeric", month: "short", year: "numeric" });
+};

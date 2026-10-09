@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -155,14 +156,14 @@ function CloudLotPage() {
             {lineage.origins.map((o) => [o.farm, o.parcel, o.region].filter(Boolean).join(" · ")).join(" / ")}</p>}
           {lineage.sources.length > 0 && <p>Viene de: {lineage.sources.map((x) => `${x.lot_code} (${x.kind === "merge" ? "mezcla" : "división"}, ${x.qty_kg} kg)`).join(", ")}</p>}
           {lineage.phases.filter((x) => x.inherited).length > 0 && <ul className="text-xs text-muted-foreground">
-            {lineage.phases.filter((x) => x.inherited).map((x, i) => <li key={i}>{x.name} · lote {x.lot_code} · {new Date(x.started_at).toLocaleDateString()}{x.ended_at ? ` – ${new Date(x.ended_at).toLocaleDateString()}` : ""}</li>)}</ul>}
+            {lineage.phases.filter((x) => x.inherited).map((x, i) => <li key={i}>{x.name} · lote {x.lot_code} · {fmtDay(x.started_at)}{x.ended_at ? ` – ${fmtDay(x.ended_at)}` : ""}</li>)}</ul>}
         </div>)}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Proceso">
           <ul className="text-sm space-y-2 mb-4">{phases.map((p) => (
             <li key={p.id} className="rounded-lg border border-border p-2">
               <div className="font-medium">{p.name} {p.status !== "finished" ? "· en curso" : ""}</div>
-              <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleString()} → {p.ended_at ? new Date(p.ended_at).toLocaleString() : "…"}
+              <div className="text-xs text-muted-foreground">{fmtDate(p.started_at)} → {p.ended_at ? fmtDate(p.ended_at) : "…"}
                 {p.weight_in_kg != null && ` · entra ${p.weight_in_kg} kg`}{p.weight_out_kg != null && ` · sale ${p.weight_out_kg} kg`}</div>
               {vars.filter((v) => v.phase_id === p.id).map((v) => (
                 <div key={v.id} className={"text-xs " + (v.value?.in_range === false ? "text-destructive" : "")}>{v.value?.label}: {v.value_number} {v.value?.unit} {v.value?.in_range === false && "(fuera de rango)"}</div>))}
@@ -291,7 +292,7 @@ function CloudLotPage() {
           ) : <p className="mt-3 text-sm text-muted-foreground">No publicada: el enlace responde “no encontrado”.</p>}
           {canSell && profile && (
             <div className="mt-3 grid gap-1">
-              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${new Date(profile.exported_at).toLocaleDateString()}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
+              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${fmtDay(profile.exported_at)}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
               <div className="flex gap-2">
                 <Input type="date" max={new Date().toISOString().slice(0, 10)} value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
                 <Button variant="outline" disabled={busy || !exportDate} onClick={() => run(() => declareLotExport(lot.id, new Date(`${exportDate}T12:00:00Z`).toISOString()), "Exportación declarada")}>Declarar</Button>

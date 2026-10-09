@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPublicReport } from "@/lib/public.functions";
 import { PublicNotFound, PublicShell } from "@/components/public-lot-view";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/r/$token")({
     const s = Route.useLoaderData() as unknown as Snap;
     return <PublicShell>
       <h1 className="font-serif text-3xl mb-1">{s.title}</h1>
-      <p className="text-xs text-muted-foreground mb-6">Copia publicada el {new Date(s.created_at).toLocaleString()} · disponible hasta {new Date(s.expires_at).toLocaleDateString()}</p>
+      <p className="text-xs text-muted-foreground mb-6">Copia publicada el {fmtDate(s.created_at)} · disponible hasta {fmtDay(s.expires_at)}</p>
       {s.payload.tables.map((t) => (
         <section key={t.title} className="mb-5"><h2 className="font-serif text-lg mb-1">{t.title}</h2>
           <table className="w-full text-sm"><thead><tr>{t.head.map((h) => <th key={h} className="text-left py-1">{h}</th>)}</tr></thead>

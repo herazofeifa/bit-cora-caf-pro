@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 // Real downloadable PDFs generated in the browser from server data (no window.print).
 // jsPDF is loaded on demand so it never runs during SSR.
 
@@ -17,7 +18,7 @@ function header(doc: import("jspdf").jsPDF, title: string, subtitle: string) {
 export async function reportPdf(title: string, filters: Record<string, string>, tables: PdfTable[], fileName: string) {
   const { jsPDF, autoTable } = await lib();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  header(doc, title, `Bitácora Café Pro · generado ${new Date().toLocaleString()} · datos del servidor`);
+  header(doc, title, `Bitácora Café Pro · generado ${fmtDate()} · datos del servidor`);
   const f = Object.entries(filters).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("   ");
   doc.setFontSize(9); doc.text(doc.splitTextToSize(`Filtros: ${f || "ninguno"}`, 180), 14, 31);
   let y = 38;
@@ -71,7 +72,7 @@ export async function lotSheetPdf(s: LotSheet) {
   const { jsPDF, autoTable } = await lib();
   const QR = await import("qrcode");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  header(doc, `${s.lot.lot_code} · ${s.lot.friendly_name}`, `Ficha de lote · Bitácora Café Pro · ${new Date().toLocaleString()}`);
+  header(doc, `${s.lot.lot_code} · ${s.lot.friendly_name}`, `Ficha de lote · Bitácora Café Pro · ${fmtDate()}`);
   if (s.publicUrl) { doc.addImage(await QR.toDataURL(s.publicUrl, { margin: 0, width: 300 }), "PNG", 170, 8, 26, 26); }
   doc.setFontSize(10);
   const lines = [
@@ -80,16 +81,16 @@ export async function lotSheetPdf(s: LotSheet) {
       : `Origen: ${[s.origin.farm ?? s.origins?.[0]?.farm, s.origin.parcel ?? s.origins?.[0]?.parcel, s.origin.region ?? s.origins?.[0]?.region].filter(Boolean).join(" · ") || "—"}${s.origin.altitude ? ` · ${s.origin.altitude} msnm` : ""}`,
     ...(s.sources?.length ? [`Viene de: ${s.sources.map((x) => `${x.lot_code} (${x.kind === "merge" ? "mezcla" : "división"}, ${x.qty_kg} kg)`).join(", ")}`] : []),
     `Variedad: ${s.lot.variety || "—"}   Proceso: ${s.lot.process_type}   Estado: ${s.lot.physical_state}   Calidad: ${s.lot.quality_status}`,
-    `Kg iniciales: ${s.lot.qty_initial_kg}   Kg actuales: ${s.lot.qty_current_kg}   Creado: ${new Date(s.lot.created_at).toLocaleDateString()}`,
+    `Kg iniciales: ${s.lot.qty_initial_kg}   Kg actuales: ${s.lot.qty_current_kg}   Creado: ${fmtDay(s.lot.created_at)}`,
   ];
   if (s.story) lines.push(`Historia: ${s.story}`);
   if (s.tasting) lines.push(`Notas de taza: ${s.tasting}`);
   doc.text(doc.splitTextToSize(lines.join("\n"), 150), 14, 38);
   autoTable(doc, { startY: 66, head: [["Fase", "Inicio", "Fin", "Entra kg", "Sale kg"]], headStyles: { fillColor: [74, 52, 38] }, styles: { fontSize: 8 },
-    body: s.phases.length ? s.phases.map((p) => [p.name, new Date(p.started_at).toLocaleString(), p.ended_at ? new Date(p.ended_at).toLocaleString() : "en curso", p.weight_in_kg ?? "", p.weight_out_kg ?? ""]) : [["Sin fases", "", "", "", ""]] });
+    body: s.phases.length ? s.phases.map((p) => [p.name, fmtDate(p.started_at), p.ended_at ? fmtDate(p.ended_at) : "en curso", p.weight_in_kg ?? "", p.weight_out_kg ?? ""]) : [["Sin fases", "", "", "", ""]] });
   let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   autoTable(doc, { startY: y, head: [["Fecha", "Resultado", "SCA", "Defectos", "Atributos y notas"]], headStyles: { fillColor: [74, 52, 38] }, styles: { fontSize: 8 },
-    body: s.quality.length ? s.quality.map((q) => [new Date(q.sampled_at).toLocaleDateString(), q.status, q.score ?? "", q.defects ?? "", q.notes ?? ""]) : [["Sin evaluaciones", "", "", "", ""]] });
+    body: s.quality.length ? s.quality.map((q) => [fmtDay(q.sampled_at), q.status, q.score ?? "", q.defects ?? "", q.notes ?? ""]) : [["Sin evaluaciones", "", "", "", ""]] });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   for (const p of s.photos) {
     if (y > 220) { doc.addPage(); y = 20; }

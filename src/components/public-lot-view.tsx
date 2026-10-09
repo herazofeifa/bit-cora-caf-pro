@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 import { Award, Calendar, Droplet, MapPin, Mountain, Sprout } from "lucide-react";
 
 export interface PublicLot {
@@ -50,7 +51,7 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
         <section><h2 className="font-serif text-xl mb-2">Proceso</h2>
           <ol className="border-l border-border ml-2 space-y-3">{lot.phases.map((p, i) => (
             <li key={i} className="pl-4"><div className="font-medium">{p.name}{p.inherited && <span className="text-xs text-muted-foreground"> · lote de origen</span>}</div>
-              <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleDateString()}{p.ended_at ? ` – ${new Date(p.ended_at).toLocaleDateString()}` : " · en curso"}</div></li>))}</ol>
+              <div className="text-xs text-muted-foreground">{fmtDay(p.started_at)}{p.ended_at ? ` – ${fmtDay(p.ended_at)}` : " · en curso"}</div></li>))}</ol>
         </section>)}
       {lot.measurements && lot.measurements.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Mediciones</h2>
@@ -58,8 +59,8 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
       {docs.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Certificados y documentos</h2>
           <ul className="text-sm">{docs.map((d) => <li key={d.id}><a className="underline" href={d.url} target="_blank" rel="noreferrer">{d.title}</a></li>)}</ul></section>)}
-      {lot.exported_at && <p className="text-sm text-center">Exportado el {new Date(lot.exported_at).toLocaleDateString()}</p>}
-      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor{lot.generated_at ? ` · ficha generada ${new Date(lot.generated_at).toLocaleString()}` : ""}</p>
+      {lot.exported_at && <p className="text-sm text-center">Exportado el {fmtDay(lot.exported_at)}</p>}
+      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor{lot.generated_at ? ` · ficha generada ${fmtDate(lot.generated_at)}` : ""}</p>
     </div>
   );
 }
