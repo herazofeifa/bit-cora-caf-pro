@@ -63,6 +63,9 @@ no está garantizada; la app corta a los 45 s y muestra el motivo (clave inváli
 Solo **cosechas y mediciones** se guardan como borrador en el dispositivo (IndexedDB, por usuario y
 organización) y se envían cuando vuelve la señal; cada envío tiene clave única, así que nunca se duplica.
 Inventario, reservas y entregas requieren conexión para evitar vender dos veces el mismo café.
+Alcance real: funciona con la app ya abierta; el service worker no guarda las páginas, así que abrir la app desde cero sin conexión no está soportado. Al cambiar de entorno o cerrar sesión, la cola anterior se detiene y sus respuestas tardías se descartan.
+
+Migración `0012_quality_units_copilot_quota.sql`: calidad SCA/defectos validada, conversión de unidades solo del servidor, cuota del copiloto. Pruebas: `tests/db/quality_harvest.test.sql`.
 
 ## Accesos
 La app es privada: no hay registro público. Un administrador crea las cuentas
