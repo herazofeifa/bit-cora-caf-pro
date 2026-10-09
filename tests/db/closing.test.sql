@@ -198,7 +198,7 @@ begin
   perform public.publish_lot((h->>'lot_id')::uuid, true, 'Historia', 'Floral');
   perform pg_temp.as_anon();
   pub := public.public_lot_view(tok);
-  perform pg_temp.is('anon: published lot code', pub->>'lot_code', (select lot_code from public.lots where id = (h->>'lot_id')::uuid));
+  perform pg_temp.is('anon: published lot code', pub->>'lot_code', h->>'lot_code');
   perform pg_temp.is('anon: farm altitude', pub->'farm'->>'altitude_m', '1600');
   if pub ? 'qty_current_kg' or pub::text ilike '%Tostador%' or pub::text ilike '%reserv%' then raise exception 'FAIL: private data in public view'; end if;
   raise notice 'ok - public view has no stock/customer/reservation data';
