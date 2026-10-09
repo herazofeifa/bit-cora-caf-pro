@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { notFound } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Json } from "@/integrations/supabase/types";
 
 // Anonymous, read-only projections for QR pages. The database functions return NULL for
 // both unknown and unpublished tokens, so both become the same 404.
@@ -41,18 +42,18 @@ export const getPublicLot = createServerFn({ method: "GET" }).inputValidator(saf
   const { data: lot, error } = await anonClient().rpc("public_lot_view", { _token: data.token });
   if (error || !lot) throw notFound();
   const l = lot as Record<string, unknown> & { files?: PublicFile[] };
-  return { ...l, files: await signFiles(l.files) } as Record<string, unknown>;
+  return { ...l, files: await signFiles(l.files) } as unknown as Json;
 });
 
 export const getPublicSack = createServerFn({ method: "GET" }).inputValidator(safeInput).handler(async ({ data }) => {
   const { data: s, error } = await anonClient().rpc("public_sack_view", { _token: data.token });
   if (error || !s) throw notFound();
   const v = s as { sack: Record<string, unknown>; lot: Record<string, unknown> & { files?: PublicFile[] }; lot_token: string };
-  return { sack: v.sack, lot_token: v.lot_token, lot: { ...v.lot, files: await signFiles(v.lot.files) } } as Record<string, unknown>;
+  return { sack: v.sack, lot_token: v.lot_token, lot: { ...v.lot, files: await signFiles(v.lot.files) } } as unknown as Json;
 });
 
 export const getPublicReport = createServerFn({ method: "GET" }).inputValidator(safeInput).handler(async ({ data }) => {
   const { data: r, error } = await anonClient().rpc("public_report_snapshot", { _token: data.token });
   if (error || !r) throw notFound();
-  return r as Record<string, unknown>;
+  return r as unknown as Json;
 });
