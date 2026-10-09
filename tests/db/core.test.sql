@@ -1,6 +1,6 @@
 -- Database integration tests for the shared operational core.
 -- Runs inside one transaction and ROLLS BACK: no data is left behind.
--- Fake user ids are used only through request.jwt.claims; no auth accounts are created.
+-- LOCAL ONLY: run via tests/db/run-local.sh on a disposable database, never on a real project.
 \set ON_ERROR_STOP on
 begin;
 
@@ -27,7 +27,10 @@ begin
   raise notice 'ok - %', _label;
 end $$;
 
--- Fixtures (as table owner)
+-- Fixtures (as table owner). auth.users here is the local stub from bootstrap.sql.
+insert into auth.users (id, email) select u::uuid, u || '@test.local' from unnest(array[
+  '10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000003',
+  '10000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001']) u;
 insert into public.organizations (id, name) values
   ('00000000-0000-0000-0000-0000000000a1', 'Test A'), ('00000000-0000-0000-0000-0000000000b1', 'Test B');
 insert into public.memberships (organization_id, user_id, role) values
