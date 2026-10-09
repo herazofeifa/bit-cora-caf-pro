@@ -9,7 +9,7 @@ const token = z.object({ token: z.string().regex(/^[a-f0-9]{32}$/) });
 
 function anonClient() {
   const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const key = (process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"])!;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: { fetch: (input, init) => {
