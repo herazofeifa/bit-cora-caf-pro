@@ -29,6 +29,13 @@
       "when": 1791582427346,
       "tag": "0003_harden_function_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791583263662,
+      "tag": "0004_closing_core_operations",
+      "breakpoints": true
     }
   ]
 }
