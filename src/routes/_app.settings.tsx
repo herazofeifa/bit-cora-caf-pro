@@ -112,6 +112,7 @@ function useDraft<T>(source: T): { draft: T; setDraft: (next: T | ((prev: T) => 
 }
 
 function SaveBar({ dirty, onSave, onDiscard, extra }: { dirty: boolean; onSave: () => void; onDiscard: () => void; extra?: React.ReactNode }) {
+  const canManage = useCan("settings.manage");
   return (
     <div className="flex items-center justify-between gap-2 pt-2">
       <div className="text-xs text-muted-foreground">
