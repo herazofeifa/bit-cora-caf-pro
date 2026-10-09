@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { needsFirstAdmin, createFirstAdmin } from "@/lib/users.functions";
 import { startAuth, useSession } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
@@ -34,12 +32,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const checkFirst = useServerFn(needsFirstAdmin);
-  const makeFirst = useServerFn(createFirstAdmin);
-  useEffect(() => {
-    startAuth();
-    checkFirst().then((r) => setMode(r.needed ? "up" : "in")).catch(() => {});
-  }, [checkFirst]);
+  useEffect(() => { startAuth(); }, []);
   useEffect(() => { if (session) navigate({ to: "/dashboard", replace: true }); }, [session, navigate]);
 
   const submit = async (e: React.FormEvent) => {
