@@ -57,6 +57,9 @@ begin
   if v::text ~* '(price|customer|reserv|audit|organization_id|"id")' then raise exception 'FAIL private key in public view: %', v; end if;
   raise notice 'ok - no private keys in public view';
 
+  c := public.create_lot(A, 'Verde D', 12, F2, null, 'Geisha', 'natural', 'verde');
+  ph := public.start_phase(c.id, 'Secado', null, null, null, null);
+  ph := public.close_phase(ph.id, 12, null, null, null);
   select array_agg(id) into kids from public.split_lot(c.id, '[{"qty_kg":5},{"qty_kg":5}]');
   insert into public.lot_public_profiles (lot_id, organization_id, is_public, visibility) values (kids[1], A, true, '{"farm": false, "producer": false}') returning public_token into tok;
   v := public.public_lot_view(tok);
