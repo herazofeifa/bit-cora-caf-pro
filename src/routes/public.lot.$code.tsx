@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot, getQualitySamples } from "@/lib/store";
 import { useFarms, useParcels } from "@/lib/app-config-store";
 import { useStore, useLotPublicProfile } from "@/lib/store";
 import {
@@ -99,12 +100,12 @@ function PublicLotContent({
 }) {
   const farm = useFarms().find((f) => f.id === lot.farm_id);
   const parcel = useParcels().find((p) => p.id === lot.parcel_id);
-  const harvest = mockDb.harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
+  const harvest = getStoreSnapshot().harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
   const processInstance = mockDb.processInstances.find((p) => p.id === lot.process_instance_id);
   const phases = useStore((s) => s.phases.filter((p) => p.process_instance_id === lot.process_instance_id));
 
   const tastingFromQc = useMemo(() => {
-    const qc = mockDb.qualitySamples.find((q) => q.lot_id === lot.id && q.tasting_notes);
+    const qc = getQualitySamples().find((q) => q.lot_id === lot.id && q.tasting_notes);
     return qc?.tasting_notes ?? null;
   }, [lot.id]);
 

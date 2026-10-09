@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
-import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot } from "@/lib/store";
 import { useFarms } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
@@ -85,7 +85,7 @@ function isAtRisk(lot: Lot): boolean {
   if (lot.current_moisture != null && lot.physical_state === "secado" && lot.current_moisture > 13) {
     return true;
   }
-  if (mockDb.alerts.some((a) => a.lot_id === lot.id && a.status === "open" && a.severity !== "info")) {
+  if (getStoreSnapshot().alerts.some((a) => a.lot_id === lot.id && a.status === "open" && a.severity !== "info")) {
     return true;
   }
   return false;
@@ -93,9 +93,9 @@ function isAtRisk(lot: Lot): boolean {
 
 function lastActivityDate(lot: Lot): string {
   const dates: number[] = [new Date(lot.updated_at).getTime()];
-  for (const m of mockDb.moistureLogs) if (m.lot_id === lot.id) dates.push(new Date(m.measured_at).getTime());
-  for (const v of mockDb.variableLogs) if (v.lot_id === lot.id) dates.push(new Date(v.measured_at).getTime());
-  for (const s of mockDb.stockMovements) if (s.lot_id === lot.id) dates.push(new Date(s.created_at).getTime());
+  for (const m of getStoreSnapshot().moistureLogs) if (m.lot_id === lot.id) dates.push(new Date(m.measured_at).getTime());
+  for (const v of getStoreSnapshot().variableLogs) if (v.lot_id === lot.id) dates.push(new Date(v.measured_at).getTime());
+  for (const s of getStoreSnapshot().stockMovements) if (s.lot_id === lot.id) dates.push(new Date(s.created_at).getTime());
   return new Date(Math.max(...dates)).toLocaleDateString("es", {
     day: "2-digit",
     month: "short",
@@ -113,7 +113,7 @@ function LotsPage() {
 
   const phaseNames = useMemo(() => {
     const set = new Set<string>();
-    mockDb.processPhaseInstances.forEach((p) => set.add(p.name));
+    getStoreSnapshot().phases.forEach((p) => set.add(p.name));
     return Array.from(set);
   }, []);
 
@@ -121,9 +121,9 @@ function LotsPage() {
     const q = filters.q.trim().toLowerCase();
     return lots.filter((lot) => {
       const farm = farms.find((f) => f.id === lot.farm_id);
-      const customers = mockDb.reservations
+      const customers = getStoreSnapshot().reservations
         .filter((r) => r.lot_id === lot.id)
-        .map((r) => mockDb.customers.find((c) => c.id === r.customer_id)?.name?.toLowerCase() ?? "");
+        .map((r) => getStoreSnapshot().customers.find((c) => c.id === r.customer_id)?.name?.toLowerCase() ?? "");
       if (q) {
         const hay = [
           lot.lot_code,
@@ -143,7 +143,7 @@ function LotsPage() {
       if (filters.commercial !== "all" && lot.commercial_state !== filters.commercial) return false;
       if (filters.quality !== "all" && lot.quality_status !== filters.quality) return false;
       if (filters.phaseName !== "all") {
-        const phase = mockDb.processPhaseInstances.find((p) => p.id === lot.current_phase_id);
+        const phase = getStoreSnapshot().phases.find((p) => p.id === lot.current_phase_id);
         if (phase?.name !== filters.phaseName) return false;
       }
       if (filters.hasAvailable && calcAvailableKg(lot) <= 0) return false;
@@ -293,7 +293,7 @@ function LotsPage() {
 
 function LotCard({ lot }: { lot: Lot }) {
   const farm = useFarms().find((f) => f.id === lot.farm_id);
-  const phase = mockDb.processPhaseInstances.find((p) => p.id === lot.current_phase_id);
+  const phase = getStoreSnapshot().phases.find((p) => p.id === lot.current_phase_id);
   const available = calcAvailableKg(lot);
   const risk = isAtRisk(lot);
 

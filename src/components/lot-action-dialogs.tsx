@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { logMoisture, logVariable, logWaste, useStore } from "@/lib/store";
-import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot } from "@/lib/store";
 import type { Lot, VariableDefinition } from "@/types/domain";
 
 interface BaseProps {
@@ -37,7 +37,7 @@ interface BaseProps {
 export function RegisterVariableDialog({ open, onOpenChange, lot }: BaseProps) {
   const definitions = useStore((s) => s.variableDefinitions);
   const phaseId = lot.current_phase_id;
-  const phase = mockDb.processPhaseInstances
+  const phase = getStoreSnapshot().phases
     .concat([])
     .find((p) => p.id === phaseId);
   const phaseName = phase?.name ?? "";
