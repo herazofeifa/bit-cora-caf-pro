@@ -99,7 +99,8 @@ begin
   perform pg_temp.eq('single sale movement', n, 1);
 
   -- Expiration releases once
-  r1 := public.create_reservation(l.id, cust, 10, null, null, now() - interval '1 day');
+  r1 := public.create_reservation(l.id, cust, 10, null, null, now() + interval '1 day');
+  perform pg_temp.as_owner(); update public.reservations set expires_at = now() - interval '1 day' where id = r1.id; perform pg_temp.as_user(com);
   perform pg_temp.eq('expired count first run', public.expire_reservations(A), 1);
   perform pg_temp.eq('expired count second run', public.expire_reservations(A), 0);
   select * into l from public.lots where id = l.id;
