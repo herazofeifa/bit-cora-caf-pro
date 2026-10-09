@@ -24,8 +24,9 @@ export const createTeamUser = createServerFn({ method: "POST" })
     });
     if (rErr || isAdmin !== true) throw new Error("Solo un administrador de esta organización puede crear usuarios.");
     const { data: org, error: oErr } = await context.supabase
-      .from("organizations").select("id, is_demo").eq("id", data.organizationId).maybeSingle();
+      .from("organizations").select("id, is_demo, eval_kind").eq("id", data.organizationId).maybeSingle();
     if (oErr || !org) throw new Error("Organización no encontrada.");
+    if (org.eval_kind) throw new Error("Los entornos de evaluación no permiten crear cuentas.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
