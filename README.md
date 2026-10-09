@@ -29,6 +29,8 @@ Las migraciones versionadas están en `drizzle/migrations/` y se aplican en orde
 | `0001_shared_operational_core.sql` | organizaciones, membresías, catálogos, lotes, reservas, movimientos, calidad, auditoría append-only, RLS y funciones transaccionales |
 | `0002_fix_lot_links_policy.sql` | corrección de la política de lectura de genealogía |
 | `0003_harden_function_privileges.sql` | revoca ejecución pública de funciones internas, fija `search_path` |
+| `0004_closing_core_operations.sql` | liberación explícita para venta, entrega bloqueada por calidad, precio finito, referencias de la misma organización, idempotencia, cosecha transaccional, plantillas versionadas, fases/mediciones/alertas, archivos, QR público de lote y saco, enlaces de reporte, entorno demo |
+| `0005_lot_files_type_restriction.sql` | solo JPG/PNG/WEBP/PDF en el almacenamiento |
 
 Reglas clave (ver `docs/ESTADO_ENTREGA.md`):
 - Toda tabla operativa tiene `organization_id` y RLS por membresía.
@@ -46,6 +48,21 @@ Reglas clave (ver `docs/ESTADO_ENTREGA.md`):
 | `bun run build` | build de producción |
 
 `test:db` no usa credenciales ni toca ninguna base real. `initdb` no puede ejecutarse como root.
+
+## Configuración del copiloto (OpenAI)
+El copiloto (`/copiloto`) llama directamente a la API de OpenAI desde el servidor.
+1. Crear una clave en la cuenta de OpenAI del autor.
+2. Guardarla como secreto `OPENAI_API_KEY` en la configuración del proyecto (nunca en el código ni en `.env`).
+3. Opcional: `OPENAI_MODEL` (por defecto `gpt-4.1-mini`).
+
+Costo: cada pregunta consume tokens de la cuenta OpenAI (instrucciones + resultados de herramientas,
+normalmente unos pocos miles de tokens por respuesta). Revise los precios vigentes en OpenAI. La latencia
+no está garantizada; la app corta a los 45 s y muestra el motivo (clave inválida, límite, error temporal).
+
+## Uso sin conexión
+Solo **cosechas y mediciones** se guardan como borrador en el dispositivo (IndexedDB, por usuario y
+organización) y se envían cuando vuelve la señal; cada envío tiene clave única, así que nunca se duplica.
+Inventario, reservas y entregas requieren conexión para evitar vender dos veces el mismo café.
 
 ## Accesos
 La app es privada: no hay registro público. Un administrador crea las cuentas

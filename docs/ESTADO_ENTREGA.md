@@ -1,85 +1,51 @@
-# Estado de entrega — fase base (backend compartido)
+# Estado de entrega — cierre (prototipo con datos de prueba)
 
-Fecha: 2026-10-09. Este documento describe lo implementado y verificado en esta
-entrega, y lo que queda pendiente. No se publicó la app, no se borraron datos
-existentes, no se importó el dataset demo, no se crearon cuentas ni se enviaron correos.
+Fecha: 2026-10-09. Se describe solo lo que existe y lo que realmente se ejecutó. No se publicó la
+app, no se enviaron correos, no se crearon cuentas, no se crearon datos demo en la base real
+y no se tocaron los datos ni usuarios existentes.
 
-## 1. Implementado
+## 1. Los 4 casos que fallaban (corregidos en `0004_closing_core_operations.sql`)
+| Caso reportado | Corrección | Prueba (`tests/db/closing.test.sql`) |
+|---|---|---|
+| `create_lot` cereza/en_proceso devolvía 100 kg libres | Nueva columna `sale_released`; un trigger deriva el estado comercial y bloquea todo el café no liberado. Solo `release_lot_for_sale` lo libera. La aprobación de calidad **no** libera café en proceso. | libre 0 / bloqueado 100 al crear; aprobado sigue en proceso; libre 100 tras liberar |
+| `deliver_reservation` entregaba con `bloqueado_calidad` | Rechazo antes de cualquier cambio (atómico) | peso, comprometido y estado de la reserva intactos tras el rechazo |
+| `create_reservation` aceptaba precio Infinity | Precio finito (0 ≤ p < 1e9), moneda ISO obligatoria con precio, unidad `kg` explícita; constraints en la tabla | Infinity, -Infinity, NaN, sin moneda y unidad `lb` rechazados |
+| `create_lot` aceptaba finca de otra organización | Validación explícita en las funciones + trigger genérico `_same_org_refs` en todas las tablas con referencias (finca, parcela, recibo, lote, cliente, fase, plantilla, archivo, saco) | finca/parcela ajenas rechazadas en función e INSERT directo; reserva con cliente ajeno rechazada |
 
-### Base de datos (Lovable Cloud)
-- **Organizaciones y membresías** (`organizations`, `memberships`): una organización
-  inicial "Microbeneficio"; el administrador existente quedó como miembro `administrador`
-  (backfill desde `user_roles`). Preparado para varias organizaciones (aislamiento por `organization_id`).
-- **Tablas operativas**: `org_settings`, `farms`, `parcels`, `units`, `process_templates`,
-  `variable_definitions`, `customers`, `harvest_tickets`, `lots`, `lot_links`, `lot_sequences`,
-  `process_phases`, `variable_logs`, `moisture_logs`, `waste_logs`, `reservations`,
-  `stock_movements`, `quality_samples`, `lot_public_profiles`, `audit_log`.
-- **RLS por organización** en todas las tablas: lectura para miembros activos; escritura
-  directa solo en catálogos y por rol; inventario, reservas, mermas, calidad y movimientos
-  **solo** mediante funciones del servidor.
-- **Rol obtenido del servidor**: `my_membership()`; el cliente ya no guarda ni lee el rol en localStorage.
-- **Funciones transaccionales** (bloqueo `FOR UPDATE` por lote, orden fijo lote→reserva):
-  `create_lot` (código único generado en servidor), `create_reservation`, `confirm_reservation`
-  (reservado→comprometido), `cancel_reservation`, `expire_reservations`, `deliver_reservation`,
-  `log_waste`, `log_moisture`, `adjust_inventory` (ajuste negativo permitido con motivo y sin tocar
-  café reservado/comprometido), `record_quality` (bloqueo/aprobación recalcula `qty_blocked_kg`),
-  `split_lot`, `merge_lots` (validan NaN, negativos, duplicados; conservan kg y genealogía).
-- **Restricciones**: cantidades finitas y no negativas (`<> 'NaN'`), `reservado+comprometido+bloqueado ≤ actual`,
-  disponibilidad como columna generada.
-- **Auditoría append-only**: trigger impide UPDATE/DELETE; `actor_id = auth.uid()`, `created_at = now()` del servidor.
-- **Administradores**: se eliminó el arranque público `createFirstAdmin`; `set_member_role`
-  serializa los cambios por organización e impide quitar al último administrador.
-  Los usuarios nuevos entran como `consulta`; solo un administrador crea cuentas (con membresía).
+Además: estado comercial derivado siempre (disponible → reservado → comprometido → vendido parcial/vendido),
+idempotencia por clave de operación (`operation_keys` + bloqueo advisory) en creación de lote, cosecha,
+reserva, entrega, fases y mediciones: la repetición devuelve el mismo resultado, con un solo movimiento y una
+sola fila de auditoría.
 
-### Aplicación
-- **Clientes**: lectura/creación/edición/borrado contra la nube, con confirmación del servidor,
-  estados de carga/error y Realtime entre dispositivos.
-- **Fincas y parcelas** (Ajustes): se cargan de la nube y "Guardar cambios" escribe en la nube.
-- **Usuarios y roles**: listado desde membresías; cambio de rol vía `set_member_role`.
-- **Caché local por usuario**: los módulos aún locales se guardan bajo `bcp.ops-data.v2:<usuario>`;
-  al cerrar sesión se vacía la memoria y se cancela Realtime. El dato antiguo `bcp.ops-data.v1`
-  se conserva intacto como respaldo y **no** se sube.
-- **Demo explícito**: la app arranca vacía; "Datos demo" en Ajustes carga el ejemplo solo en ese dispositivo.
-- Reportes, trazabilidad, detalle de lote, inventario, mermas, dashboard y ficha pública ya no leen
-  datos operativos de `mockDb`; leen el almacén de la sesión. Siguen usando el catálogo por defecto de
-  plantillas de proceso (`processTemplates/processInstances/processTemplatePhases`).
+## 2. Funciones de cierre
+| # | Funcionalidad | Estado |
+|---|---|---|
+| 1 | **Cosecha** (`/operacion/cosecha`): trabajadores, número, responsable, corte/pasilla/repela, temporada, calidad inicial, fecha, finca/parcela/variedad, cantidad en kg o unidad configurada. `register_harvest` crea recibo + lote nuevo o suma a lote existente en **una** transacción. | Hecho y probado. Si falla, no queda recibo huérfano. |
+| 2 | **Procesos**: plantillas Lavado/Honey/Natural/Anaeróbico con rangos de pH, temperatura, Brix y humedad; plantillas personalizadas versionadas (`save_process_template`). Fases reales con hora, operador y peso de entrada. Mediciones fuera de rango crean alerta. Al cerrar una fase con el peso medido, la diferencia se registra como merma de proceso y se cambia el estado físico. Lista de procesos atrasados o con más de 20 días fermentando. | Hecho en servidor y en `/operacion/lote/:id`. Pendiente: el **editor visual** de plantillas personalizadas aún no llama a `save_process_template` (la función existe y está probada). |
+| 3 | **Archivos**: bucket privado `lot-files` (10 MB), carpeta por organización, solo JPG/PNG/WEBP/PDF (tabla y política de almacenamiento), lectura con enlace firmado de 5 min, contratos nunca públicos (constraint). Solo los archivos marcados aparecen en la ficha pública. | Hecho. Subida probada en tipos/políticas; **no se subió un archivo real** en esta sesión. |
+| 4 | **QR anónimo**: `/t/:token` (lote) y `/s/:token` (saco). Token único global de 32 hex; ficha despublicada por defecto; privado e inexistente devuelven el mismo 404; sin stock, clientes, precios ni contratos. Sacos con identificador propio y etiquetas PDF con QR. | Hecho. Probado: anónimo publicado/privado/inexistente, saco de lote privado, otra organización. 404 verificado en navegador. |
+| 5 | **Reportes** (`/operacion/reportes`): datos del servidor con filtros (fechas, finca, variedad, proceso, temporada, cliente, estado comercial, calidad); CSV y PDF descargables (jsPDF); precio promedio ponderado por kg entregado y por moneda. Compartir crea una **copia publicada** con vencimiento (1–90 días) y revocable (`/r/:token`), sin clientes. | Hecho. Ficha de lote en PDF: pendiente (solo etiquetas de saco y reporte). El módulo antiguo `/reports` sigue leyendo la caché local. |
+| 6 | **Copiloto** (`/copiloto`): OpenAI Responses API directa desde el servidor; 7 herramientas de solo lectura con esquema estricto y allowlist; organización validada con la membresía; RLS del usuario. Dictado por voz si el navegador lo permite. Mensajes claros si falta la clave, hay timeout (45 s), 401, 429 o 5xx. | Código hecho. **Falta `OPENAI_API_KEY`**: verificado que la app muestra el aviso de configuración. Sin clave no se probó una respuesta real ni se midió la latencia. |
+| 7 | **Sin conexión**: el service worker guarda solo archivos estáticos (nunca HTML, API ni sesión) y no se activa en la vista previa. Cola en IndexedDB por usuario y organización para cosechas y mediciones, con clave de operación, reintento manual y automático (al volver la conexión y cada 30 s) y rechazos visibles. Se conserva al cerrar el navegador. Inventario, reservas y entregas requieren conexión (se explica en la pantalla). | Hecho. No se probó en un dispositivo real sin señal. |
+| 8 | **Demo**: botón de administrador “Crear entorno demo” (`create_demo_environment`) que crea una organización separada con datos de prueba. Desde la organización demo, el administrador crea una cuenta de evaluador (consulta o productor) escribiendo la contraseña; esa cuenta solo pertenece a la demo. Selector de organización. | Hecho y probado (en la base local, no cambia los datos de la organización real). **No se ejecutó en la base real.** |
 
-## 2. Pruebas ejecutadas realmente (sandbox, 2026-10-09)
+## 3. Pruebas ejecutadas realmente (sandbox, 2026-10-09)
 | Comando | Resultado |
 |---|---|
-| `bun run typecheck` (tsc) | sin errores |
-| `bun run test` (Vitest) | 3 archivos, 4 pruebas OK (CSV, sobreventa local, aislamiento/logout, demo explícito) |
-| `bash tests/db/run-local.sh` | migraciones 0000–0003 aplicadas en PostgreSQL 17 desechable; 27 aserciones OK + concurrencia OK |
+| `bun run typecheck` | sin errores |
+| `bun run test` (Vitest) | 4 archivos, 6 pruebas OK (incluye el promedio ponderado (60×6 + 40×8)/100 = 6,8) |
+| `bash tests/db/run-local.sh` | migraciones 0000–0005 sobre PostgreSQL 17 desechable; `core.test.sql` + `closing.test.sql`: 108 aserciones `ok`; concurrencia: `successful=6 rejected_oversell=4 reserved_free=90 10` |
+| `bun run build` | OK |
+| Navegador (Playwright, sesión del administrador) | `/operacion`, `/operacion/cosecha`, `/operacion/reportes` y `/copiloto` cargan; `/t/<token inexistente>` y `/s/abc` muestran “No encontrado”; el copiloto muestra el aviso de clave faltante |
 
-Aserciones de `tests/db/core.test.sql`: códigos de lote únicos; NaN/negativos rechazados;
-sobreventa rechazada; confirmar mueve a comprometido una vez; cancelar libera una vez; entregar
-reduce físico y registra una venta una vez (y no se puede cancelar después); vencimiento libera una vez;
-merma no consume reservado; ajuste negativo con motivo; bloqueo/aprobación de calidad; división/mezcla
-conservan kg y genealogía y rechazan duplicados; `consulta` no escribe (función, RLS e UPDATE directo);
-otra organización no ve ni opera datos ajenos; no se puede degradar al último admin; auditoría con actor y append-only.
+**No ejecutado:** la propagación de cambios en tiempo real entre dos dispositivos (el código se suscribe a
+`lots`, `alerts` y `reservations`, pero no se verificó con dos sesiones), las pruebas de interfaz
+automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta que el repositorio esté conectado).
 
-Concurrencia (`tests/db/concurrency.sh`): 10 sesiones paralelas reservando 15 kg de un lote de 100 kg →
-`successful=6 rejected_oversell=4 reserved_free=90 10`.
-
-Limitación: el usuario de base del sandbox no puede asumir el rol `authenticated`, por eso las
-pruebas de RLS se ejecutan sobre una base local con roles equivalentes (`tests/db/bootstrap.sql`),
-no sobre la base del proyecto.
-
-## Revisión de seguridad automática
-Tras la migración 0003 quedan avisos esperados: funciones `SECURITY DEFINER` ejecutables por usuarios con sesión (cada una valida membresía y rol dentro) y `lot_sequences` sin políticas (solo accesible desde funciones internas).
-
-## 3. Pendiente (siguiente entrega)
-Las tablas y funciones ya existen y están probadas; falta conectar estas pantallas, que hoy
-siguen guardando en la caché local por usuario:
-- Cosechas y recibos → `harvest_tickets` + `create_lot`.
-- Lotes, detalle, división/mezcla, ajustes → `lots`, `split_lot`, `merge_lots`, `adjust_inventory`.
-- Control de proceso y fases → `process_phases`; variables → `variable_logs`; humedad → `log_moisture`.
-- Mermas → `log_waste`; calidad → `record_quality`.
-- Reservas e inventario → funciones de reserva (bloqueado hasta que los lotes estén en la nube).
-- Movimientos, alertas, auditoría (pantalla) → leer `stock_movements` / `audit_log`.
-- Organización, unidades, rangos y reglas (Ajustes) → `organizations`, `units`, `org_settings`.
-- Plantillas de proceso y variables personalizadas → `process_templates`, `variable_definitions`.
-- Ficha pública por QR desde la nube (`lot_public_profiles`, lectura anónima acotada).
-- Programar `expire_reservations` (hoy se invoca bajo demanda).
-- Fotos, PDF, modo sin conexión real y copiloto: fuera de esta entrega.
-- CI: el archivo existe; no se ha comprobado en GitHub (no consta repositorio conectado).
+## 4. Pendiente exacto
+- **Configuración del autor:** agregar `OPENAI_API_KEY` (y opcionalmente `OPENAI_MODEL`, por defecto `gpt-4.1-mini`) en Secretos.
+- **Pantallas antiguas:** `/lots`, `/harvest`, `/intake`, `/process-control`, `/reservations`, `/inventory`, `/waste`, `/quality`, `/reports` y `/traceability` siguen usando la caché local por usuario. La operación compartida está en **Operación (servidor)**.
+- **Plantillas:** falta conectar el editor visual de plantillas personalizadas a `save_process_template`.
+- **PDF:** falta la ficha de lote en PDF.
+- **Tareas programadas:** no se agenda `expire_reservations`; se ejecuta solo al llamarla.
+- **Tiempo de respuesta:** no se garantiza la latencia del copiloto (no se midió).
