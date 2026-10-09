@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/permission-gate";
 import {
   ArrowLeft,
   Droplet,
@@ -289,9 +290,11 @@ function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | 
             <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Finalizar fase
           </Button>
         )}
+        <PermissionGate permission="waste.log">
         <Button variant="secondary" size="sm" className="shrink-0" onClick={() => setWasteOpen(true)}>
           <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Merma
         </Button>
+        </PermissionGate>
         <Button variant="secondary" size="sm" className="shrink-0" onClick={() => navigate({ to: "/reservations" })}>
           <ClipboardList className="h-3.5 w-3.5 mr-1.5" /> Reservar
         </Button>
@@ -304,8 +307,10 @@ function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | 
         <Button variant="secondary" size="sm" className="shrink-0" disabled>
           <Package className="h-3.5 w-3.5 mr-1.5" /> Ajustar
         </Button>
-        <Button variant="secondary" size="sm" className="shrink-0" disabled>
-          <QrCode className="h-3.5 w-3.5 mr-1.5" /> Ficha pública
+        <Button asChild variant="secondary" size="sm" className="shrink-0">
+          <Link to="/public/lot/$code" params={{ code: lot.lot_code }} target="_blank">
+            <QrCode className="h-3.5 w-3.5 mr-1.5" /> Ficha pública
+          </Link>
         </Button>
       </div>
 

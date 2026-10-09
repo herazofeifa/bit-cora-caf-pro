@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/permission-gate";
 import { Plus, Search, Sprout, MapPin, Calendar, Scale, AlertTriangle } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -59,11 +60,13 @@ function HarvestListPage() {
         eyebrow="COSECHA" title="Cosecha"
         subtitle="Registra el café recolectado en tu finca."
         action={
+          <PermissionGate permission="lot.create" hint>
           <Button asChild className="h-11 rounded-xl">
             <Link to="/harvest/new">
               <Plus className="h-4 w-4" /> Nueva cosecha
             </Link>
           </Button>
+          </PermissionGate>
         }
       />
 
