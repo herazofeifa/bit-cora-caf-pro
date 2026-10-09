@@ -1,3 +1,4 @@
+import { crDay, inCrRange } from "@/lib/date-range";
 import { fmtDay } from "@/lib/org-data";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -34,7 +35,7 @@ function CloudReports() {
   const [waste, setWaste] = useState<RWaste[]>([]); const [res, setRes] = useState<RRes[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [shares, setShares] = useState<{ id: string; token: string; title: string; expires_at: string; revoked_at: string | null }[]>([]);
-  const [flt, setFlt] = useState({ from: yearStart, to: new Date().toISOString().slice(0, 10), farm: "", variety: "", process: "", customer: "", season: "", commercial: "", quality: "" });
+  const [flt, setFlt] = useState({ from: yearStart, to: crDay(), farm: "", variety: "", process: "", customer: "", season: "", commercial: "", quality: "" });
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -57,7 +58,7 @@ function CloudReports() {
   useEffect(() => { if (cloud.orgId) void load(); }, [cloud.orgId]);
 
   const d = useMemo(() => {
-    const inRange = (iso: string | null) => !!iso && iso.slice(0, 10) >= flt.from && iso.slice(0, 10) <= flt.to;
+    const inRange = (iso: string | null) => inCrRange(iso, flt.from, flt.to);
     const lotOk = (l: RLot) => (!flt.farm || l.farm_id === flt.farm) && (!flt.variety || l.variety === flt.variety) && (!flt.process || l.process_type === flt.process)
       && (!flt.commercial || l.commercial_state === flt.commercial) && (!flt.quality || l.quality_status === flt.quality);
     const L = lots.filter(lotOk); const ids = new Set(L.map((l) => l.id));
