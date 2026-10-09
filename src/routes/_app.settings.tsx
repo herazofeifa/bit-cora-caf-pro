@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole, getOrgId } from "@/lib/cloud";
+import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole, getOrgId, useCloudState } from "@/lib/cloud";
 import { loadDemoData, resetOperationalData } from "@/lib/store";
 import { createTeamUser } from "@/lib/users.functions";
 import { createFileRoute } from "@tanstack/react-router";
@@ -385,7 +385,8 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
       role: ((userRoles ?? []).find((r) => r.user_id === p.id)?.role ?? "consulta") as AppRole,
     })));
   };
-  useEffect(() => { void load(); }, [currentRole]);
+  const cloudOrg = useCloudState().orgId;
+  useEffect(() => { void load(); }, [currentRole, cloudOrg]);
   const changeRole = async (userId: string, role: AppRole) => {
     try { await cloudSetMemberRole(userId, role); }
     catch (e) { return toast.error((e as Error).message); }
