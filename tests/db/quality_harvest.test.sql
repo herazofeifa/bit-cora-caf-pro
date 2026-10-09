@@ -26,16 +26,16 @@ declare A uuid := '05000000-0000-0000-0000-0000000000a1'; F uuid := '25000000-00
 begin
   perform pg_temp.as_user('15000000-0000-0000-0000-000000000001');
   -- 3) unit conversion
-  r := public.register_harvest(A, jsonb_build_object('qty', 2, 'uom', 'cajuela', 'farm_id', F, 'harvest_date', '2026-10-01'), null, null, 'qh-1');
+  r := public.register_harvest(A, jsonb_build_object('qty', 2, 'uom', 'cajuela', 'farm_id', F, 'harvest_date', '2026-10-01'), null, null, 'qh-key-0001');
   perform pg_temp.eq('2 cajuelas use the server factor 12.5 → 25 kg', (r->>'qty_kg')::numeric, 25);
   perform pg_temp.expect_fail(format('select public.register_harvest(%L, %L::jsonb, null, null, %L)', A,
-    jsonb_build_object('qty', 2, 'uom', 'cajuela', 'kg_factor', 50, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-2'), '%la define la organización%');
+    jsonb_build_object('qty', 2, 'uom', 'cajuela', 'kg_factor', 50, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-key-0002'), '%la define la organización%');
   select count(*) into tok from public.harvest_tickets where organization_id = A;
   perform pg_temp.eq('fraudulent factor creates no ticket', tok::numeric, 1);
-  r := public.register_harvest(A, jsonb_build_object('qty', 1, 'uom', 'cajuela', 'kg_factor', 12.5, 'farm_id', F, 'harvest_date', '2026-10-01'), null, null, 'qh-3');
+  r := public.register_harvest(A, jsonb_build_object('qty', 1, 'uom', 'cajuela', 'kg_factor', 12.5, 'farm_id', F, 'harvest_date', '2026-10-01'), null, null, 'qh-key-0003');
   perform pg_temp.eq('matching client factor accepted', (r->>'qty_kg')::numeric, 12.5);
   perform pg_temp.expect_fail(format('select public.register_harvest(%L, %L::jsonb, null, null, %L)', A,
-    jsonb_build_object('qty', 1, 'uom', 'lata', 'kg_factor', 9, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-4'), '%Configure el peso%');
+    jsonb_build_object('qty', 1, 'uom', 'lata', 'kg_factor', 9, 'farm_id', F, 'harvest_date', '2026-10-01'), 'qh-key-0004'), '%Configure el peso%');
 
   -- 1) structured quality
   l := public.create_lot(A, 'Q', 100, F, null, 'Geisha', 'lavado', 'verde');
