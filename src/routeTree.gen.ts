@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
@@ -40,6 +41,11 @@ import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
 import { Route as AppIntakeNewRouteImport } from './routes/_app.intake.new'
 import { Route as AppHarvestNewRouteImport } from './routes/_app.harvest.new'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/alerts': typeof AppAlertsRoute
   '/assistant': typeof AppAssistantRoute
   '/audit': typeof AppAuditRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/alerts': typeof AppAlertsRoute
   '/assistant': typeof AppAssistantRoute
   '/audit': typeof AppAuditRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/assistant': typeof AppAssistantRoute
   '/_app/audit': typeof AppAuditRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/onboarding'
+    | '/reset-password'
     | '/alerts'
     | '/assistant'
     | '/audit'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/onboarding'
+    | '/reset-password'
     | '/alerts'
     | '/assistant'
     | '/audit'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/onboarding'
+    | '/reset-password'
     | '/_app/alerts'
     | '/_app/assistant'
     | '/_app/audit'
@@ -388,11 +400,19 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   PublicLotCodeRoute: typeof PublicLotCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -718,6 +738,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   PublicLotCodeRoute: PublicLotCodeRoute,
 }
 export const routeTree = rootRouteImport

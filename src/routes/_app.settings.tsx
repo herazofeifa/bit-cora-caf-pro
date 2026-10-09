@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { createTeamUser } from "@/lib/users.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
@@ -374,12 +376,42 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
     toast.success(`Rol actualizado: ${roleLabel[role]}`);
     void load();
   };
+  const createUser = useServerFn(createTeamUser);
+  const [nu, setNu] = useState({ full_name: "", email: "", password: "", role: "consulta" as AppRole });
+  const [creating, setCreating] = useState(false);
+  const addUser = async () => {
+    setCreating(true);
+    try {
+      await createUser({ data: nu });
+      toast.success("Usuario creado. Compartile su correo y contraseña.");
+      setNu({ full_name: "", email: "", password: "", role: "consulta" });
+      void load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo crear el usuario");
+    } finally { setCreating(false); }
+  };
   return (
     <div className="space-y-4">
+      {isAdmin && (
+        <Card className="p-4 space-y-3">
+          <Label>Agregar usuario</Label>
+          <p className="text-xs text-muted-foreground">Solo vos podés dar acceso. La contraseña debe tener al menos 8 caracteres.</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            <Input placeholder="Nombre" value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} />
+            <Input type="email" placeholder="correo@finca.com" value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} />
+            <Input type="password" placeholder="Contraseña inicial" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
+            <Select value={nu.role} onValueChange={(v) => setNu({ ...nu, role: v as AppRole })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{roles.map((r) => <SelectItem key={r} value={r}>{roleLabel[r]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" onClick={addUser} disabled={creating || !nu.email || nu.password.length < 8 || !nu.full_name}>Crear usuario</Button>
+        </Card>
+      )}
       <Card className="p-4">
         <Label>Tu rol</Label>
         <p className="text-sm mt-1">{roleLabel[currentRole]}</p>
-        <p className="text-xs text-muted-foreground mt-1">La primera persona registrada es Administrador; las nuevas cuentas entran como Consulta hasta que un administrador les asigne un rol.</p>
+        <p className="text-xs text-muted-foreground mt-1">Solo un administrador puede crear cuentas y cambiar roles.</p>
       </Card>
       <Card className="p-0 divide-y divide-border">
         {users.map((u) => (
