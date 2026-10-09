@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCloudState } from "@/lib/cloud";
+import { currentGeneration, getOrgId, useCloudState } from "@/lib/cloud";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFarms } from "@/lib/app-config-store";
 import { useCurrentRole } from "@/lib/permissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,11 +38,14 @@ function CloudReports() {
   const [shares, setShares] = useState<{ id: string; token: string; title: string; expires_at: string; revoked_at: string | null }[]>([]);
   const [flt, setFlt] = useState({ from: yearStart, to: crDay(), farm: "", variety: "", process: "", customer: "", season: "", commercial: "", quality: "" });
   const [loading, setLoading] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false); const [shareDays, setShareDays] = useState("7"); const [sharing, setSharing] = useState(false);
 
   async function load() {
+    const org = requireOrg(); const gen = currentGeneration();
+    // Late replies from a previous organization/session must never land in this screen.
+    const live = () => gen === currentGeneration() && getOrgId() === org;
     setLoading(true);
     try {
-      const org = requireOrg();
       const [l, t, w, r, c, s] = await Promise.all([
         supabase.from("lots").select("id,variety,process_type,farm_id,commercial_state,quality_status,qty_current_kg,qty_free_kg,qty_reserved_kg,qty_committed_kg").eq("organization_id", org),
         supabase.from("harvest_tickets").select("farm_id,variety,harvest_date,qty_kg,season").eq("organization_id", org),
@@ -50,12 +54,17 @@ function CloudReports() {
         supabase.from("customers").select("id,name").eq("organization_id", org),
         supabase.from("report_shares").select("id,token,title,expires_at,revoked_at").eq("organization_id", org).order("created_at", { ascending: false }),
       ]);
+      if (!live()) return;
       for (const x of [l, t, w, r, c]) if (x.error) throw x.error;
       setLots((l.data ?? []) as RLot[]); setTickets((t.data ?? []) as RTicket[]); setWaste((w.data ?? []) as RWaste[]);
       setRes((r.data ?? []) as RRes[]); setCustomers(c.data ?? []); setShares(s.data ?? []);
-    } catch (e) { toast.error(friendlyError(e)); } finally { setLoading(false); }
+    } catch (e) { if (live()) toast.error(friendlyError(e)); } finally { if (live()) setLoading(false); }
   }
-  useEffect(() => { if (cloud.orgId) void load(); }, [cloud.orgId]);
+  useEffect(() => {
+    // Clear the previous organization's figures immediately on switch/logout.
+    setLots([]); setTickets([]); setWaste([]); setRes([]); setCustomers([]); setShares([]);
+    if (cloud.orgId) void load();
+  }, [cloud.orgId]);
 
   const d = useMemo(() => {
     const inRange = (iso: string | null) => inCrRange(iso, flt.from, flt.to);
@@ -97,16 +106,16 @@ function CloudReports() {
   ];
   const csv = () => downloadCsv(`reporte-${flt.from}-${flt.to}.csv`, tables.flatMap((t) => t.rows.map((r) => ({ seccion: t.title, ...Object.fromEntries(t.head.map((h, i) => [h, r[i]])) }))));
   async function share() {
-    const days = Number(prompt("¿Cuántos días estará disponible el enlace? (1–90)", "7"));
-    if (!days) return;
-    if (!confirm("Se publicará una copia de estos totales (sin clientes) a cualquiera con el enlace. ¿Continuar?")) return;
+    const days = Math.round(Number(shareDays));
+    if (!(days >= 1 && days <= 90)) { toast.error("Elige entre 1 y 90 días."); return; }
+    setSharing(true);
     try {
       const safe = tables.filter((t) => t.title !== "Reservas activas");
-      const s = await publishReportSnapshot(`Resumen ${flt.from} a ${flt.to}`, { filters: filterLabels, tables: safe }, days);
+      const s = await publishReportSnapshot(`Resumen ${flt.from} a ${flt.to}`, { filters: Object.fromEntries(Object.entries(filterLabels).filter(([k]) => k !== "Cliente")), tables: safe }, days);
       const url = `${window.location.origin}/r/${s.token}`;
       await navigator.clipboard?.writeText(url).catch(() => {});
-      toast.success("Enlace público creado y copiado"); void load();
-    } catch (e) { toast.error(friendlyError(e)); }
+      toast.success("Enlace público creado y copiado"); setShareOpen(false); void load();
+    } catch (e) { toast.error(friendlyError(e)); } finally { setSharing(false); }
   }
 
   if (!cloud.orgId) return <p className="text-muted-foreground">Cargando…</p>;
@@ -118,7 +127,7 @@ function CloudReports() {
         action={<div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={csv}><Download className="h-4 w-4 mr-1" />CSV</Button>
           <Button onClick={() => void reportPdf("Reporte de operación", filterLabels, tables, `reporte-${flt.from}-${flt.to}.pdf`)}><FileText className="h-4 w-4 mr-1" />PDF</Button>
-          {(role === "administrador" || role === "comercial") && <Button variant="outline" onClick={() => void share()}><Link2 className="h-4 w-4 mr-1" />Compartir</Button>}
+          {(role === "administrador" || role === "comercial") && <Button variant="outline" onClick={() => setShareOpen(true)}><Link2 className="h-4 w-4 mr-1" />Compartir</Button>}
         </div>} />
       <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-6 rounded-xl border border-border bg-card p-4">
         <div><Label>Desde</Label><Input type="date" value={flt.from} onChange={F("from")} /></div>
@@ -157,6 +166,22 @@ function CloudReports() {
               {live && <Button size="sm" variant="ghost" onClick={async () => { try { await revokeReportSnapshot(s.id); void load(); } catch (e) { toast.error(friendlyError(e)); } }}><XCircle className="h-4 w-4 mr-1" />Revocar</Button>}
             </li>; })}</ul>
         </section>)}
+      <Dialog open={shareOpen} onOpenChange={(o) => { if (!sharing) setShareOpen(o); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Compartir copia pública del reporte</DialogTitle>
+            <DialogDescription>Se guarda una copia fija de los totales de este periodo ({flt.from} a {flt.to}). Cualquiera con el enlace podrá verla hasta que venza o la revoques.</DialogDescription></DialogHeader>
+          <ul className="text-sm list-disc pl-5 space-y-1">
+            <li>Incluye: cosecha por finca y variedad, café libre por variedad, inventario por estado comercial, mermas por tipo y ventas entregadas por moneda (kg y precio ponderado).</li>
+            <li>No incluye: clientes, reservas activas ni datos personales.</li>
+          </ul>
+          <div className="grid gap-1"><Label htmlFor="share-days">Días disponible (1–90)</Label>
+            <Input id="share-days" type="number" min={1} max={90} value={shareDays} onChange={(e) => setShareDays(e.target.value)} /></div>
+          <DialogFooter>
+            <Button variant="outline" disabled={sharing} onClick={() => setShareOpen(false)}>Cancelar</Button>
+            <Button disabled={sharing} onClick={() => void share()}>Crear enlace</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

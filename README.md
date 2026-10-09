@@ -80,3 +80,6 @@ Una sola aplicación: todos los módulos usan los registros guardados de la orga
 
 ### Migraciones 0010–0011 (mezclas y procedencia)
 `0011_lineage_guards_apply.sql`: mezcla solo con el mismo estado físico, sin fases abiertas en mezcla/división, `lot_lineage` interna y procedencia heredada en la ficha pública. (`0010` está vacía.) Pruebas: `tests/db/lineage.test.sql`, incluida en `tests/db/run-local.sh`.
+
+## Roles y comprador
+Cinco roles internos (Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta). El comprador no tiene cuenta ni portal privado: consulta el QR del lote o del saco y las copias públicas de reportes. Es un ajuste aprobado por el autor respecto a la memoria inicial.

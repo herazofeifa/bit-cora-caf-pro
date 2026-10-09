@@ -41,3 +41,6 @@ Reportes muestran precios promedio ponderados separados en USD y CRC. El copilot
 > Nota: el copiloto responde con OpenAI real; latencia medida 4–10 s (5,9 s en la última prueba del autor). No se promete <3 s.
 
 > Fechas en hora de Costa Rica. Un lote dividido sin muestra propia muestra la calidad del lote de origen, marcada como heredada.
+
+## Roles y comprador
+Cinco roles internos (Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta). El comprador no tiene cuenta ni portal privado: consulta el QR del lote o del saco y las copias públicas de reportes. Es un ajuste aprobado por el autor respecto a la memoria inicial.
