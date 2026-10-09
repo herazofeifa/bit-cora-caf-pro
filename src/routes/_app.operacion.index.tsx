@@ -11,6 +11,8 @@ import { useCurrentRole } from "@/lib/permissions";
 import { supabase } from "@/integrations/supabase/client";
 import { createDemoEnvironment, friendlyError, listLots, overduePhases, requireOrg, type CloudLot } from "@/lib/ops-cloud";
 import { commercialStateLabel } from "@/lib/helpers";
+import { useServerFn } from "@tanstack/react-start";
+import { createTeamUser } from "@/lib/users.functions";
 import type { CommercialState } from "@/types/domain";
 
 export const Route = createFileRoute("/_app/operacion/")({
@@ -29,6 +31,8 @@ function OperacionHub() {
   const [units, setUnits] = useState<{ id: string; name: string; symbol: string; kg_factor: number | null }[]>([]);
   const [unit, setUnit] = useState({ name: "", symbol: "", kg: "" });
   const [error, setError] = useState<string | null>(null);
+  const createUser = useServerFn(createTeamUser);
+  const [ev, setEv] = useState({ email: "", full_name: "", password: "", role: "consulta" as "consulta" | "productor" });
 
   const load = useCallback(async () => {
     try {
@@ -132,6 +136,23 @@ function OperacionHub() {
             <Button size="sm" onClick={() => void addUnit()}><Plus className="h-4 w-4" /></Button>
           </div>)}
       </section>
+
+      {role === "administrador" && active?.is_demo && (
+        <section className="mb-6 rounded-xl border border-border p-4 text-sm">
+          <h2 className="font-serif text-lg mb-1">Cuenta de evaluador</h2>
+          <p className="text-muted-foreground mb-3">Solo pertenece a esta organización demo, con permisos mínimos. Escribe tú la contraseña; no se muestra ni se guarda en la app.</p>
+          <div className="grid gap-2 md:grid-cols-4">
+            <Input placeholder="correo" type="email" value={ev.email} onChange={(e) => setEv({ ...ev, email: e.target.value })} />
+            <Input placeholder="nombre" value={ev.full_name} onChange={(e) => setEv({ ...ev, full_name: e.target.value })} />
+            <Input placeholder="contraseña (mín. 8)" type="password" autoComplete="new-password" value={ev.password} onChange={(e) => setEv({ ...ev, password: e.target.value })} />
+            <select className="h-10 rounded-md border border-input bg-background px-3" value={ev.role} onChange={(e) => setEv({ ...ev, role: e.target.value as "consulta" | "productor" })}>
+              <option value="consulta">Consulta (solo lectura)</option><option value="productor">Productor</option></select>
+          </div>
+          <Button className="mt-2" variant="outline" onClick={async () => {
+            try { await createUser({ data: { ...ev, organizationId: cloud.orgId! } }); toast.success("Cuenta de evaluador creada"); setEv({ email: "", full_name: "", password: "", role: "consulta" }); }
+            catch (e) { toast.error(friendlyError(e)); }
+          }}>Crear cuenta</Button>
+        </section>)}
 
       {role === "administrador" && !active?.is_demo && (
         <section className="rounded-xl border border-border p-4 text-sm">

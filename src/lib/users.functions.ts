@@ -13,11 +13,11 @@ const newUser = z.object({
 /** Admin only: creates a team account with a role. */
 export const createTeamUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => newUser.extend({ role: z.enum(ROLES) }).parse(d))
+  .validator((d: unknown) => newUser.extend({ role: z.enum(ROLES), organizationId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     // Role is read from the server-side membership of the caller, never from the client.
-    const { data: mine, error: mErr } = await context.supabase.rpc("my_membership");
-    const membership = mine?.[0];
+    const { data: mine, error: mErr } = await context.supabase.rpc("my_memberships");
+    const membership = data.organizationId ? mine?.find((m) => m.organization_id === data.organizationId) : mine?.[0];
     if (mErr || !membership || membership.role !== "administrador") {
       throw new Error("Solo un administrador puede crear usuarios.");
     }
@@ -31,8 +31,9 @@ export const createTeamUser = createServerFn({ method: "POST" })
       organization_id: membership.organization_id, user_id: created.user.id, role: data.role,
     });
     if (memErr) throw new Error(memErr.message);
+    // Legacy global role mirror: only for accounts outside demo orgs (demo accounts stay least-privileged).
     await supabaseAdmin.from("user_roles").delete().eq("user_id", created.user.id);
-    await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: data.role });
+    await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: membership.is_demo ? "consulta" : data.role });
     await supabaseAdmin.from("audit_log").insert({
       organization_id: membership.organization_id, actor_id: context.userId,
       entity: "memberships", entity_id: created.user.id, action: "create", diff: { role: data.role, email: data.email },
