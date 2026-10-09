@@ -18,7 +18,7 @@ function header(doc: import("jspdf").jsPDF, title: string, subtitle: string) {
 export async function reportPdf(title: string, filters: Record<string, string>, tables: PdfTable[], fileName: string) {
   const { jsPDF, autoTable } = await lib();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  header(doc, title, `Bitácora Café Pro · generado ${fmtDate()} · datos del servidor`);
+  header(doc, title, `Bitácora Café Pro · generado ${fmtDate(new Date())} · datos del servidor`);
   const f = Object.entries(filters).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("   ");
   doc.setFontSize(9); doc.text(doc.splitTextToSize(`Filtros: ${f || "ninguno"}`, 180), 14, 31);
   let y = 38;
@@ -72,7 +72,7 @@ export async function lotSheetPdf(s: LotSheet) {
   const { jsPDF, autoTable } = await lib();
   const QR = await import("qrcode");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  header(doc, `${s.lot.lot_code} · ${s.lot.friendly_name}`, `Ficha de lote · Bitácora Café Pro · ${fmtDate()}`);
+  header(doc, `${s.lot.lot_code} · ${s.lot.friendly_name}`, `Ficha de lote · Bitácora Café Pro · ${fmtDate(new Date())}`);
   if (s.publicUrl) { doc.addImage(await QR.toDataURL(s.publicUrl, { margin: 0, width: 300 }), "PNG", 170, 8, 26, 26); }
   doc.setFontSize(10);
   const lines = [
