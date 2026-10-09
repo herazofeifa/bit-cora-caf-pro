@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
@@ -18,7 +19,7 @@ import { ConfirmAction } from "@/components/confirm-action";
 import { mockDb } from "@/data/mock-data";
 import { useStore, getStoreSnapshot } from "@/lib/store";
 import {
-  roleLabel, roleDescription, useCurrentRole, setCurrentRole, type AppRole,
+  roleLabel, roleDescription, useCurrentRole, type AppRole,
 } from "@/lib/permissions";
 import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
 import {
