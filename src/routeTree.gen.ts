@@ -41,7 +41,6 @@ import { Route as AppOperacionIndexRouteImport } from './routes/_app.operacion.i
 import { Route as PublicLotCodeRouteImport } from './routes/public.lot.$code'
 import { Route as AppVariablesNewRouteImport } from './routes/_app.variables.new'
 import { Route as AppVariablesLogRouteImport } from './routes/_app.variables.log'
-import { Route as AppProcessesCustomBuilderRouteImport } from './routes/_app.processes.custom-builder'
 import { Route as AppOperacionReportesRouteImport } from './routes/_app.operacion.reportes'
 import { Route as AppOperacionCosechaRouteImport } from './routes/_app.operacion.cosecha'
 import { Route as AppLotsIdRouteImport } from './routes/_app.lots.$id'
@@ -208,12 +207,6 @@ const AppVariablesLogRoute = AppVariablesLogRouteImport.update({
   path: '/log',
   getParentRoute: () => AppVariablesRoute,
 } as any)
-const AppProcessesCustomBuilderRoute =
-  AppProcessesCustomBuilderRouteImport.update({
-    id: '/custom-builder',
-    path: '/custom-builder',
-    getParentRoute: () => AppProcessesRoute,
-  } as any)
 const AppOperacionReportesRoute = AppOperacionReportesRouteImport.update({
   id: '/operacion/reportes',
   path: '/operacion/reportes',
@@ -262,7 +255,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRouteWithChildren
   '/process-control': typeof AppProcessControlRoute
-  '/processes': typeof AppProcessesRouteWithChildren
+  '/processes': typeof AppProcessesRoute
   '/quality': typeof AppQualityRoute
   '/reports': typeof AppReportsRoute
   '/reservations': typeof AppReservationsRoute
@@ -278,7 +271,6 @@ export interface FileRoutesByFullPath {
   '/lots/$id': typeof AppLotsIdRoute
   '/operacion/cosecha': typeof AppOperacionCosechaRoute
   '/operacion/reportes': typeof AppOperacionReportesRoute
-  '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
   '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
@@ -302,7 +294,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof AppInventoryRoute
   '/lots': typeof AppLotsRouteWithChildren
   '/process-control': typeof AppProcessControlRoute
-  '/processes': typeof AppProcessesRouteWithChildren
+  '/processes': typeof AppProcessesRoute
   '/quality': typeof AppQualityRoute
   '/reports': typeof AppReportsRoute
   '/reservations': typeof AppReservationsRoute
@@ -318,7 +310,6 @@ export interface FileRoutesByTo {
   '/lots/$id': typeof AppLotsIdRoute
   '/operacion/cosecha': typeof AppOperacionCosechaRoute
   '/operacion/reportes': typeof AppOperacionReportesRoute
-  '/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
   '/variables/log': typeof AppVariablesLogRoute
   '/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
@@ -344,7 +335,7 @@ export interface FileRoutesById {
   '/_app/inventory': typeof AppInventoryRoute
   '/_app/lots': typeof AppLotsRouteWithChildren
   '/_app/process-control': typeof AppProcessControlRoute
-  '/_app/processes': typeof AppProcessesRouteWithChildren
+  '/_app/processes': typeof AppProcessesRoute
   '/_app/quality': typeof AppQualityRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/reservations': typeof AppReservationsRoute
@@ -360,7 +351,6 @@ export interface FileRoutesById {
   '/_app/lots/$id': typeof AppLotsIdRoute
   '/_app/operacion/cosecha': typeof AppOperacionCosechaRoute
   '/_app/operacion/reportes': typeof AppOperacionReportesRoute
-  '/_app/processes/custom-builder': typeof AppProcessesCustomBuilderRoute
   '/_app/variables/log': typeof AppVariablesLogRoute
   '/_app/variables/new': typeof AppVariablesNewRoute
   '/public/lot/$code': typeof PublicLotCodeRoute
@@ -402,7 +392,6 @@ export interface FileRouteTypes {
     | '/lots/$id'
     | '/operacion/cosecha'
     | '/operacion/reportes'
-    | '/processes/custom-builder'
     | '/variables/log'
     | '/variables/new'
     | '/public/lot/$code'
@@ -442,7 +431,6 @@ export interface FileRouteTypes {
     | '/lots/$id'
     | '/operacion/cosecha'
     | '/operacion/reportes'
-    | '/processes/custom-builder'
     | '/variables/log'
     | '/variables/new'
     | '/public/lot/$code'
@@ -483,7 +471,6 @@ export interface FileRouteTypes {
     | '/_app/lots/$id'
     | '/_app/operacion/cosecha'
     | '/_app/operacion/reportes'
-    | '/_app/processes/custom-builder'
     | '/_app/variables/log'
     | '/_app/variables/new'
     | '/public/lot/$code'
@@ -729,13 +716,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVariablesLogRouteImport
       parentRoute: typeof AppVariablesRoute
     }
-    '/_app/processes/custom-builder': {
-      id: '/_app/processes/custom-builder'
-      path: '/custom-builder'
-      fullPath: '/processes/custom-builder'
-      preLoaderRoute: typeof AppProcessesCustomBuilderRouteImport
-      parentRoute: typeof AppProcessesRoute
-    }
     '/_app/operacion/reportes': {
       id: '/_app/operacion/reportes'
       path: '/operacion/reportes'
@@ -816,18 +796,6 @@ const AppLotsRouteChildren: AppLotsRouteChildren = {
 const AppLotsRouteWithChildren =
   AppLotsRoute._addFileChildren(AppLotsRouteChildren)
 
-interface AppProcessesRouteChildren {
-  AppProcessesCustomBuilderRoute: typeof AppProcessesCustomBuilderRoute
-}
-
-const AppProcessesRouteChildren: AppProcessesRouteChildren = {
-  AppProcessesCustomBuilderRoute: AppProcessesCustomBuilderRoute,
-}
-
-const AppProcessesRouteWithChildren = AppProcessesRoute._addFileChildren(
-  AppProcessesRouteChildren,
-)
-
 interface AppVariablesRouteChildren {
   AppVariablesLogRoute: typeof AppVariablesLogRoute
   AppVariablesNewRoute: typeof AppVariablesNewRoute
@@ -855,7 +823,7 @@ interface AppRouteChildren {
   AppInventoryRoute: typeof AppInventoryRoute
   AppLotsRoute: typeof AppLotsRouteWithChildren
   AppProcessControlRoute: typeof AppProcessControlRoute
-  AppProcessesRoute: typeof AppProcessesRouteWithChildren
+  AppProcessesRoute: typeof AppProcessesRoute
   AppQualityRoute: typeof AppQualityRoute
   AppReportsRoute: typeof AppReportsRoute
   AppReservationsRoute: typeof AppReservationsRoute
@@ -882,7 +850,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInventoryRoute: AppInventoryRoute,
   AppLotsRoute: AppLotsRouteWithChildren,
   AppProcessControlRoute: AppProcessControlRoute,
-  AppProcessesRoute: AppProcessesRouteWithChildren,
+  AppProcessesRoute: AppProcessesRoute,
   AppQualityRoute: AppQualityRoute,
   AppReportsRoute: AppReportsRoute,
   AppReservationsRoute: AppReservationsRoute,
