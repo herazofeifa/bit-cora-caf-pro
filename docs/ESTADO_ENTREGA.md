@@ -133,3 +133,13 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 - Arreglo: añadir crea una fila en el borrador con UUID estable; solo «Guardar cambios» escribe en la base y el aviso de éxito aparece tras la escritura confirmada (errores reales se muestran). Conversiones, Variables y Plantillas ya no tenían acciones locales enlazadas.
 - Prueba REAL en UI (Playwright, administrador original, Microbeneficio): crear «Finca Prueba UI» → guardar → «Parcela Prueba UI» → guardar → registrar cosecha 40 kg → lote LAV-2026-001 visible tras recargar; consulta a la base confirma finca, parcela y lote de 40 kg. Esos registros de prueba quedan en Microbeneficio.
 - Copiloto: con la nueva OPENAI_API_KEY (no compartida), «¿Cuánto café libre tengo por variedad?» respondió con datos reales (cero lotes libres, coincide con la base) en 5,9 s medidos por el autor. No se garantiza <3 s.
+
+## Cierre de hallazgos manuales (09/10/2026, 23:31 UTC)
+
+Cuenta profesores@bitacoracafe.example y sus dos entornos: creados por el autor; no se reiniciaron ni reemplazaron.
+
+1. Tablero: «En proceso» cuenta solo lotes con una fase abierta; nueva tarjeta «Bloqueado sin fase abierta» (proceso terminado, pendiente de calidad o de liberar). Captura real en la demo propia del autor: 300 kg en proceso / 0 kg bloqueado.
+2. Calidad heredada: si un lote no tiene muestra propia, ficha interna, PDF y ficha pública muestran la última muestra aprobada del lote de origen con el texto «Calidad heredada del lote de origen …», respetando la opción de publicación de calidad. Comprobado en la ficha pública de LAV-2026-002 (demo de evaluación): SCA 86, defectos 0/3, «heredada de LAV-2026-001».
+3. Fechas en español con zona America/Costa_Rica: fechas de solo día «6 oct 2026»; marcas de tiempo «9 oct 2026, 17:36 (hora de Costa Rica)». Comprobado en la misma ficha pública (exportación 6 oct 2026).
+4. Configuración base: la provisión ahora guarda org_settings explícita (stock bajo 100 kg, humedad 10–12 %, saco de demostración 46 kg marcado como configurable). Se añadió a las dos demos existentes sin tocar sus otros registros ni permisos. El copiloto solo usa el peso de saco guardado.
+5. Reservas: etiquetas accesibles en vencimiento, entrega pactada y condiciones; «Condiciones» abre un diálogo de la app con Guardar/Cancelar (sin prompt del navegador). Prueba real (Playwright, demo propia del autor, no la de evaluación): reserva de 1 kg con vencimiento 19 oct y entrega pactada 29 oct → visible tras recargar; editada en el diálogo a 3 nov → visible tras recargar; luego cancelada. La reserva QA 45a22973… de la demo de evaluación no se tocó.
