@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCloudState } from "@/lib/cloud";
+import { sel, useOrgQuery } from "@/lib/org-data";
 import { askCopilot } from "@/lib/copilot.functions";
 
 export const Route = createFileRoute("/_app/copiloto")({
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/_app/copiloto")({
 
 type Msg = { role: "user" | "assistant"; content: string; meta?: string; error?: boolean };
 const EXAMPLES = ["¿Cuánto café libre tengo por variedad?", "¿Cuántos sacos de Geisha hay disponibles?", "¿Qué procesos están atrasados?", "¿Cuántos kg entregué el mes pasado?",
-  "¿Cuál es mi precio promedio ponderado este año?", "Resume las compras del cliente Tostador Demo"];
+  "¿Cuál es mi precio promedio ponderado este año?"];
 
 // Minimal typing for the browser speech API (not available in every browser).
 type SR = { lang: string; interimResults: boolean; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; onend: () => void; onerror: () => void; start: () => void; stop: () => void };
@@ -27,6 +28,9 @@ type SR = { lang: string; interimResults: boolean; onresult: (e: { results: { 0:
 function CopilotPage() {
   const cloud = useCloudState(); const ask = useServerFn(askCopilot);
   const [msgs, setMsgs] = useState<Msg[]>([]); const [text, setText] = useState(""); const [busy, setBusy] = useState(false);
+  // Buyer example uses a real customer of the selected organization (never a mock name).
+  const firstCustomer = useOrgQuery<{ name: string }[]>("cp-cust", (o) => sel("customers", "name", o, "name", true, 1), ["customers"], []);
+  const buyer = firstCustomer.data[0]?.name;
   const [listening, setListening] = useState(false); const [voice, setVoice] = useState(false);
   const rec = useRef<SR | null>(null); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }; setVoice(!!(w.SpeechRecognition || w.webkitSpeechRecognition)); }, []);
@@ -59,7 +63,9 @@ function CopilotPage() {
       <PageHeader eyebrow="COPILOTO" title="Pregúntale a tu bitácora" subtitle="Responde con los registros reales de tu organización. Solo consulta: no cambia datos." />
       <div className="flex flex-wrap gap-2 mb-4"><span className="text-sm text-muted-foreground self-center">Para registrar, paso a paso:</span>{GUIDED.map((g) => <Link key={g.to} to={g.to} className="rounded-full border border-border px-3 py-1.5 text-sm hover:bg-accent">{g.l}</Link>)}</div>
       <div className="rounded-xl border border-border bg-card p-4 min-h-[300px] space-y-3">
-        {msgs.length === 0 && <div className="flex flex-wrap gap-2">{EXAMPLES.map((e) => <Button key={e} size="sm" variant="outline" onClick={() => void send(e)}>{e}</Button>)}</div>}
+        {msgs.length === 0 && <div className="flex flex-wrap gap-2">{EXAMPLES.map((e) => <Button key={e} size="sm" variant="outline" onClick={() => void send(e)}>{e}</Button>)}
+          {buyer ? <Button size="sm" variant="outline" onClick={() => void send(`Resume las compras del cliente ${buyer}`)}>{`Resume las compras del cliente ${buyer}`}</Button>
+            : <Button size="sm" variant="outline" onClick={() => setText("Resume las compras del cliente ")}>Resumen de un cliente (escribe su nombre)</Button>}</div>}
         {msgs.map((m, i) => (
           <div key={i} className={m.role === "user" ? "text-right" : ""}>
             <div className={"inline-block max-w-[90%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap text-left " +

@@ -1,3 +1,4 @@
+import { crDay, crRange } from "@/lib/date-range";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -20,9 +21,9 @@ const TOOLS = [
     parameters: obj({ agrupar_por: { type: "string", enum: ["variedad", "proceso", "estado_fisico"] } }) },
   { type: "function", name: "procesos_atrasados", strict: true, description: "Fases en curso que superan la duración esperada o fermentan más de 20 días.", parameters: obj({}) },
   { type: "function", name: "reservas_activas", strict: true, description: "Reservas reservadas o confirmadas, con cliente, kg, precio por kg y vencimiento.", parameters: obj({}) },
-  { type: "function", name: "mermas", strict: true, description: "Mermas registradas por tipo y por temporada de cosecha, en un rango de fechas (YYYY-MM-DD).",
+  { type: "function", name: "mermas", strict: true, description: "Mermas registradas por tipo y por temporada de cosecha, en un rango de fechas (YYYY-MM-DD, ambos inclusive, días de Costa Rica).",
     parameters: obj({ desde: { type: "string" }, hasta: { type: "string" } }) },
-  { type: "function", name: "ventas_entregadas", strict: true, description: "Kg entregados y precio promedio ponderado por kg, por moneda, en un rango de fechas (YYYY-MM-DD, hasta exclusivo).",
+  { type: "function", name: "ventas_entregadas", strict: true, description: "Kg entregados y precio promedio ponderado por kg, por moneda, en un rango de fechas (YYYY-MM-DD, ambos inclusive, días de Costa Rica).",
     parameters: obj({ desde: { type: "string" }, hasta: { type: "string" } }) },
   { type: "function", name: "resumen_comprador", strict: true, description: "Historial de reservas y entregas de un cliente por nombre (búsqueda parcial).",
     parameters: obj({ nombre: { type: "string" } }) },
@@ -57,7 +58,7 @@ async function runTool(sb: Sb, org: string, name: string, args: Record<string, s
     }
     case "mermas": {
       if (!DATE.test(args.desde) || !DATE.test(args.hasta)) return { error: "fechas inválidas" };
-      const { data, error } = await sb.from("waste_logs").select("waste_type,qty_kg,registered_at,lots(lot_code,harvest_tickets!lots_harvest_ticket_id_fkey(season))").eq("organization_id", org).gte("registered_at", args.desde).lte("registered_at", args.hasta + "T23:59:59");
+      const { data, error } = await sb.from("waste_logs").select("waste_type,qty_kg,registered_at,lots(lot_code,harvest_tickets!lots_harvest_ticket_id_fkey(season))").eq("organization_id", org).gte("registered_at", crRange(args.desde, args.hasta).from).lt("registered_at", crRange(args.desde, args.hasta).toExclusive);
       if (error) throw error;
       const porTipo: Record<string, number> = {}; const porTemporada: Record<string, number> = {};
       for (const w of data ?? []) {
@@ -68,7 +69,7 @@ async function runTool(sb: Sb, org: string, name: string, args: Record<string, s
     }
     case "ventas_entregadas": {
       if (!DATE.test(args.desde) || !DATE.test(args.hasta)) return { error: "fechas inválidas" };
-      const { data, error } = await sb.rpc("sales_summary", { _org: org, _from: args.desde, _to: args.hasta }); if (error) throw error;
+      const { data, error } = await sb.rpc("sales_summary", { _org: org, _from: crRange(args.desde, args.hasta).from, _to: crRange(args.desde, args.hasta).toExclusive }); if (error) throw error;
       return { nota: "precio ponderado por kg entregado; solo entregas con precio cuentan para el promedio", filas: data ?? [] };
     }
     case "resumen_comprador": {
@@ -113,9 +114,9 @@ async function runTool(sb: Sb, org: string, name: string, args: Record<string, s
   return { error: "herramienta no permitida" };
 }
 
-const SYSTEM = (today: string, orgName: string) => `Eres el copiloto de Bitácora Café Pro para el microbeneficio "${orgName}". Hoy es ${today}.
+const SYSTEM = (today: string, orgName: string) => `Eres el copiloto de Bitácora Café Pro para el microbeneficio "${orgName}". Hoy es ${today} (fecha de Costa Rica, zona America/Costa_Rica).
 Responde en español claro y breve, para productores. Usa SOLO datos obtenidos con las herramientas; si no hay registros, dilo ("no hay registros de…") y no inventes cifras.
-Indica siempre unidades (kg) y moneda. Para "mes pasado" o "este año" calcula las fechas tú mismo. Si sugieres algo, explica en qué dato te basas.
+Indica siempre unidades (kg) y moneda. Para "hoy", "este mes", "mes pasado" o "este año" calcula las fechas con días de Costa Rica; los rangos desde/hasta son inclusivos (hasta = hoy incluye todo el día de hoy). Si sugieres algo, explica en qué dato te basas.
 Si preguntan por sacos, distingue SIEMPRE la equivalencia (kg ÷ peso configurado) de los sacos físicos etiquetados; si no hay peso configurado, dilo y responde en kg.
 No puedes modificar datos: si te piden registrar o cambiar algo, indica la pantalla de la app donde hacerlo.`;
 
@@ -138,7 +139,7 @@ export const askCopilot = createServerFn({ method: "POST" })
     // Some OpenAI projects only enable certain models: fall back in order when one is not available.
     const models = [process.env["OPENAI_MODEL"], "gpt-4.1-mini", "gpt-4o-mini", "gpt-5-mini", "gpt-4.1", "gpt-4o"].filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
     let model = models.shift()!;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = crDay();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = data.messages.map((x) => ({ role: x.role, content: x.content }));
     const used: string[] = [];

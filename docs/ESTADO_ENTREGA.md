@@ -143,3 +143,13 @@ Cuenta profesores@bitacoracafe.example y sus dos entornos: creados por el autor;
 3. Fechas en español con zona America/Costa_Rica: fechas de solo día «6 oct 2026»; marcas de tiempo «9 oct 2026, 17:36 (hora de Costa Rica)». Comprobado en la misma ficha pública (exportación 6 oct 2026).
 4. Configuración base: la provisión ahora guarda org_settings explícita (stock bajo 100 kg, humedad 10–12 %, saco de demostración 46 kg marcado como configurable). Se añadió a las dos demos existentes sin tocar sus otros registros ni permisos. El copiloto solo usa el peso de saco guardado.
 5. Reservas: etiquetas accesibles en vencimiento, entrega pactada y condiciones; «Condiciones» abre un diálogo de la app con Guardar/Cancelar (sin prompt del navegador). Prueba real (Playwright, demo propia del autor, no la de evaluación): reserva de 1 kg con vencimiento 19 oct y entrega pactada 29 oct → visible tras recargar; editada en el diálogo a 3 nov → visible tras recargar; luego cancelada. La reserva QA 45a22973… de la demo de evaluación no se tocó.
+
+## Regresión del copiloto: rangos de fechas (09/10/2026, 23:40 UTC)
+
+- Causa: ventas_entregadas pasaba `hasta` como fecha sin hora a sales_summary (`delivered_at < _to`), así que «hasta = hoy» excluía todo el día de hoy.
+- Arreglo: nuevo módulo de rangos en hora de Costa Rica. `desde..hasta` son inclusivos y se convierten a [00:00 CR de desde, 00:00 CR del día siguiente a hasta). Lo usan el copiloto (ventas y mermas) y Reportes; el CSV, el PDF y las copias compartidas salen de esos mismos datos filtrados. El copiloto calcula «hoy / este mes / mes pasado / este año» en hora de Costa Rica.
+- Pruebas de regresión: src/lib/__tests__/date-range.test.ts (entrega 23:16 UTC con hasta = hoy incluida; 05:59 UTC del día siguiente aún es hoy en CR; 06:00 UTC ya no).
+- Consulta a la base con el rango corregido, demo de profesores: USD 30 kg a 6,80/kg y CRC 20 kg a 4000/kg, 50 kg entregados este año.
+- Respuesta REAL del copiloto con la misma pregunta, sesión del autor en su demo propia (no hay acceso de agente a la cuenta de profesores): fermentación de 22 días y USD 6,50/kg sobre 100 kg, que coincide con la base. Esa entrega también es de hoy, el mismo caso límite. Latencia mostrada 3,2 s, o 4,1 s de extremo a extremo. Pendiente: que el profesor repita la pregunta en su demo.
+- La respuesta errónea anterior (2,7 s) no cuenta como cumplimiento de latencia. Solo se cuentan las respuestas correctas: 3,2 a 10 s. No se garantiza menos de 3 s.
+- Ejemplo de comprador del copiloto: usa el primer cliente REAL de la organización elegida; si no hay clientes, pide escribir el nombre. Se quitó el nombre fijo.
