@@ -70,7 +70,7 @@ function CloudLotPage() {
         supabase.from("sacks").select("id,seq,sack_token,weight_kg").eq("lot_id", id).order("seq"),
         supabase.from("process_templates").select("id,name,process_type,version,phases").eq("active", true).order("name"),
         supabase.from("customers").select("id,name").order("name"),
-        supabase.from("lot_public_profiles").select("is_public,public_token,short_story,tasting_notes,visibility").eq("lot_id", id).maybeSingle(),
+        supabase.from("lot_public_profiles").select("is_public,public_token,short_story,tasting_notes,visibility,exported_at").eq("lot_id", id).maybeSingle(),
       ]);
       setPhases((p.data ?? []) as unknown as Phase[]); setVars((v.data ?? []) as unknown as VarLog[]); setRes((r.data ?? []) as Res[]);
       setFiles((f.data ?? []) as FileRow[]); setSacks((s.data ?? []) as Sack[]); setTpls((t.data ?? []) as unknown as Tpl[]);
