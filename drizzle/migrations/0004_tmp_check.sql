@@ -809,7 +809,7 @@ begin
   insert into public.parcels (organization_id, farm_id, name, variety, altitude_m) values (org, farm, 'Lote Alto', 'Caturra', 1700) returning id into parcel;
   insert into public.customers (organization_id, name, type, country) values (org, 'Tostador Demo', 'tostador', 'Costa Rica') returning id into cust;
   res := public.register_harvest(org, jsonb_build_object('farm_id', farm, 'parcel_id', parcel, 'variety', 'Caturra', 'harvest_date', current_date - 30,
-    'qty', 40, 'uom', 'cajuela', 'season', '2025-2026', 'cut_type', 'corte', 'workers', '["Ana","Luis","Marta"]', 'responsible', 'Encargado demo', 'initial_quality', 'madura'), null, 'Caturra lavado demo');
+    'qty', 40, 'uom', 'cajuela', 'season', '2025-2026', 'cut_type', 'corte', 'workers', '["Ana","Luis","Marta"]'::jsonb, 'responsible', 'Encargado demo', 'initial_quality', 'madura'), null, 'Caturra lavado demo');
   select id into tpl from public.process_templates where organization_id = org and process_type = 'lavado' limit 1;
   ph := public.start_phase((res->>'lot_id')::uuid, 'Fermentación', tpl, 'Fermentación');
   perform public.log_phase_variable(ph.id, 'ph', 4.6);

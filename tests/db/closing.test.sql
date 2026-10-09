@@ -140,7 +140,7 @@ begin
 
   -- Harvest: ticket + new lot in one transaction, unit conversion, workers
   h := public.register_harvest(A, jsonb_build_object('farm_id', farmA, 'parcel_id', parcelA, 'variety', 'Geisha', 'harvest_date', current_date,
-    'qty', 40, 'uom', 'cajuela', 'season', '2025-2026', 'cut_type', 'corte', 'workers', '["Ana","Luis"]', 'responsible', 'Carlos',
+    'qty', 40, 'uom', 'cajuela', 'season', '2025-2026', 'cut_type', 'corte', 'workers', '["Ana","Luis"]'::jsonb, 'responsible', 'Carlos',
     'initial_quality', 'madura'), null, 'Geisha', 'op-harv-0001');
   perform pg_temp.eq('harvest kg = 40 cajuelas × 12.5', (h->>'qty_kg')::numeric, 500);
   perform pg_temp.eq('harvest worker count derived', (select worker_count from public.harvest_tickets where id = (h->>'ticket_id')::uuid), 2);
