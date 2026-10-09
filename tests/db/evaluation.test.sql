@@ -88,8 +88,8 @@ begin
   perform pg_temp.eq('sample: every reservation status present',
     (select count(distinct status) from public.reservations where organization_id = SA), 5);
   perform pg_temp.eq('sample: USD and CRC', (select count(distinct currency) from public.reservations where organization_id = SA), 2);
-  perform pg_temp.eq('sample: split links', (select count(*) from public.lot_links l join public.lots x on x.id = l.child_lot_id where x.organization_id = SA and l.kind = 'split'), 2);
-  perform pg_temp.eq('sample: merge links', (select count(*) from public.lot_links l join public.lots x on x.id = l.child_lot_id where x.organization_id = SA and l.kind = 'merge'), 2);
+  perform pg_temp.eq('sample: split links', (select count(*) from public.lot_links k join public.lots x on x.id = k.child_lot_id where x.organization_id = SA and k.kind = 'split'), 2);
+  perform pg_temp.eq('sample: merge links', (select count(*) from public.lot_links k join public.lots x on x.id = k.child_lot_id where x.organization_id = SA and k.kind = 'merge'), 2);
   perform pg_temp.is('sample: has quality-blocked lot', (select bool_or(commercial_state = 'bloqueado_calidad')::text from public.lots where organization_id = SA), 'true');
   perform pg_temp.is('sample: has in-process lot', (select bool_or(commercial_state = 'en_proceso')::text from public.lots where organization_id = SA), 'true');
   perform pg_temp.eq('sample: out-of-range alerts', (select count(*) from public.alerts where organization_id = SA) >= 2 and true, 1);
