@@ -59,9 +59,14 @@ function CloudLotPage() {
   const [sackForm, setSackForm] = useState({ count: "", weight: "46" });
   const [pub, setPub] = useState({ story: "", notes: "", measurements: false, producer: true });
 
+  type Lineage = { origins: { farm: string; parcel: string | null; region: string | null; country: string; altitude_m: number | null }[];
+    sources: { lot_code: string; kind: string; qty_kg: number }[];
+    phases: { lot_code: string; inherited: boolean; name: string; status: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[] };
+  const [lineage, setLineage] = useState<Lineage | null>(null);
   const load = useCallback(async () => {
     try {
       const l = await getLot(id); setLot(l); if (!l) return;
+      void supabase.rpc("lot_lineage" as never, { _lot: id } as never).then(({ data }) => setLineage((data ?? null) as Lineage | null));
       const [p, v, r, f, s, t, c, pp] = await Promise.all([
         supabase.from("process_phases").select("*").eq("lot_id", id).order("started_at"),
         supabase.from("variable_logs").select("id,phase_id,value_number,value,measured_at").eq("lot_id", id).order("measured_at"),
@@ -123,7 +128,8 @@ function CloudLotPage() {
           const fd = farm.data as { name: string; region: string | null; altitude_m: number | null } | null;
           const pd = parcel.data as { name: string; altitude_m: number | null } | null;
           await lotSheetPdf({ lot: { ...lot, created_at: lot.created_at }, origin: { farm: fd?.name, region: fd?.region, parcel: pd?.name, altitude: pd?.altitude_m ?? fd?.altitude_m },
-            phases, quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: { notes?: string; cupping?: string } | null }[]).map((x) => ({ ...x, notes: [x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
+            origins: lineage?.origins, sources: lineage?.sources,
+            phases: [...(lineage?.phases ?? []).filter((x) => x.inherited).map((x) => ({ ...x, name: `${x.name} (de ${x.lot_code})` })), ...phases], quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: { notes?: string; cupping?: string } | null }[]).map((x) => ({ ...x, notes: [x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
             photos, story: profile?.short_story, tasting: profile?.tasting_notes, publicUrl: profile?.is_public ? publicUrl : null });
         }, "Ficha PDF generada")}><Download className="h-4 w-4 mr-1" />Ficha PDF</Button>} />
 
@@ -134,6 +140,15 @@ function CloudLotPage() {
       <p className="mb-6 text-sm">Estado comercial: <b>{commercialStateLabel[lot.commercial_state as CommercialState] ?? lot.commercial_state}</b> · Calidad: {lot.quality_status}
         {lot.current_moisture != null && <> · Humedad {lot.current_moisture}%</>}</p>
 
+      {lineage && (lineage.origins.length > 1 || lineage.sources.length > 0) && (
+        <div className="rounded-lg border border-border p-3 mb-6 text-sm space-y-1">
+          <div className="eyebrow">Procedencia</div>
+          {lineage.origins.length > 0 && <p>{lineage.origins.length > 1 ? "Orígenes de la mezcla: " : "Origen: "}
+            {lineage.origins.map((o) => [o.farm, o.parcel, o.region].filter(Boolean).join(" · ")).join(" / ")}</p>}
+          {lineage.sources.length > 0 && <p>Viene de: {lineage.sources.map((x) => `${x.lot_code} (${x.kind === "merge" ? "mezcla" : "división"}, ${x.qty_kg} kg)`).join(", ")}</p>}
+          {lineage.phases.filter((x) => x.inherited).length > 0 && <ul className="text-xs text-muted-foreground">
+            {lineage.phases.filter((x) => x.inherited).map((x, i) => <li key={i}>{x.name} · lote {x.lot_code} · {new Date(x.started_at).toLocaleDateString()}{x.ended_at ? ` – ${new Date(x.ended_at).toLocaleDateString()}` : ""}</li>)}</ul>}
+        </div>)}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Proceso">
           <ul className="text-sm space-y-2 mb-4">{phases.map((p) => (

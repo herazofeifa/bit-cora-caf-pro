@@ -74,3 +74,6 @@ datos. El repositorio debe conectarse a GitHub para que se ejecute.
 
 ## Estado actual (cierre)
 Una sola aplicación: todos los módulos usan los registros guardados de la organización elegida, con actualización en vivo. Las pantallas antiguas con datos locales se conservan solo como referencia en `legacy/` (no se compilan). Detalle de pruebas y limitaciones en `docs/ESTADO_ENTREGA.md`. Pruebas de base de datos: `bash tests/db/run-local.sh` (como usuario sin privilegios de root).
+
+### Migraciones 0010–0011 (mezclas y procedencia)
+`0011_lineage_guards_apply.sql`: mezcla solo con el mismo estado físico, sin fases abiertas en mezcla/división, `lot_lineage` interna y procedencia heredada en la ficha pública. (`0010` está vacía.) Pruebas: `tests/db/lineage.test.sql`, incluida en `tests/db/run-local.sh`.

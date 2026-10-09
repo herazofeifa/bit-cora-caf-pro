@@ -58,6 +58,8 @@ export async function sackLabelsPdf(lot: { lot_code: string; friendly_name: stri
 export interface LotSheet {
   lot: { lot_code: string; friendly_name: string; variety: string; process_type: string; physical_state: string; quality_status: string; qty_initial_kg: number; qty_current_kg: number; created_at: string };
   origin: { farm?: string; parcel?: string; altitude?: number | null; region?: string | null };
+  origins?: { farm: string; parcel: string | null; region: string | null; altitude_m: number | null }[];
+  sources?: { lot_code: string; kind: string; qty_kg: number }[];
   phases: { name: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[];
   quality: { sampled_at: string; status: string; score: number | null; notes?: string | null }[];
   photos: { title: string; dataUrl: string }[];
@@ -73,7 +75,10 @@ export async function lotSheetPdf(s: LotSheet) {
   if (s.publicUrl) { doc.addImage(await QR.toDataURL(s.publicUrl, { margin: 0, width: 300 }), "PNG", 170, 8, 26, 26); }
   doc.setFontSize(10);
   const lines = [
-    `Origen: ${[s.origin.farm, s.origin.parcel, s.origin.region].filter(Boolean).join(" · ") || "—"}${s.origin.altitude ? ` · ${s.origin.altitude} msnm` : ""}`,
+    (s.origins && s.origins.length > 1)
+      ? `Orígenes (mezcla): ${s.origins.map((o) => [o.farm, o.parcel, o.region].filter(Boolean).join(" · ") + (o.altitude_m ? ` ${o.altitude_m} msnm` : "")).join(" / ")}`
+      : `Origen: ${[s.origin.farm ?? s.origins?.[0]?.farm, s.origin.parcel ?? s.origins?.[0]?.parcel, s.origin.region ?? s.origins?.[0]?.region].filter(Boolean).join(" · ") || "—"}${s.origin.altitude ? ` · ${s.origin.altitude} msnm` : ""}`,
+    ...(s.sources?.length ? [`Viene de: ${s.sources.map((x) => `${x.lot_code} (${x.kind === "merge" ? "mezcla" : "división"}, ${x.qty_kg} kg)`).join(", ")}`] : []),
     `Variedad: ${s.lot.variety || "—"}   Proceso: ${s.lot.process_type}   Estado: ${s.lot.physical_state}   Calidad: ${s.lot.quality_status}`,
     `Kg iniciales: ${s.lot.qty_initial_kg}   Kg actuales: ${s.lot.qty_current_kg}   Creado: ${new Date(s.lot.created_at).toLocaleDateString()}`,
   ];
