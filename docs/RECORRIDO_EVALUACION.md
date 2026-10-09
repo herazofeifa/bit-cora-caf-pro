@@ -35,3 +35,5 @@ Reportes muestran precios promedio ponderados separados en USD y CRC. El copilot
 ## Límites de la cuenta evaluadora
 - Es administradora solo de esos dos espacios: no ve la organización original, sus datos ni su equipo.
 - No puede crear cuentas, cambiar roles ni crear otros entornos demo.
+
+> Si un intento anterior mostró «duplicate key … user_roles», ya está corregido: vuelve a enviar el formulario «Cuenta de evaluación» con profesores@bitacoracafe.example (no quedó ninguna cuenta a medias).
