@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { setCurrentRole, type AppRole } from "@/lib/permissions";
 import { hydrateOpsForUser } from "@/lib/store";
 import { startCloud, stopCloud } from "@/lib/cloud";
+import { clearQueueMemory, loadQueue } from "@/lib/offline-queue";
+
+export interface Membership { organization_id: string; organization_name: string; role: AppRole; is_demo: boolean }
+let memberships: Membership[] = [];
+// Only remembers WHICH organization to view; access is still decided by the database per request.
+const prefKey = (uid: string) => `bcp.active-org:${uid}`;
 
 // Session + membership loaded from Lovable Cloud. The role comes from the
 // server (memberships table via my_membership()); nothing about privileges is
@@ -20,14 +26,35 @@ async function onSignedIn(s: Session) {
   if (activeUser === s.user.id) return;
   activeUser = s.user.id;
   hydrateOpsForUser(s.user.id);
-  const { data } = await supabase.rpc("my_membership");
-  const m = data?.[0];
+  await activate(s.user.id, null);
+}
+
+async function activate(uid: string, wanted: string | null) {
+  const { data } = await supabase.rpc("my_memberships");
+  memberships = (data ?? []) as Membership[];
+  const pref = wanted ?? localStorage.getItem(prefKey(uid));
+  const m = memberships.find((x) => x.organization_id === pref) ?? memberships[0];
   setCurrentRole((m?.role as AppRole | undefined) ?? "consulta");
-  if (m) await startCloud(m.organization_id);
+  emit();
+  if (m) {
+    localStorage.setItem(prefKey(uid), m.organization_id);
+    await startCloud(m.organization_id);
+    await loadQueue();
+  }
+}
+
+export async function switchOrganization(orgId: string) {
+  if (!activeUser) return;
+  await activate(activeUser, orgId);
+}
+export function useMemberships() {
+  return useSyncExternalStore(subscribe, () => memberships, () => memberships);
 }
 
 function onSignedOut() {
   activeUser = null;
+  memberships = [];
+  clearQueueMemory();
   setCurrentRole("consulta");
   stopCloud();
   hydrateOpsForUser(null);
