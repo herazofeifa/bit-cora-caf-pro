@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmAction } from "@/components/confirm-action";
 import { LoadState, SimpleTable, selectCls } from "@/components/ops-ui";
 import { roleLabel, roleDescription, useCurrentRole, type AppRole } from "@/lib/permissions";
-import { useFarms, useParcels, addFarm, addParcel } from "@/lib/app-config-store";
+import { useFarms, useParcels } from "@/lib/app-config-store";
 import { DEFAULT_ORG_SETTINGS, loadOrgSettings, saveOrgSettings, sel, useOrgQuery } from "@/lib/org-data";
 import { friendlyError, requireOrg } from "@/lib/ops-cloud";
 import type { Farm, Parcel } from "@/types/domain";
@@ -130,7 +130,11 @@ function FarmsSection() {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => { const f = addFarm(); toast.success(`Finca creada: ${f.name}`); }}>
+        <Button variant="outline" size="sm" onClick={() => {
+          const now = new Date().toISOString();
+          setDraft((prev) => [...prev, { id: crypto.randomUUID(), organization_id: getOrgId() ?? "", name: "Nueva finca", region: null, country: "Costa Rica", owner_name: null, altitude_m: null, notes: null, created_at: now, updated_at: now } as Farm]);
+          toast.info("Finca añadida al borrador. Pulsa «Guardar cambios» para crearla.");
+        }}>
           <Plus className="size-4" /> Añadir finca
         </Button>
       </div>
@@ -213,7 +217,11 @@ function ParcelsSection() {
           variant="outline"
           size="sm"
           disabled={farms.length === 0}
-          onClick={() => { const p = addParcel(farms[0]?.id); if (p) toast.success(`Parcela creada: ${p.name}`); }}
+          onClick={() => {
+            const now = new Date().toISOString();
+            setDraft((prev) => [...prev, { id: crypto.randomUUID(), farm_id: farms[0].id, name: "Nueva parcela", variety: null, altitude_m: null, area_ha: null, notes: null, created_at: now, updated_at: now } as unknown as Parcel]);
+            toast.info("Parcela añadida al borrador. Pulsa «Guardar cambios» para crearla.");
+          }}
         >
           <Plus className="size-4" /> Añadir parcela
         </Button>
