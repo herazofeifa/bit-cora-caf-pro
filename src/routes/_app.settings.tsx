@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole, getOrgId, useCloudState } from "@/lib/cloud";
 import { loadDemoData, resetOperationalData } from "@/lib/store";
 import { createTeamUser } from "@/lib/users.functions";
+import { isEvaluatorAccount, useMemberships } from "@/lib/auth";
+import { EvaluationAccountCard } from "@/components/evaluation-account-card";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
@@ -47,6 +49,7 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   const role = useCurrentRole();
+  const evaluator = isEvaluatorAccount(useMemberships());
 
   return (
     <>
@@ -68,13 +71,13 @@ function SettingsPage() {
             }
             onConfirm={() => { resetAll(); toast.success("Ajustes restablecidos"); }}
           />
-          <ConfirmAction
+          {!evaluator && <ConfirmAction
             title="Cargar datos de demostración"
             description="Reemplaza los lotes y registros guardados solo en este dispositivo por un conjunto de ejemplo. No se sube nada a la nube."
             confirmLabel="Cargar demo"
             trigger={<Button variant="outline" className="h-10 rounded-xl">Datos demo</Button>}
             onConfirm={() => { loadDemoData(); toast.success("Datos de demostración cargados en este dispositivo"); }}
-          />
+          />}
           <ConfirmAction
             destructive
             title="Vaciar datos locales"
@@ -105,7 +108,7 @@ function SettingsPage() {
         <TabsContent value="org" className="mt-4"><OrgSection /></TabsContent>
         <TabsContent value="farms" className="mt-4"><FarmsSection /></TabsContent>
         <TabsContent value="parcels" className="mt-4"><ParcelsSection /></TabsContent>
-        <TabsContent value="users" className="mt-4"><UsersRolesSection currentRole={role} /></TabsContent>
+        <TabsContent value="users" className="mt-4">{evaluator ? <p className="text-sm text-muted-foreground">La cuenta de evaluación no gestiona usuarios ni roles.</p> : <><UsersRolesSection currentRole={role} /><EvaluationAccountCard /></>}</TabsContent>
         <TabsContent value="units" className="mt-4"><UnitsSection /></TabsContent>
         <TabsContent value="moisture" className="mt-4"><MoistureSection /></TabsContent>
         <TabsContent value="processes" className="mt-4"><ProcessTemplatesSection /></TabsContent>

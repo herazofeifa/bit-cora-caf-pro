@@ -17,3 +17,4 @@
 - The offline queue (IndexedDB, per user+org) holds only harvests and measurements; why: inventory/reservations must be decided online.
 - src/lib/cloud.ts applies a response only if it belongs to the current generation (bumped on every start/stop); why: late replies must not repopulate data after logout or organization switch.
 - Team visibility (profiles/user_roles) is self or an administrator sharing an organization, via can_see_user(); team actions take the selected organization and check has_org_role server-side; why: no global-admin cross-organization reads.
+- Evaluation spaces (organizations.eval_kind) are created only by provision_evaluation, once per source org, seeded through the business RPCs; the evaluator is a member only of those two orgs and they cannot manage members; why: committee access fully isolated from real data.
