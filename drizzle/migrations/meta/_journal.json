@@ -43,6 +43,13 @@
       "when": 1791584210535,
       "tag": "0005_lot_files_type_restriction",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791584909869,
+      "tag": "0006_audit_fixes",
+      "breakpoints": true
     }
   ]
 }

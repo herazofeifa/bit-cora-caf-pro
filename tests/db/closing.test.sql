@@ -145,8 +145,12 @@ begin
   perform pg_temp.eq('harvest kg = 40 cajuelas × 12.5', (h->>'qty_kg')::numeric, 500);
   perform pg_temp.eq('harvest worker count derived', (select worker_count from public.harvest_tickets where id = (h->>'ticket_id')::uuid), 2);
   perform pg_temp.is('ticket linked to lot', (select lot_id::text from public.harvest_tickets where id = (h->>'ticket_id')::uuid), h->>'lot_id');
-  h2 := public.register_harvest(A, jsonb_build_object('farm_id', farmA, 'qty', 40, 'uom', 'cajuela', 'harvest_date', current_date), null, 'Geisha', 'op-harv-0001');
+  h2 := public.register_harvest(A, jsonb_build_object('farm_id', farmA, 'parcel_id', parcelA, 'variety', 'Geisha', 'harvest_date', current_date,
+    'qty', 40, 'uom', 'cajuela', 'season', '2025-2026', 'cut_type', 'corte', 'workers', '["Ana","Luis"]'::jsonb, 'responsible', 'Carlos',
+    'initial_quality', 'madura'), null, 'Geisha', 'op-harv-0001');
   perform pg_temp.is('harvest op key: same result', h2->>'ticket_id', h->>'ticket_id');
+  perform pg_temp.expect_fail(format('select public.register_harvest(%L,%L,null,%L,%L)', A,
+    jsonb_build_object('farm_id', farmA, 'qty', 40, 'uom', 'cajuela', 'harvest_date', current_date), 'Geisha', 'op-harv-0001'), '%datos distintos%');
   perform pg_temp.eq('harvest op key: one ticket', (select count(*) from public.harvest_tickets where organization_id = A), 1);
   -- add to existing lot
   h2 := public.register_harvest(A, jsonb_build_object('farm_id', farmA, 'qty', 100, 'uom', 'kg', 'harvest_date', current_date), (h->>'lot_id')::uuid);

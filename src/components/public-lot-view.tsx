@@ -9,7 +9,7 @@ export interface PublicLot {
   phases: { name: string; started_at: string; ended_at: string | null }[];
   measurements: { label: string; value: number; unit: string | null; at: string }[] | null;
   moisture: number | null; quality: { score: number | null; notes: string | null; at: string } | null;
-  files: { id: string; kind: string; title: string; mime: string; url?: string }[]; exported_at: string;
+  files: { id: string; kind: string; title: string; mime: string; url?: string }[]; exported_at: string | null; generated_at?: string;
 }
 
 const PROCESS: Record<string, string> = { lavado: "Lavado", honey: "Honey", natural: "Natural", anaerobico: "Anaeróbico" };
@@ -50,7 +50,8 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
       {docs.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Certificados y documentos</h2>
           <ul className="text-sm">{docs.map((d) => <li key={d.id}><a className="underline" href={d.url} target="_blank" rel="noreferrer">{d.title}</a></li>)}</ul></section>)}
-      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor · consultada {new Date(lot.exported_at).toLocaleString()}</p>
+      {lot.exported_at && <p className="text-sm text-center">Exportado el {new Date(lot.exported_at).toLocaleDateString()}</p>}
+      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor{lot.generated_at ? ` · ficha generada ${new Date(lot.generated_at).toLocaleString()}` : ""}</p>
     </div>
   );
 }

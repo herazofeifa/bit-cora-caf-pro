@@ -49,3 +49,20 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 - **PDF:** falta la ficha de lote en PDF.
 - **Tareas programadas:** no se agenda `expire_reservations`; se ejecuta solo al llamarla.
 - **Tiempo de respuesta:** no se garantiza la latencia del copiloto (no se midió).
+
+
+## Correcciones de la auditoría independiente (migración 0006)
+
+| Hallazgo | Corrección | Prueba |
+|---|---|---|
+| `create_lot` con misma `_op_key` y datos distintos devolvía el lote anterior | La clave queda ligada a actor + operación + md5 de los argumentos canónicos en create_lot, create_reservation, deliver_reservation, register_harvest, start_phase, log_phase_variable y close_phase. Datos distintos → "ya se usó con datos distintos"; otro usuario → "pertenece a otro usuario". | `audit.test.sql` (lote, reserva, entrega, cosecha); `closing.test.sql` ajustado: el caso antiguo reutilizaba la clave con otro contenido |
+| `public_lot_view.exported_at = now()` | `exported_at` = fecha declarada explícitamente con `declare_lot_export` (admin/comercial, no futura, auditada) o `null`; `generated_at` aparte. Una entrega no cuenta como exportación. UI: "Fecha real de exportación" en la ficha del lote. | `audit.test.sql`: null sin declarar, fecha declarada exacta, futura rechazada, otro rol/org rechazado |
+| Reserva vencida confirmable/entregable sin correr `expire_reservations` | confirm/deliver rechazan si `expires_at <= now()`; create_reservation rechaza fechas pasadas. | `audit.test.sql`; `concurrency.sh`: 5 vencimientos + 5 confirmaciones simultáneas → `confirmed=0 releases=1 status=vencida reserved=0` |
+| Respuestas asíncronas repoblaban datos tras logout/cambio de org (`cloud.ts`) | Contador de generación; respuestas de una generación anterior se descartan. | `src/lib/__tests__/cloud-generation.test.ts` (logout en vuelo, cambio A→B) |
+| `cloudSaveFarms/Parcels` perdía el mapeo de IDs temporales | Toda finca/parcela se envía con UUID; `cloudSaveFarms` devuelve mapeo temporal→confirmado y las parcelas lo aplican. | mismo archivo de prueba |
+| SELECT de profiles/user_roles con `has_role` global | `can_see_user()`: el propio usuario o un administrador con membresía compartida. Se eliminaron las políticas de escritura global de `user_roles` (solo servidor). Ajustes muestra el equipo de la organización seleccionada. | `audit.test.sql`: admin global de B no ve perfiles/roles de A; consulta solo ve el suyo |
+| `createTeamUser` usaba la primera membresía | Recibe la organización elegida (obligatoria), valida `has_org_role(org, administrador)` en servidor y, si falla membresía/rol/auditoría, borra la cuenta creada (compensación). | Revisión de código; no se crearon cuentas reales (sin autorización) |
+
+**Ejecutado realmente (9 oct 2026):** `bash tests/db/run-local.sh` sobre PostgreSQL desechable con migraciones 0000–0006: 144 líneas `ok`, `ALL DB/CLOSING/AUDIT TESTS PASSED`, concurrencia de reservas `6/4/90 10`, carrera de vencimiento OK. `bunx vitest run`: 9 pruebas en 5 archivos. Revisión de tipos sin errores. En la base real se verificó por consulta que las 7 funciones usan la huella y que las políticas nuevas están activas.
+
+**Pendiente/no verificado:** alta de usuario con compensación no probada contra la base real (requiere crear cuenta); la huella usa la representación numérica enviada (`100` y `100.0` cuentan como datos distintos).

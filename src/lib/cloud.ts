@@ -25,22 +25,31 @@ let channel: ReturnType<typeof supabase.channel> | null = null;
 const cloudFarmIds = new Set<string>();
 const cloudParcelIds = new Set<string>();
 
+// Generation counter: every start/stop bumps it. A response is applied only if it was
+// requested in the current generation, so a slow reply from a previous session/org
+// can never repopulate data after logout or an organization switch.
+let generation = 0;
+export const currentGeneration = () => generation;
+const isLive = (gen: number, orgId: string) => gen === generation && cloud.orgId === orgId;
+
 function mapCustomer(r: Record<string, unknown>): Customer {
   return r as unknown as Customer;
 }
 
-export async function refreshCustomers(orgId = cloud.orgId) {
+export async function refreshCustomers(orgId = cloud.orgId, gen = generation) {
   if (!orgId) return;
   const { data, error } = await supabase.from("customers").select("*").eq("organization_id", orgId).order("name");
+  if (!isLive(gen, orgId)) return;
   if (error) throw error;
   setCustomersFromCloud((data ?? []).map(mapCustomer));
 }
-export async function refreshFarmsAndParcels(orgId = cloud.orgId) {
+export async function refreshFarmsAndParcels(orgId = cloud.orgId, gen = generation) {
   if (!orgId) return;
   const [f, p] = await Promise.all([
     supabase.from("farms").select("*").eq("organization_id", orgId).order("created_at"),
     supabase.from("parcels").select("*").eq("organization_id", orgId).order("created_at"),
   ]);
+  if (!isLive(gen, orgId)) return;
   if (f.error) throw f.error;
   if (p.error) throw p.error;
   cloudFarmIds.clear(); (f.data ?? []).forEach((r) => cloudFarmIds.add(r.id));
@@ -49,27 +58,32 @@ export async function refreshFarmsAndParcels(orgId = cloud.orgId) {
   replaceParcelsFromCloud((p.data ?? []) as unknown as Parcel[]);
 }
 
-/** Called on sign-in with the server-side membership. */
+/** Called on sign-in / organization switch with the server-side membership. */
 export async function startCloud(orgId: string) {
   stopCloud();
-  cloudFarmIds.clear(); cloudParcelIds.clear();
+  const gen = generation;
   set({ orgId, status: "loading", error: null });
   try {
-    await Promise.all([refreshCustomers(orgId), refreshFarmsAndParcels(orgId)]);
+    await Promise.all([refreshCustomers(orgId, gen), refreshFarmsAndParcels(orgId, gen)]);
+    if (!isLive(gen, orgId)) return;
     set({ status: "ready" });
   } catch (e) {
+    if (!isLive(gen, orgId)) return;
     set({ status: "error", error: e instanceof Error ? e.message : "No se pudieron cargar los datos" });
   }
+  if (!isLive(gen, orgId)) return;
   channel = supabase
     .channel(`org-${orgId}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "customers", filter: `organization_id=eq.${orgId}` },
-      () => { void refreshCustomers(orgId).catch(() => {}); })
+      () => { void refreshCustomers(orgId, gen).catch(() => {}); })
     .subscribe();
 }
 
-/** Called on sign-out: drop subscriptions and every cached row. */
+/** Called on sign-out: invalidate in-flight responses, drop subscriptions and every cached row. */
 export function stopCloud() {
+  generation++;
   if (channel) { void supabase.removeChannel(channel); channel = null; }
+  cloudFarmIds.clear(); cloudParcelIds.clear();
   setCustomersFromCloud([]);
   replaceFarmsFromCloud([]);
   replaceParcelsFromCloud([]);
@@ -105,47 +119,63 @@ export async function cloudDeleteCustomer(id: string) {
 }
 
 // ───────────── Farms & parcels (Settings "Guardar cambios") ─────────────
-const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
+const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+/** Temporary (non-UUID) farm id → id confirmed by the server. Applied to parcels saved later. */
+const farmIdMap = new Map<string, string>();
+export const resolveFarmId = (id: string) => farmIdMap.get(id) ?? id;
 
-export async function cloudSaveFarms(next: Farm[], _prev?: Farm[]) {
+/** Saves farms; every row is sent with a UUID so parcels can reference it. Returns old→new id map. */
+export async function cloudSaveFarms(next: Farm[], _prev?: Farm[]): Promise<Map<string, string>> {
   const org = requireOrg();
+  const mapping = new Map<string, string>();
   for (const f of next) {
+    const id = isUuid(f.id) ? f.id : (farmIdMap.get(f.id) ?? crypto.randomUUID());
+    if (id !== f.id) mapping.set(f.id, id);
     const row = {
-      name: f.name, region: f.region, country: f.country || "Costa Rica", owner_name: f.owner_name,
-      altitude_m: f.altitude_m, notes: f.notes, organization_id: org, ...(isUuid(f.id) ? { id: f.id } : {}),
+      id, name: f.name, region: f.region, country: f.country || "Costa Rica", owner_name: f.owner_name,
+      altitude_m: f.altitude_m, notes: f.notes, organization_id: org,
     };
-    const res = cloudFarmIds.has(f.id)
-      ? await supabase.from("farms").update({ ...row, updated_at: new Date().toISOString() }).eq("id", f.id)
+    const res = cloudFarmIds.has(id)
+      ? await supabase.from("farms").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id)
       : await supabase.from("farms").insert(row);
     if (res.error) throw friendly(res.error);
+    cloudFarmIds.add(id);
+    if (id !== f.id) farmIdMap.set(f.id, id);
   }
+  const kept = new Set(next.map((f) => resolveFarmId(f.id)));
   for (const id of [...cloudFarmIds]) {
-    const p = { id };
-    if (!next.some((f) => f.id === p.id)) {
-      const res = await supabase.from("farms").delete().eq("id", p.id);
+    if (!kept.has(id)) {
+      const res = await supabase.from("farms").delete().eq("id", id);
       if (res.error) throw friendly(res.error);
+      cloudFarmIds.delete(id);
     }
   }
   await refreshFarmsAndParcels();
+  return mapping;
 }
 
-export async function cloudSaveParcels(next: Parcel[], _prev?: Parcel[]) {
+export async function cloudSaveParcels(next: Parcel[], _prev?: Parcel[], farmMap: Map<string, string> = farmIdMap) {
   const org = requireOrg();
+  const saved = new Set<string>();
   for (const p of next) {
+    const id = isUuid(p.id) ? p.id : crypto.randomUUID();
+    const farmId = farmMap.get(p.farm_id) ?? resolveFarmId(p.farm_id);
+    if (!isUuid(farmId)) throw new Error(`Guarda primero la finca de la parcela "${p.name}".`);
     const row = {
-      farm_id: p.farm_id, name: p.name, variety: p.variety, altitude_m: p.altitude_m, area_ha: p.area_ha,
-      notes: p.notes, organization_id: org, ...(isUuid(p.id) ? { id: p.id } : {}),
+      id, farm_id: farmId, name: p.name, variety: p.variety, altitude_m: p.altitude_m, area_ha: p.area_ha,
+      notes: p.notes, organization_id: org,
     };
-    const res = cloudParcelIds.has(p.id)
-      ? await supabase.from("parcels").update({ ...row, updated_at: new Date().toISOString() }).eq("id", p.id)
+    const res = cloudParcelIds.has(id)
+      ? await supabase.from("parcels").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id)
       : await supabase.from("parcels").insert(row);
     if (res.error) throw friendly(res.error);
+    cloudParcelIds.add(id); saved.add(id);
   }
   for (const id of [...cloudParcelIds]) {
-    const p = { id };
-    if (!next.some((x) => x.id === p.id)) {
-      const res = await supabase.from("parcels").delete().eq("id", p.id);
+    if (!saved.has(id)) {
+      const res = await supabase.from("parcels").delete().eq("id", id);
       if (res.error) throw friendly(res.error);
+      cloudParcelIds.delete(id);
     }
   }
   await refreshFarmsAndParcels();

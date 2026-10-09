@@ -434,6 +434,7 @@ export type Database = {
       }
       lot_public_profiles: {
         Row: {
+          exported_at: string | null
           is_public: boolean
           lot_id: string
           organization_id: string
@@ -445,6 +446,7 @@ export type Database = {
           visibility: Json
         }
         Insert: {
+          exported_at?: string | null
           is_public?: boolean
           lot_id: string
           organization_id: string
@@ -456,6 +458,7 @@ export type Database = {
           visibility?: Json
         }
         Update: {
+          exported_at?: string | null
           is_public?: boolean
           lot_id?: string
           organization_id?: string
@@ -721,6 +724,7 @@ export type Database = {
       operation_keys: {
         Row: {
           actor_id: string | null
+          args_hash: string | null
           created_at: string
           op_key: string
           operation: string
@@ -729,6 +733,7 @@ export type Database = {
         }
         Insert: {
           actor_id?: string | null
+          args_hash?: string | null
           created_at?: string
           op_key: string
           operation: string
@@ -737,6 +742,7 @@ export type Database = {
         }
         Update: {
           actor_id?: string | null
+          args_hash?: string | null
           created_at?: string
           op_key?: string
           operation?: string
@@ -1573,7 +1579,7 @@ export type Database = {
         Returns: string
       }
       _op_get: {
-        Args: { _key: string; _op: string; _org: string }
+        Args: { _args_hash: string; _key: string; _op: string; _org: string }
         Returns: Json
       }
       _op_put: {
@@ -1658,6 +1664,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_see_user: { Args: { _user: string }; Returns: boolean }
       cancel_reservation: {
         Args: { _id: string; _reason?: string }
         Returns: {
@@ -1858,6 +1865,27 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      declare_lot_export: {
+        Args: { _exported_at: string; _lot: string }
+        Returns: {
+          exported_at: string | null
+          is_public: boolean
+          lot_id: string
+          organization_id: string
+          public_token: string
+          published_at: string | null
+          short_story: string | null
+          tasting_notes: string | null
+          updated_at: string
+          visibility: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lot_public_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       deliver_reservation: {
         Args: { _id: string; _notes?: string; _op_key?: string }
         Returns: {
@@ -2055,6 +2083,7 @@ export type Database = {
           _visibility?: Json
         }
         Returns: {
+          exported_at: string | null
           is_public: boolean
           lot_id: string
           organization_id: string

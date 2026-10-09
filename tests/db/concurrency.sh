@@ -38,3 +38,34 @@ RES=$(psql "$DATABASE_URL" -Atc "select qty_reserved_kg::int || ' ' || qty_free_
 echo "successful=$OK rejected_oversell=$OVER reserved_free=$RES"
 [ "$OK" = "6" ] && [ "$OVER" = "4" ] && [ "$RES" = "90 10" ] || { echo "FAIL concurrency"; exit 1; }
 echo "ok - concurrent reservations never oversell"
+
+# Expiry race: one expired reservation; 5 sessions run expire_reservations while 5 try to confirm it.
+# None may confirm; the hold is released exactly once.
+psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 <<SQL
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"$COM","role":"authenticated"}', false);
+select public.cancel_reservation(id, 'reset') from public.reservations where lot_id = '$LOT' and status = 'reservada';
+select public.create_reservation('$LOT', '$CUST', 20, null, null, now() + interval '1 day', 'exp-race');
+reset role;
+update public.reservations set expires_at = now() - interval '1 minute' where notes = 'exp-race';
+SQL
+RID=$(psql "$DATABASE_URL" -Atc "select id from public.reservations where notes = 'exp-race'")
+rm -f /tmp/bcp_exp_*.out
+for i in $(seq 1 10); do
+  if [ $((i % 2)) -eq 0 ]; then CALL="select 'EXP ' || public.expire_reservations('$ORG')"; else CALL="select 'CONF ' || status from public.confirm_reservation('$RID')"; fi
+  ( psql "$DATABASE_URL" -Atq >/tmp/bcp_exp_$i.out 2>&1 <<SQL
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"$COM","role":"authenticated"}', false);
+select pg_sleep(0.2);
+$CALL;
+SQL
+  ) &
+done
+wait
+CONF=$( (grep -l '^CONF ' /tmp/bcp_exp_*.out || true) | wc -l | tr -d ' ')
+REL=$(psql "$DATABASE_URL" -Atc "select count(*) from public.stock_movements where reference_id = '$RID' and movement_type = 'liberacion_reserva'")
+ST=$(psql "$DATABASE_URL" -Atc "select status from public.reservations where id = '$RID'")
+RSV=$(psql "$DATABASE_URL" -Atc "select qty_reserved_kg::int from public.lots where id = '$LOT'")
+echo "expiry_race confirmed=$CONF releases=$REL status=$ST reserved=$RSV"
+[ "$CONF" = "0" ] && [ "$REL" = "1" ] && [ "$ST" = "vencida" ] && [ "$RSV" = "0" ] || { echo "FAIL expiry race"; exit 1; }
+echo "ok - expired reservation never confirmed; released exactly once"

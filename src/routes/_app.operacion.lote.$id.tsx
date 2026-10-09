@@ -13,7 +13,7 @@ import { useCurrentRole } from "@/lib/permissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   closePhase, confirmReservation, cancelReservation, createReservation, createSacks, deliverReservation, friendlyError, getLot,
-  logPhaseVariable, newOpKey, publishLot, recordQuality, releaseLot, signedFileUrl, startPhase, uploadLotFile, type CloudLot,
+  logPhaseVariable, newOpKey, publishLot, declareLotExport, recordQuality, releaseLot, signedFileUrl, startPhase, uploadLotFile, type CloudLot,
 } from "@/lib/ops-cloud";
 import { enqueue, flushQueue } from "@/lib/offline-queue";
 import { sackLabelsPdf } from "@/lib/pdf";
@@ -48,7 +48,8 @@ function CloudLotPage() {
   const [phases, setPhases] = useState<Phase[]>([]); const [vars, setVars] = useState<VarLog[]>([]);
   const [res, setRes] = useState<Res[]>([]); const [files, setFiles] = useState<FileRow[]>([]); const [sacks, setSacks] = useState<Sack[]>([]);
   const [tpls, setTpls] = useState<Tpl[]>([]); const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [profile, setProfile] = useState<{ is_public: boolean; public_token: string; short_story: string | null; tasting_notes: string | null; visibility: Record<string, boolean> } | null>(null);
+  const [profile, setProfile] = useState<{ is_public: boolean; public_token: string; short_story: string | null; tasting_notes: string | null; visibility: Record<string, boolean>; exported_at?: string | null } | null>(null);
+  const [exportDate, setExportDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [phaseForm, setPhaseForm] = useState({ tpl: "", name: "", expected: "" });
   const [meas, setMeas] = useState({ key: "", value: "" });
@@ -69,7 +70,7 @@ function CloudLotPage() {
         supabase.from("sacks").select("id,seq,sack_token,weight_kg").eq("lot_id", id).order("seq"),
         supabase.from("process_templates").select("id,name,process_type,version,phases").eq("active", true).order("name"),
         supabase.from("customers").select("id,name").order("name"),
-        supabase.from("lot_public_profiles").select("is_public,public_token,short_story,tasting_notes,visibility").eq("lot_id", id).maybeSingle(),
+        supabase.from("lot_public_profiles").select("is_public,public_token,short_story,tasting_notes,visibility,exported_at").eq("lot_id", id).maybeSingle(),
       ]);
       setPhases((p.data ?? []) as unknown as Phase[]); setVars((v.data ?? []) as unknown as VarLog[]); setRes((r.data ?? []) as Res[]);
       setFiles((f.data ?? []) as FileRow[]); setSacks((s.data ?? []) as Sack[]); setTpls((t.data ?? []) as unknown as Tpl[]);
@@ -243,6 +244,15 @@ function CloudLotPage() {
               <div className="text-xs break-all"><a className="underline" href={publicUrl} target="_blank" rel="noreferrer">{publicUrl}</a>
                 <p className="text-muted-foreground mt-1">Muestra solo origen, proceso y lo que elijas. Nunca inventario, clientes ni precios.</p></div></div>
           ) : <p className="mt-3 text-sm text-muted-foreground">No publicada: el enlace responde “no encontrado”.</p>}
+          {canSell && profile && (
+            <div className="mt-3 grid gap-1">
+              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${new Date(profile.exported_at).toLocaleDateString()}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
+              <div className="flex gap-2">
+                <Input type="date" max={new Date().toISOString().slice(0, 10)} value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+                <Button variant="outline" disabled={busy || !exportDate} onClick={() => run(() => declareLotExport(lot.id, new Date(`${exportDate}T12:00:00Z`).toISOString()), "Exportación declarada")}>Declarar</Button>
+                {profile.exported_at && <Button variant="ghost" disabled={busy} onClick={() => run(() => declareLotExport(lot.id, null), "Fecha retirada")}>Quitar</Button>}
+              </div>
+            </div>)}
         </Card>
 
         <Card title="Sacos con QR">

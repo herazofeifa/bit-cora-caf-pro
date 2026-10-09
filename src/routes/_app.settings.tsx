@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole } from "@/lib/cloud";
+import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole, getOrgId, useCloudState } from "@/lib/cloud";
 import { loadDemoData, resetOperationalData } from "@/lib/store";
 import { createTeamUser } from "@/lib/users.functions";
 import { createFileRoute } from "@tanstack/react-router";
@@ -372,16 +372,21 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   const isAdmin = currentRole === "administrador";
   const [users, setUsers] = useState<{ id: string; name: string; email: string; role: AppRole }[]>([]);
   const load = async () => {
-    const [{ data: profiles }, { data: userRoles }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email").order("created_at"),
-      supabase.from("memberships").select("user_id, role"),
-    ]);
+    const org = getOrgId();
+    if (!org) { setUsers([]); return; }
+    // Team of the selected organization only.
+    const { data: userRoles } = await supabase.from("memberships").select("user_id, role").eq("organization_id", org);
+    const ids = (userRoles ?? []).map((r) => r.user_id);
+    const { data: profiles } = ids.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", ids).order("created_at")
+      : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
     setUsers((profiles ?? []).map((p) => ({
       id: p.id, name: p.full_name ?? "", email: p.email ?? "",
       role: ((userRoles ?? []).find((r) => r.user_id === p.id)?.role ?? "consulta") as AppRole,
     })));
   };
-  useEffect(() => { void load(); }, [currentRole]);
+  const cloudOrg = useCloudState().orgId;
+  useEffect(() => { void load(); }, [currentRole, cloudOrg]);
   const changeRole = async (userId: string, role: AppRole) => {
     try { await cloudSetMemberRole(userId, role); }
     catch (e) { return toast.error((e as Error).message); }
@@ -394,7 +399,9 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   const addUser = async () => {
     setCreating(true);
     try {
-      await createUser({ data: nu });
+      const org = getOrgId();
+      if (!org) throw new Error("Sin organización activa");
+      await createUser({ data: { ...nu, organizationId: org } });
       toast.success("Usuario creado. Compartile su correo y contraseña.");
       setNu({ full_name: "", email: "", password: "", role: "consulta" });
       void load();
