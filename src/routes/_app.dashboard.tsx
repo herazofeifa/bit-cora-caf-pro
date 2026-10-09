@@ -239,7 +239,7 @@ function DashboardPage() {
         title: `Pesaje pendiente del recibo del ${new Date(pending.harvest_date).toLocaleDateString("es")}`,
         description: `${pending.qty_original} fanega(s) sin confirmar kg. Configura el factor de fanega.`,
         buttons: [
-          { label: "Confirmar peso", onClick: () => toast("Confirmar peso", { description: "Próximamente" }) },
+          { label: "Configurar fanega", onClick: () => navigate({ to: "/settings" }) },
         ],
       });
     }

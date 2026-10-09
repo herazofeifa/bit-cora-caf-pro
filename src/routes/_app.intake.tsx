@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/permission-gate";
 import { Plus, PackageOpen, Search, Calendar, Scale, MapPin, AlertTriangle } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -48,11 +49,13 @@ function IntakeListPage() {
         eyebrow="RECIBOS" title="Recibos"
         subtitle="Café que entra al beneficio."
         action={
+          <PermissionGate permission="intake.create" hint>
           <Button asChild className="h-11 rounded-xl">
             <Link to="/intake/new">
               <Plus className="h-4 w-4" /> Nuevo recibo
             </Link>
           </Button>
+          </PermissionGate>
         }
       />
 

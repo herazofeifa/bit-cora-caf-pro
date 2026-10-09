@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/permission-gate";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Trash2, Plus, ChevronRight, Camera } from "lucide-react";
@@ -87,12 +88,14 @@ function WastePage() {
         eyebrow="MERMAS" title="Mermas"
         subtitle="Lo que se pierde durante el proceso. Registralo para entender tus rendimientos."
         action={
+          <PermissionGate permission="waste.log" hint>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="size-4" /> Registrar merma</Button>
             </DialogTrigger>
             <NewWasteDialog onClose={() => setOpen(false)} />
           </Dialog>
+          </PermissionGate>
         }
       />
 

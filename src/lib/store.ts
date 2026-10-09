@@ -40,27 +40,64 @@ interface State {
   stockMovements: StockMovement[];
 }
 
+const OPS_STORAGE_KEY = "bcp.ops-data.v1";
+
+function loadOps(): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(OPS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+const persistedOps = loadOps();
+function pick<T>(key: string, fallback: T[]): T[] {
+  const v = persistedOps[key];
+  return Array.isArray(v) ? (v as T[]) : fallback;
+}
+
 const state: State = {
-  harvestTickets: [...mockDb.harvestTickets],
-  lots: [...mockDb.lots],
-  audit: [],
-  phases: [...mockDb.processPhaseInstances],
-  variableLogs: [...mockDb.variableLogs],
-  variableDefinitions: [...mockDb.variableDefinitions],
-  moistureLogs: [...mockDb.moistureLogs],
-  wasteLogs: [...mockDb.wasteLogs],
-  alerts: [...mockDb.alerts],
-  customers: [...mockDb.customers],
-  reservations: [...mockDb.reservations],
-  stockMovements: [...mockDb.stockMovements],
+  harvestTickets: pick("harvestTickets", [...mockDb.harvestTickets]),
+  lots: pick("lots", [...mockDb.lots]),
+  audit: pick("audit", []),
+  phases: pick("phases", [...mockDb.processPhaseInstances]),
+  variableLogs: pick("variableLogs", [...mockDb.variableLogs]),
+  variableDefinitions: pick("variableDefinitions", [...mockDb.variableDefinitions]),
+  moistureLogs: pick("moistureLogs", [...mockDb.moistureLogs]),
+  wasteLogs: pick("wasteLogs", [...mockDb.wasteLogs]),
+  alerts: pick("alerts", [...mockDb.alerts]),
+  customers: pick("customers", [...mockDb.customers]),
+  reservations: pick("reservations", [...mockDb.reservations]),
+  stockMovements: pick("stockMovements", [...mockDb.stockMovements]),
 };
+if (Array.isArray(persistedOps.qualitySamples)) {
+  (state as State & { qualitySamples?: unknown[] }).qualitySamples = persistedOps.qualitySamples as unknown[];
+}
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-const emit = () => listeners.forEach((l) => l());
+function persistOps() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(OPS_STORAGE_KEY, JSON.stringify({ ...state, publicProfiles: getPublicProfilesForPersist() }));
+  } catch {}
+}
+const emit = () => {
+  persistOps();
+  listeners.forEach((l) => l());
+};
+
+/** Clears all saved operational data and reloads the demo dataset. */
+export function resetOperationalData() {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.removeItem(OPS_STORAGE_KEY); } catch {}
+  window.location.reload();
+}
 
 function shallowEqual<T>(a: T, b: T): boolean {
   if (Object.is(a, b)) return true;
@@ -1139,7 +1176,12 @@ export function updateQualitySampleStatus(id: string, status: import("@/types/do
 
 // ───────────── Lot public profiles (privacy-controlled) ─────────────
 
-const publicProfiles: Record<string, LotPublicProfile> = {};
+const publicProfiles: Record<string, LotPublicProfile> =
+  (persistedOps.publicProfiles as Record<string, LotPublicProfile> | undefined) ?? {};
+
+function getPublicProfilesForPersist(): Record<string, LotPublicProfile> {
+  try { return publicProfiles; } catch { return {}; }
+}
 
 function defaultPublicProfile(lotId: string): LotPublicProfile {
   return {

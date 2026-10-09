@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
 import {
   Building2, MapPin, Leaf, Users, Scale, Droplets, Workflow, Beaker, Bell, Eye, RefreshCw,
@@ -111,17 +112,18 @@ function useDraft<T>(source: T): { draft: T; setDraft: (next: T | ((prev: T) => 
 }
 
 function SaveBar({ dirty, onSave, onDiscard, extra }: { dirty: boolean; onSave: () => void; onDiscard: () => void; extra?: React.ReactNode }) {
+  const canManage = useCan("settings.manage");
   return (
     <div className="flex items-center justify-between gap-2 pt-2">
       <div className="text-xs text-muted-foreground">
-        {dirty ? "Tienes cambios sin guardar." : "Sin cambios pendientes."}
+        {!canManage ? "Solo lectura: tu rol no puede guardar ajustes." : dirty ? "Tienes cambios sin guardar." : "Sin cambios pendientes."}
       </div>
       <div className="flex items-center gap-2">
         {extra}
         <Button variant="outline" size="sm" onClick={onDiscard} disabled={!dirty}>
           <Undo2 className="size-4" /> Descartar
         </Button>
-        <Button size="sm" onClick={onSave} disabled={!dirty}>
+        <Button size="sm" onClick={onSave} disabled={!dirty || !canManage} title={canManage ? undefined : "Tu rol no permite cambiar ajustes"}>
           <Save className="size-4" /> Guardar cambios
         </Button>
       </div>
