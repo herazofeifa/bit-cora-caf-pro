@@ -54,6 +54,7 @@ const customerSchema = z.object({
 function CustomersPage() {
   const customers = useStore((s) => s.customers);
   const reservations = useStore((s) => s.reservations);
+  const cloud = useCloudState();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
@@ -162,7 +163,8 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
     notes: initial?.notes ?? "",
   });
 
-  function submit() {
+  const [saving, setSaving] = useState(false);
+  async function submit() {
     const parsed = customerSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Datos inválidos");
@@ -244,7 +246,7 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button onClick={submit}>{initial ? "Guardar" : "Crear"}</Button>
+        <Button onClick={submit} disabled={saving}>{saving ? "Guardando…" : initial ? "Guardar" : "Crear"}</Button>
       </DialogFooter>
     </DialogContent>
   );
