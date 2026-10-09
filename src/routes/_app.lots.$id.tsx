@@ -17,6 +17,7 @@ import {
 } from "@/lib/ops-cloud";
 import { enqueue, flushQueue } from "@/lib/offline-queue";
 import { lotSheetPdf, sackLabelsPdf } from "@/lib/pdf";
+import { QualityForm, qualitySummary, type QualityData } from "@/components/quality-form";
 import { commercialStateLabel } from "@/lib/helpers";
 import type { CommercialState } from "@/types/domain";
 
@@ -129,7 +130,7 @@ function CloudLotPage() {
           const pd = parcel.data as { name: string; altitude_m: number | null } | null;
           await lotSheetPdf({ lot: { ...lot, created_at: lot.created_at }, origin: { farm: fd?.name, region: fd?.region, parcel: pd?.name, altitude: pd?.altitude_m ?? fd?.altitude_m },
             origins: lineage?.origins, sources: lineage?.sources,
-            phases: [...(lineage?.phases ?? []).filter((x) => x.inherited).map((x) => ({ ...x, name: `${x.name} (de ${x.lot_code})` })), ...phases], quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: { notes?: string; cupping?: string } | null }[]).map((x) => ({ ...x, notes: [x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
+            phases: [...(lineage?.phases ?? []).filter((x) => x.inherited).map((x) => ({ ...x, name: `${x.name} (de ${x.lot_code})` })), ...phases], quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: QualityData | null }[]).map((x) => ({ ...x, defects: qualitySummary(x.data).defects, notes: [qualitySummary(x.data).sca, x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
             photos, story: profile?.short_story, tasting: profile?.tasting_notes, publicUrl: profile?.is_public ? publicUrl : null });
         }, "Ficha PDF generada")}><Download className="h-4 w-4 mr-1" />Ficha PDF</Button>} />
 
@@ -206,9 +207,9 @@ function CloudLotPage() {
         </Card>
 
         <Card title="Calidad y liberación">
+          {canProcess && <details className="mb-3"><summary className="text-sm cursor-pointer font-medium">Registrar evaluación de calidad (SCA, defectos)</summary><div className="mt-2"><QualityForm fixedLot={lot.id} onSaved={() => void load()} /></div></details>}
           {canProcess ? (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={busy} onClick={() => { const s = prompt("Puntaje SCA (0–100)"); if (s === null) return; void run(() => recordQuality(lot.id, "aprobado", s ? Number(s) : null, null), "Calidad aprobada"); }}>Aprobar calidad</Button>
               <Button variant="outline" disabled={busy} onClick={() => run(() => recordQuality(lot.id, "bloqueado", null, null), "Lote bloqueado por calidad")}><Lock className="h-4 w-4 mr-1" />Bloquear</Button>
               <Button disabled={busy || lot.sale_released} onClick={() => run(() => releaseLot(lot.id, "Liberado desde la ficha"), "Lote liberado para la venta")}>
                 {lot.sale_released ? "Ya liberado para la venta" : "Liberar para la venta"}</Button>
