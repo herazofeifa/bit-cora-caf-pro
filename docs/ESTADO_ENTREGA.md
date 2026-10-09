@@ -49,7 +49,7 @@ existentes, no se importó el dataset demo, no se crearon cuentas ni se enviaron
 |---|---|
 | `bun run typecheck` (tsc) | sin errores |
 | `bun run test` (Vitest) | 3 archivos, 4 pruebas OK (CSV, sobreventa local, aislamiento/logout, demo explícito) |
-| `bash tests/db/run-local.sh` | migraciones 0000–0002 aplicadas en PostgreSQL 17 desechable; 27 aserciones OK + concurrencia OK |
+| `bash tests/db/run-local.sh` | migraciones 0000–0003 aplicadas en PostgreSQL 17 desechable; 27 aserciones OK + concurrencia OK |
 
 Aserciones de `tests/db/core.test.sql`: códigos de lote únicos; NaN/negativos rechazados;
 sobreventa rechazada; confirmar mueve a comprometido una vez; cancelar libera una vez; entregar
@@ -64,6 +64,9 @@ Concurrencia (`tests/db/concurrency.sh`): 10 sesiones paralelas reservando 15 kg
 Limitación: el usuario de base del sandbox no puede asumir el rol `authenticated`, por eso las
 pruebas de RLS se ejecutan sobre una base local con roles equivalentes (`tests/db/bootstrap.sql`),
 no sobre la base del proyecto.
+
+## Revisión de seguridad automática
+Tras la migración 0003 quedan avisos esperados: funciones `SECURITY DEFINER` ejecutables por usuarios con sesión (cada una valida membresía y rol dentro) y `lot_sequences` sin políticas (solo accesible desde funciones internas).
 
 ## 3. Pendiente (siguiente entrega)
 Las tablas y funciones ya existen y están probadas; falta conectar estas pantallas, que hoy

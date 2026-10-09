@@ -28,6 +28,7 @@ Las migraciones versionadas están en `drizzle/migrations/` y se aplican en orde
 | `0000_migration.sql` | `profiles`, `user_roles`, `has_role`, trigger de alta |
 | `0001_shared_operational_core.sql` | organizaciones, membresías, catálogos, lotes, reservas, movimientos, calidad, auditoría append-only, RLS y funciones transaccionales |
 | `0002_fix_lot_links_policy.sql` | corrección de la política de lectura de genealogía |
+| `0003_harden_function_privileges.sql` | revoca ejecución pública de funciones internas, fija `search_path` |
 
 Reglas clave (ver `docs/ESTADO_ENTREGA.md`):
 - Toda tabla operativa tiene `organization_id` y RLS por membresía.
