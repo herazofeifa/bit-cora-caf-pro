@@ -77,24 +77,14 @@ export const rolePermissions: Record<AppRole, Permission[]> = {
 
 // ───────────── Current role store (persistent) ─────────────
 
-const STORAGE_KEY = "bcp.currentRole";
-let currentRole: AppRole = readInitial();
-
-function readInitial(): AppRole {
-  if (typeof window === "undefined") return "administrador";
-  try {
-    const v = window.localStorage.getItem(STORAGE_KEY) as AppRole | null;
-    if (v && v in rolePermissions) return v;
-  } catch {}
-  return "administrador";
-}
+// Role is set only from the server membership (src/lib/auth.ts). Default: read-only.
+let currentRole: AppRole = "consulta";
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
 
 export function setCurrentRole(role: AppRole) {
   currentRole = role;
-  try { window.localStorage.setItem(STORAGE_KEY, role); } catch {}
   listeners.forEach((l) => l());
 }
 
