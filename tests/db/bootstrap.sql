@@ -22,3 +22,9 @@ do $$ begin
     create publication supabase_realtime;
   end if;
 end $$;
+-- storage stub (only what the policies reference)
+create schema if not exists storage;
+create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated, service_role;
+grant select, insert, delete on storage.objects to authenticated;
