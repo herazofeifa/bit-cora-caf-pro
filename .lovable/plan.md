@@ -1,125 +1,52 @@
+# Auditoría de Bitácora Café Pro
 
-# Arquitectura de datos — Bitácora Café Pro
+## Lo que no funciona (problemas reales)
 
-Este es el modelo de datos propuesto, mapeado 1:1 a las tablas Supabase cuando se conecte el backend. Actualmente vive en memoria (`mockDb`) + capa reactiva (`app-config-store.ts`) persistida en `localStorage`.
+1. **Los datos operativos se pierden al recargar.** Lotes, cosechas, recibos, humedades, mermas, reservas, calidad y auditoría viven solo en memoria. Solo los Ajustes (fincas, parcelas, unidades, rangos) se guardan. Al refrescar la página, todo vuelve a los datos de ejemplo.
+2. **Los roles casi no se aplican.** Los permisos existen, pero solo se respetan en Reservas y Auditoría. Un usuario "Consulta" puede crear lotes, registrar mermas, cambiar ajustes o dividir lotes.
+3. **El inicio de sesión es simulado.** No hay usuarios reales; cualquiera entra y el rol se elige en Ajustes.
+4. **Varias pantallas siguen leyendo datos de ejemplo directamente** (Dashboard, Lotes, Detalle de lote, Inventario, Mermas, Control de proceso, Trazabilidad, Reportes, Ficha pública, diálogos de lote) para cosas como nombres de clientes o plantillas, en lugar de los datos vivos. Puede mostrar información desactualizada.
+5. **La ficha pública (QR) no ve cambios reales**: al no haber datos compartidos, un tercero que escanea el QR no ve el lote del productor.
 
-## Vista por dominios
+## Lo que falta implementar (marcado como "Próximamente")
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  TENANCY & SEGURIDAD                                            │
-│  organizations ── profiles ── user_roles (RBAC)                 │
-└─────────────────────────────────────────────────────────────────┘
-                │
-┌───────────────┴─────────────────────────────────────────────────┐
-│  CATÁLOGOS (configurables en Ajustes)                           │
-│  farms → parcels │ units │ customers │ variable_definitions     │
-│                  │        │           │ process_templates       │
-│                  │        │           │   └─ template_phases    │
-└─────────────────────────────────────────────────────────────────┘
-                │
-┌───────────────┴─────────────────────────────────────────────────┐
-│  ENTRADA DE MATERIA PRIMA                                       │
-│  harvest_tickets (kind = harvest | intake)                      │
-│     └── convierte a → lots                                      │
-└─────────────────────────────────────────────────────────────────┘
-                │
-┌───────────────┴─────────────────────────────────────────────────┐
-│  PRODUCCIÓN Y TRAZABILIDAD                                      │
-│  lots (parent_lot_id → genealogía)                              │
-│    ├── process_instances → process_phase_instances              │
-│    ├── variable_logs / moisture_logs                            │
-│    ├── stock_movements (entradas, salidas, transformaciones)    │
-│    ├── waste_logs (mermas)                                      │
-│    └── quality_samples                                          │
-└─────────────────────────────────────────────────────────────────┘
-                │
-┌───────────────┴─────────────────────────────────────────────────┐
-│  COMERCIAL                                                      │
-│  customers → reservations → (movimientos de venta)              │
-└─────────────────────────────────────────────────────────────────┘
-                │
-┌───────────────┴─────────────────────────────────────────────────┐
-│  OBSERVABILIDAD                                                 │
-│  alerts │ audit_log │ app_settings (por organización)           │
-└─────────────────────────────────────────────────────────────────┘
-```
+- Exportar PDF, Exportar CSV y Compartir en Reportes.
+- Botón "Confirmar peso" del Dashboard.
+- Sección de ficha pública dentro del Detalle de lote (botón "Próximamente", aunque la ficha ya existe en otra pantalla).
+- Adjuntar foto en registro de variables y en diálogos de lote.
+- Asistente: solo "Registrar humedad" funciona dentro del asistente; las demás tareas redirigen a formularios normales.
+- Sincronización sin conexión: solo es una idea visual, no guarda ni reenvía nada.
 
-## Diagrama entidad-relación (Mermaid)
+## Calidad del código (afecta mantenimiento)
 
-Este diagrama se entregará como artefacto `.mmd` para incluir en la documentación de graduación.
+- Archivos muy grandes: Reportes (51 KB), almacén de datos (47 KB), Detalle de lote (43 KB), Constructor de procesos (31 KB).
+- Restos de código sin uso en Detalle de lote.
+- No hay pruebas automáticas de las reglas críticas (inventario libre = actual − reservado − comprometido − bloqueado, sin sobreventa).
 
-```mermaid
-erDiagram
-    ORGANIZATION ||--o{ PROFILE : "tiene"
-    ORGANIZATION ||--o{ FARM : "posee"
-    ORGANIZATION ||--o{ CUSTOMER : "gestiona"
-    ORGANIZATION ||--o{ UNIT : "define"
-    ORGANIZATION ||--o{ VARIABLE_DEFINITION : "define"
-    ORGANIZATION ||--o{ PROCESS_TEMPLATE : "define"
-    ORGANIZATION ||--|| APP_SETTINGS : "configura"
+## Propuesta por fases
 
-    PROFILE ||--o{ USER_ROLE : "tiene"
+**Fase 1 — Arreglos rápidos (sin servidor)**
+- Guardar todos los datos operativos en el navegador para que no se pierdan al recargar.
+- Aplicar permisos en todos los botones de crear, editar, borrar, dividir/fusionar y en Ajustes.
+- Reemplazar lecturas directas de datos de ejemplo por los datos vivos.
+- Activar Exportar CSV real en Reportes, Inventario y Trazabilidad; activar "Confirmar peso"; enlazar la ficha pública desde el Detalle de lote.
+- Agregar pruebas de reglas de inventario y reservas.
 
-    FARM ||--o{ PARCEL : "contiene"
-    FARM ||--o{ HARVEST_TICKET : "origen"
-    PARCEL ||--o{ HARVEST_TICKET : "origen"
+**Fase 2 — Producción real (con Lovable Cloud)**
+- Usuarios reales con inicio de sesión y roles guardados de forma segura.
+- Base de datos compartida para lotes, procesos, reservas, etc.
+- Ficha pública por QR leyendo datos reales con privacidad respetada.
+- Subida de fotos.
+- Exportar PDF.
 
-    HARVEST_TICKET ||--o| LOT : "genera"
-    UNIT ||--o{ HARVEST_TICKET : "uom_original"
+**Fase 3 — Mejoras**
+- Completar el asistente para cosecha, recibo, variable y merma dentro del mismo flujo.
+- Dividir los archivos grandes sin cambiar el comportamiento.
+- Cola real sin conexión.
 
-    LOT ||--o{ LOT : "parent_lot (genealogía)"
-    LOT ||--o{ PROCESS_INSTANCE : "corre"
-    PROCESS_TEMPLATE ||--o{ PROCESS_TEMPLATE_PHASE : "fases"
-    PROCESS_TEMPLATE ||--o{ PROCESS_INSTANCE : "instancia"
-    PROCESS_INSTANCE ||--o{ PROCESS_PHASE_INSTANCE : "fases activas"
-    PROCESS_TEMPLATE_PHASE ||--o{ PROCESS_PHASE_INSTANCE : "plantilla"
-
-    LOT ||--o{ VARIABLE_LOG : "mide"
-    VARIABLE_DEFINITION ||--o{ VARIABLE_LOG : "tipifica"
-    PROCESS_PHASE_INSTANCE ||--o{ VARIABLE_LOG : "contexto"
-
-    LOT ||--o{ MOISTURE_LOG : "humedad"
-    LOT ||--o{ STOCK_MOVEMENT : "movimientos"
-    LOT ||--o{ WASTE_LOG : "mermas"
-    LOT ||--o{ QUALITY_SAMPLE : "catación"
-
-    CUSTOMER ||--o{ RESERVATION : "reserva"
-    LOT ||--o{ RESERVATION : "compromete"
-
-    LOT ||--o{ ALERT : "genera"
-    PROFILE ||--o{ AUDIT_LOG : "actúa"
-```
-
-## Estado reactivo en el cliente (hoy)
-
-```text
-localStorage (bcp.app-config.v1)
-        ▲
-        │ persist + emit
-        │
-  app-config-store.ts  ──► useSyncExternalStoreWithSelector
-        │                        │
-   mockDb (semilla)         Componentes React
-                            (Ajustes, Lotes, Recibos,
-                             Trazabilidad pública, etc.)
-```
-
-## Reglas de integridad clave
-
-- `lots.parent_lot_id` habilita el árbol de trazabilidad genealógica (split/merge/transformación).
-- `qty_current_kg = qty_free_kg + qty_reserved_kg + qty_committed_kg + qty_blocked_kg` (invariante contable).
-- `stock_movements` es append-only: cualquier cambio en cantidades de un lote debe generar un movimiento.
-- Borrar `farm` requiere que no existan `parcels`, `lots` ni `harvest_tickets` asociados (validación ya implementada en Ajustes).
-- Borrar `parcel` requiere que no existan `lots` ni `harvest_tickets` asociados.
-- `units.is_configurable = false` bloquea edición/borrado (unidades base del sistema).
-- RBAC vía tabla separada `user_roles` + función `has_role()` SECURITY DEFINER (evita escalamiento).
-
-## Entregable
-
-Al aprobar el plan, generaré:
-
-1. `/mnt/documents/arquitectura-datos.mmd` — diagrama ER en Mermaid, listo para incrustar en la memoria de graduación.
-2. `/mnt/documents/arquitectura-datos-dominios.mmd` — segundo diagrama de flujo por dominios (el ASCII de arriba en formato Mermaid `flowchart`).
-
-Ambos se mostrarán como artefactos descargables en el chat. No se tocará código de la aplicación.
+## Detalles técnicos
+- Persistencia fase 1: extender `src/lib/store.ts` con el mismo patrón `persist()/loadPersisted()` de `app-config-store.ts` (clave versionada).
+- Permisos: envolver acciones con `PermissionGate`/`useCan`; agregar permisos faltantes en `permissions.ts`.
+- CSV: utilidad compartida en `src/lib/export-csv.ts`.
+- Pruebas con vitest sobre funciones de inventario/reservas de `store.ts`.
+- Fase 2 requiere activar Lovable Cloud, tabla `user_roles` separada y RLS.
