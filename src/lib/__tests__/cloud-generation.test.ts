@@ -24,7 +24,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 const { startCloud, stopCloud, cloudSaveFarms, cloudSaveParcels } = await import("../cloud");
 const { getStoreSnapshot } = await import("../store");
-const { getAppConfigSnapshot } = await import("../app-config-store");
+const { getFarms } = await import("../app-config-store");
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const answerAll = (rows: Record<string, unknown[]>) => {
@@ -41,7 +41,7 @@ describe("capa de datos compartidos: respuestas viejas", () => {
     answerAll({ customers: [{ id: "c-a", name: "De A" }], farms: [{ id: "f-a" }], parcels: [] });
     await run;
     expect(getStoreSnapshot().customers).toHaveLength(0);
-    expect(getAppConfigSnapshot().farms).toHaveLength(0);
+    expect(getFarms()).toHaveLength(0);
   });
 
   it("al cambiar de organización solo quedan los datos de la nueva", async () => {
