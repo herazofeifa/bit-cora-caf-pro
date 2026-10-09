@@ -166,6 +166,58 @@ export type Database = {
           },
         ]
       }
+      evaluation_spaces: {
+        Row: {
+          blank_org: string
+          created_at: string
+          created_by: string | null
+          evaluator_user: string | null
+          sample_files: Json
+          sample_org: string
+          source_org: string
+        }
+        Insert: {
+          blank_org: string
+          created_at?: string
+          created_by?: string | null
+          evaluator_user?: string | null
+          sample_files?: Json
+          sample_org: string
+          source_org: string
+        }
+        Update: {
+          blank_org?: string
+          created_at?: string
+          created_by?: string | null
+          evaluator_user?: string | null
+          sample_files?: Json
+          sample_org?: string
+          source_org?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_spaces_blank_org_fkey"
+            columns: ["blank_org"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_spaces_sample_org_fkey"
+            columns: ["sample_org"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_spaces_source_org_fkey"
+            columns: ["source_org"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farms: {
         Row: {
           altitude_m: number | null
@@ -789,6 +841,7 @@ export type Database = {
         Row: {
           country: string
           created_at: string
+          eval_kind: string | null
           id: string
           is_demo: boolean
           name: string
@@ -797,6 +850,7 @@ export type Database = {
         Insert: {
           country?: string
           created_at?: string
+          eval_kind?: string | null
           id?: string
           is_demo?: boolean
           name: string
@@ -805,6 +859,7 @@ export type Database = {
         Update: {
           country?: string
           created_at?: string
+          eval_kind?: string | null
           id?: string
           is_demo?: boolean
           name?: string
@@ -1625,6 +1680,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      _seed_eval_base: { Args: { _org: string }; Returns: undefined }
+      _seed_eval_sample: { Args: { _org: string }; Returns: Json }
       _seed_process_templates: { Args: { _org: string }; Returns: undefined }
       adjust_inventory: {
         Args: { _delta: number; _lot: string; _reason: string }
@@ -1929,6 +1986,7 @@ export type Database = {
         Returns: boolean
       }
       is_org_member: { Args: { _org: string }; Returns: boolean }
+      is_real_org_admin: { Args: never; Returns: boolean }
       log_moisture: {
         Args: { _device?: string; _lot: string; _notes?: string; _pct: number }
         Returns: {
@@ -2052,6 +2110,7 @@ export type Database = {
       my_memberships: {
         Args: never
         Returns: {
+          eval_kind: string
           is_demo: boolean
           organization_id: string
           organization_name: string
@@ -2070,6 +2129,10 @@ export type Database = {
           reason: string
           started_at: string
         }[]
+      }
+      provision_evaluation: {
+        Args: { _evaluator?: string; _source_org: string }
+        Returns: Json
       }
       public_lot_view: { Args: { _token: string }; Returns: Json }
       public_report_snapshot: { Args: { _token: string }; Returns: Json }
