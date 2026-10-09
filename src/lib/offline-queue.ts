@@ -87,10 +87,11 @@ let flushingPartition: string | null = null;
  */
 export async function flushQueue() {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+  if (partition && getOrgId() !== partitionOrg) { clearQueueMemory(); await loadQueue(); } // environment switched
   const myPartition = partition, myOrg = partitionOrg, myGen = currentGeneration();
   if (!myPartition || !myOrg || flushingPartition === myPartition) return;
   flushingPartition = myPartition;
-  const stale = () => partition !== myPartition || currentGeneration() !== myGen;
+  const stale = () => partition !== myPartition || currentGeneration() !== myGen || getOrgId() !== myOrg;
   try {
     for (const it of items.filter((x) => x.status === "pending")) {
       if (stale()) return;
