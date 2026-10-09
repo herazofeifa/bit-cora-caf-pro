@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
 import { toast } from "sonner";
@@ -18,7 +19,7 @@ import { ConfirmAction } from "@/components/confirm-action";
 import { mockDb } from "@/data/mock-data";
 import { useStore, getStoreSnapshot } from "@/lib/store";
 import {
-  roleLabel, roleDescription, useCurrentRole, setCurrentRole, type AppRole,
+  roleLabel, roleDescription, useCurrentRole, type AppRole,
 } from "@/lib/permissions";
 import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
 import {
@@ -353,17 +354,52 @@ function ParcelsSection() {
 
 function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   const roles: AppRole[] = ["administrador", "encargado_beneficio", "productor", "comercial", "consulta"];
+  const isAdmin = currentRole === "administrador";
+  const [users, setUsers] = useState<{ id: string; name: string; email: string; role: AppRole }[]>([]);
+  const load = async () => {
+    const [{ data: profiles }, { data: userRoles }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, email").order("created_at"),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
+    setUsers((profiles ?? []).map((p) => ({
+      id: p.id, name: p.full_name ?? "", email: p.email ?? "",
+      role: ((userRoles ?? []).find((r) => r.user_id === p.id)?.role ?? "consulta") as AppRole,
+    })));
+  };
+  useEffect(() => { void load(); }, [currentRole]);
+  const changeRole = async (userId: string, role: AppRole) => {
+    const del = await supabase.from("user_roles").delete().eq("user_id", userId);
+    const ins = del.error ? del : await supabase.from("user_roles").insert({ user_id: userId, role });
+    if (ins.error) return toast.error("No se pudo cambiar el rol");
+    toast.success(`Rol actualizado: ${roleLabel[role]}`);
+    void load();
+  };
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        <Label>Rol activo (modo demo)</Label>
-        <p className="text-xs text-muted-foreground mb-2">Cambia el rol para ver cómo se adapta la interfaz y los permisos.</p>
-        <Select value={currentRole} onValueChange={(v) => { setCurrentRole(v as AppRole); toast.success(`Rol: ${roleLabel[v as AppRole]}`); }}>
-          <SelectTrigger className="max-w-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {roles.map((r) => <SelectItem key={r} value={r}>{roleLabel[r]}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <Label>Tu rol</Label>
+        <p className="text-sm mt-1">{roleLabel[currentRole]}</p>
+        <p className="text-xs text-muted-foreground mt-1">La primera persona registrada es Administrador; las nuevas cuentas entran como Consulta hasta que un administrador les asigne un rol.</p>
+      </Card>
+      <Card className="p-0 divide-y divide-border">
+        {users.map((u) => (
+          <div key={u.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div>
+              <div className="font-medium">{u.name || u.email}</div>
+              <div className="text-xs text-muted-foreground">{u.email}</div>
+            </div>
+            {isAdmin ? (
+              <Select value={u.role} onValueChange={(v) => changeRole(u.id, v as AppRole)}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => <SelectItem key={r} value={r}>{roleLabel[r]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className="text-xs">{roleLabel[u.role]}</span>
+            )}
+          </div>
+        ))}
       </Card>
       <Card className="p-0 divide-y divide-border">
         {roles.map((r) => (

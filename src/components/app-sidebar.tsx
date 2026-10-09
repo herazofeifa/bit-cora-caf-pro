@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Coffee, ChevronDown } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { signOut, useSession } from "@/lib/auth";
+import { Coffee, ChevronDown, LogOut } from "lucide-react";
 import { navGroups } from "./nav-items";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const session = useSession();
+  const navigate = useNavigate();
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -76,6 +79,16 @@ export function AppSidebar() {
           );
         })}
       </nav>
+      <div className="border-t border-sidebar-border p-3 text-xs">
+        <div className="truncate text-muted-foreground mb-2">{session?.user.email}</div>
+        <button
+          type="button"
+          className="flex items-center gap-2 text-sm font-medium text-sidebar-foreground hover:text-primary"
+          onClick={async () => { await signOut(); navigate({ to: "/login", replace: true }); }}
+        >
+          <LogOut className="h-4 w-4" /> Cerrar sesión
+        </button>
+      </div>
     </aside>
   );
 }
