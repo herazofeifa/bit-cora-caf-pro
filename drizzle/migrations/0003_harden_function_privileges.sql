@@ -1,0 +1,14 @@
+alter function public.audit_immutable() set search_path = public;
+alter function public._assert_qty(numeric, text) set search_path = public;
+revoke execute on function public.is_org_member(uuid) from public, anon;
+revoke execute on function public.has_org_role(uuid, public.app_role[]) from public, anon;
+revoke execute on function public.has_role(uuid, public.app_role) from public, anon;
+grant execute on function public.is_org_member(uuid) to authenticated;
+grant execute on function public.has_org_role(uuid, public.app_role[]) to authenticated;
+grant execute on function public.has_role(uuid, public.app_role) to authenticated;
+revoke execute on function public._require_role(uuid, public.app_role[]) from public, anon, authenticated;
+revoke execute on function public._assert_qty(numeric, text) from public, anon, authenticated;
+revoke execute on function public.audit_row() from public, anon, authenticated;
+revoke execute on function public.audit_immutable() from public, anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+comment on table public.lot_sequences is 'Internal counter for server-generated lot codes; accessed only by SECURITY DEFINER functions (no policies by design).';

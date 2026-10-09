@@ -26,7 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createCustomer, deleteCustomer, updateCustomer, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import { cloudCreateCustomer, cloudDeleteCustomer, cloudUpdateCustomer, useCloudState } from "@/lib/cloud";
 import { customerTypeLabel } from "@/lib/helpers";
 import type { Customer, CustomerType } from "@/types/domain";
 
@@ -53,6 +54,7 @@ const customerSchema = z.object({
 function CustomersPage() {
   const customers = useStore((s) => s.customers);
   const reservations = useStore((s) => s.reservations);
+  const cloud = useCloudState();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
@@ -91,7 +93,11 @@ function CustomersPage() {
         <Input className="pl-9" placeholder="Buscar cliente, contacto o email…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {filtered.length === 0 ? (
+      {cloud.status === "loading" ? (
+        <p className="text-sm text-muted-foreground">Cargando clientes…</p>
+      ) : cloud.status === "error" ? (
+        <p className="text-sm text-destructive">No se pudieron cargar los clientes: {cloud.error}</p>
+      ) : filtered.length === 0 ? (
         <EmptyState icon={Users} title="Sin clientes aún" description="Agrega tu primer cliente para empezar a registrar reservas y ventas." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -110,8 +116,13 @@ function CustomersPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => {
-                      try { deleteCustomer(c.id); toast.success("Cliente eliminado."); }
-                      catch (e) { toast.error((e as Error).message); }
+                      if (reservations.some((r) => r.customer_id === c.id && (r.status === "reservada" || r.status === "confirmada" || r.status === "activa"))) {
+                        toast.error("Este cliente tiene reservas activas.");
+                        return;
+                      }
+                      cloudDeleteCustomer(c.id)
+                        .then(() => toast.success("Cliente eliminado."))
+                        .catch((e: Error) => toast.error(e.message));
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -156,7 +167,8 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
     notes: initial?.notes ?? "",
   });
 
-  function submit() {
+  const [saving, setSaving] = useState(false);
+  async function submit() {
     const parsed = customerSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Datos inválidos");
@@ -172,14 +184,21 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
       country: data.country || null,
       notes: data.notes || null,
     };
-    if (initial) {
-      updateCustomer(initial.id, payload);
-      toast.success("Cliente actualizado");
-    } else {
-      createCustomer(payload);
-      toast.success("Cliente creado");
+    setSaving(true);
+    try {
+      if (initial) {
+        await cloudUpdateCustomer(initial.id, payload);
+        toast.success("Cliente actualizado");
+      } else {
+        await cloudCreateCustomer(payload);
+        toast.success("Cliente creado");
+      }
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
     }
-    onClose();
   }
 
   return (
@@ -231,7 +250,7 @@ function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClos
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button onClick={submit}>{initial ? "Guardar" : "Crear"}</Button>
+        <Button onClick={submit} disabled={saving}>{saving ? "Guardando…" : initial ? "Guardar" : "Crear"}</Button>
       </DialogFooter>
     </DialogContent>
   );

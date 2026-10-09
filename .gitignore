@@ -30,3 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets / local env (the Lovable-managed .env holds only publishable values)
+.env.local
+.env.*.local
+*.pem
+supabase/.temp/

@@ -8,6 +8,27 @@
       "when": 1791580843418,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791581772618,
+      "tag": "0001_shared_operational_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791581975810,
+      "tag": "0002_fix_lot_links_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791582427346,
+      "tag": "0003_harden_function_privileges",
+      "breakpoints": true
     }
   ]
 }

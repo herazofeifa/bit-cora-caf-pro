@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
+import { cloudSaveFarms, cloudSaveParcels, cloudSetMemberRole } from "@/lib/cloud";
+import { loadDemoData, resetOperationalData } from "@/lib/store";
 import { createTeamUser } from "@/lib/users.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCan } from "@/lib/permissions";
@@ -26,8 +28,8 @@ import {
 import { useSyncQueue, retrySync, clearSynced } from "@/lib/sync-queue";
 import {
   useOrganization, useFarms, useParcels, useUnits, useAppSettings,
-  setOrganization, replaceFarms, replaceParcels, replaceUnits, setSettings,
-  addFarm, removeFarm, addParcel, removeParcel,
+  setOrganization, replaceUnits, setSettings,
+  addFarm, addParcel,
   resetSettings, resetAll, DEFAULT_SETTINGS,
   type AppSettings, type Organization,
 } from "@/lib/app-config-store";
@@ -53,10 +55,11 @@ function SettingsPage() {
         title="Ajustes"
         subtitle="Organización, unidades, alertas, permisos y sincronización."
         action={
+          <div className="flex flex-wrap gap-2">
           <ConfirmAction
             destructive
             title="Restablecer todos los ajustes"
-            description="Se eliminarán los cambios locales en organización, fincas, parcelas, unidades y reglas. Esta acción no se puede deshacer."
+            description="Se restablecen los ajustes locales de este dispositivo (organización, unidades y reglas). Fincas, parcelas y clientes guardados en la nube no se tocan."
             confirmLabel="Restablecer"
             trigger={
               <Button variant="outline" className="h-10 rounded-xl">
@@ -65,6 +68,22 @@ function SettingsPage() {
             }
             onConfirm={() => { resetAll(); toast.success("Ajustes restablecidos"); }}
           />
+          <ConfirmAction
+            title="Cargar datos de demostración"
+            description="Reemplaza los lotes y registros guardados solo en este dispositivo por un conjunto de ejemplo. No se sube nada a la nube."
+            confirmLabel="Cargar demo"
+            trigger={<Button variant="outline" className="h-10 rounded-xl">Datos demo</Button>}
+            onConfirm={() => { loadDemoData(); toast.success("Datos de demostración cargados en este dispositivo"); }}
+          />
+          <ConfirmAction
+            destructive
+            title="Vaciar datos locales"
+            description="Borra los lotes y registros guardados solo en este dispositivo para tu usuario."
+            confirmLabel="Vaciar"
+            trigger={<Button variant="outline" className="h-10 rounded-xl">Vaciar local</Button>}
+            onConfirm={() => { resetOperationalData(); toast.success("Datos locales vaciados"); }}
+          />
+          </div>
         }
       />
 
@@ -235,14 +254,9 @@ function FarmsSection() {
         dirty={dirty}
         onDiscard={reset}
         onSave={() => {
-          const ids = new Set(draft.map((f) => f.id));
-          const removedIds = farms.filter((f) => !ids.has(f.id)).map((f) => f.id);
-          // Cascade: drop parcels for removed farms in the parcel store too.
-          if (removedIds.length > 0) {
-            removedIds.forEach((id) => removeFarm(id));
-          }
-          replaceFarms(draft.map((f) => ({ ...f, updated_at: new Date().toISOString() })));
-          toast.success("Fincas guardadas");
+          cloudSaveFarms(draft, farms)
+            .then(() => toast.success("Fincas guardadas"))
+            .catch((e: Error) => toast.error(e.message));
         }}
       />
     </div>
@@ -342,10 +356,9 @@ function ParcelsSection() {
         dirty={dirty}
         onDiscard={reset}
         onSave={() => {
-          const ids = new Set(draft.map((p) => p.id));
-          parcels.filter((p) => !ids.has(p.id)).forEach((p) => removeParcel(p.id));
-          replaceParcels(draft.map((p) => ({ ...p, updated_at: new Date().toISOString() })));
-          toast.success("Parcelas guardadas");
+          cloudSaveParcels(draft, parcels)
+            .then(() => toast.success("Parcelas guardadas"))
+            .catch((e: Error) => toast.error(e.message));
         }}
       />
     </div>
@@ -361,7 +374,7 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   const load = async () => {
     const [{ data: profiles }, { data: userRoles }] = await Promise.all([
       supabase.from("profiles").select("id, full_name, email").order("created_at"),
-      supabase.from("user_roles").select("user_id, role"),
+      supabase.from("memberships").select("user_id, role"),
     ]);
     setUsers((profiles ?? []).map((p) => ({
       id: p.id, name: p.full_name ?? "", email: p.email ?? "",
@@ -370,9 +383,8 @@ function UsersRolesSection({ currentRole }: { currentRole: AppRole }) {
   };
   useEffect(() => { void load(); }, [currentRole]);
   const changeRole = async (userId: string, role: AppRole) => {
-    const del = await supabase.from("user_roles").delete().eq("user_id", userId);
-    const ins = del.error ? del : await supabase.from("user_roles").insert({ user_id: userId, role });
-    if (ins.error) return toast.error("No se pudo cambiar el rol");
+    try { await cloudSetMemberRole(userId, role); }
+    catch (e) { return toast.error((e as Error).message); }
     toast.success(`Rol actualizado: ${roleLabel[role]}`);
     void load();
   };

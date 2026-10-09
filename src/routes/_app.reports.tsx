@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { downloadCsv } from "@/lib/export-csv";
 import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot, getQualitySamples } from "@/lib/store";
 import { useFarms, useParcels } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
@@ -195,9 +196,9 @@ const EMPTY_FILTERS: Filters = {
 function FiltersBar({ filters, setFilters, onClear }: { filters: Filters; setFilters: (f: Filters) => void; onClear: () => void }) {
   const farms = useFarms();
   const parcels = useParcels().filter((p) => filters.farmId === "all" || p.farm_id === filters.farmId);
-  const varieties = Array.from(new Set(mockDb.lots.map((l) => l.variety).filter(Boolean)));
-  const customers = mockDb.customers;
-  const seasons = Array.from(new Set(mockDb.harvestTickets.map((h) => harvestSeasonOf(h.harvest_date))));
+  const varieties = Array.from(new Set(getStoreSnapshot().lots.map((l) => l.variety).filter(Boolean)));
+  const customers = getStoreSnapshot().customers;
+  const seasons = Array.from(new Set(getStoreSnapshot().harvestTickets.map((h) => harvestSeasonOf(h.harvest_date))));
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setFilters({ ...filters, [k]: v });
 
@@ -348,10 +349,10 @@ function ReportsPage() {
   const alerts = useStore((s) => s.alerts);
   const customers = useStore((s) => s.customers);
 
-  const harvestTickets = mockDb.harvestTickets;
+  const harvestTickets = getStoreSnapshot().harvestTickets;
   const processInstances = mockDb.processInstances;
   const processTemplates = mockDb.processTemplates;
-  const qualitySamples = mockDb.qualitySamples;
+  const qualitySamples = getQualitySamples();
   const farms = useFarms();
   const parcels = useParcels();
 

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { logWaste, useStore } from "@/lib/store";
 import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot } from "@/lib/store";
 import {
   formatKg,
   wasteDestinationLabel,
@@ -127,7 +128,7 @@ function WastePage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((w) => {
-            const phase = mockDb.processPhaseInstances.find((p) => p.id === w.phase_instance_id);
+            const phase = getStoreSnapshot().phases.find((p) => p.id === w.phase_instance_id);
             return (
               <Link
                 key={w.id}

@@ -48,6 +48,7 @@ import {
 } from "@/components/lot-action-dialogs";
 import { FinishPhaseDialog } from "@/components/finish-phase-dialog";
 import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot, getQualitySamples } from "@/lib/store";
 import { useFarms, useParcels, getUnits } from "@/lib/app-config-store";
 import {
   calcAvailableKg,
@@ -419,7 +420,7 @@ function Row({ label, value, accent }: { label: string; value: string; accent?: 
 function ProcesoTab({ lot }: { lot: Lot }) {
   const instance = mockDb.processInstances.find((p) => p.id === lot.process_instance_id);
   const allPhases = instance
-    ? mockDb.processPhaseInstances.filter((p) => p.process_instance_id === instance.id)
+    ? getStoreSnapshot().phases.filter((p) => p.process_instance_id === instance.id)
     : [];
   const templatePhases = instance?.template_id
     ? mockDb.processTemplatePhases
@@ -834,14 +835,14 @@ function InventarioTab({ lot, available }: { lot: Lot; available: number }) {
 // ───────────── Reservas tab ─────────────
 
 function ReservasTab({ lot }: { lot: Lot }) {
-  const reservations = mockDb.reservations.filter((r) => r.lot_id === lot.id);
+  const reservations = getStoreSnapshot().reservations.filter((r) => r.lot_id === lot.id);
   if (reservations.length === 0) {
     return <EmptyState icon={ClipboardList} title="Sin reservas" description="Este lote no tiene reservas activas." />;
   }
   return (
     <div className="space-y-3">
       {reservations.map((r) => {
-        const customer = mockDb.customers.find((c) => c.id === r.customer_id);
+        const customer = getStoreSnapshot().customers.find((c) => c.id === r.customer_id);
         return (
           <Card key={r.id}>
             <CardContent className="pt-4 flex items-center justify-between gap-3">
@@ -870,7 +871,7 @@ function ReservasTab({ lot }: { lot: Lot }) {
 // ───────────── Calidad tab ─────────────
 
 function CalidadTab({ lot }: { lot: Lot }) {
-  const samples = mockDb.qualitySamples.filter((q) => q.lot_id === lot.id);
+  const samples = getQualitySamples().filter((q) => q.lot_id === lot.id);
   if (samples.length === 0) {
     return <EmptyState icon={TestTube} title="Sin muestras" description="Aún no hay catación registrada para este lote." />;
   }
@@ -901,7 +902,7 @@ function CalidadTab({ lot }: { lot: Lot }) {
 // ───────────── Mermas tab ─────────────
 
 function MermasTab({ lot }: { lot: Lot }) {
-  const wastes = mockDb.wasteLogs.filter((w) => w.lot_id === lot.id);
+  const wastes = getStoreSnapshot().wasteLogs.filter((w) => w.lot_id === lot.id);
   if (wastes.length === 0) {
     return <EmptyState icon={Trash2} title="Sin mermas" description="No hay pérdidas registradas para este lote." />;
   }
@@ -951,7 +952,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
       tone: "success",
     });
     if (lot.harvest_ticket_id) {
-      const ht = mockDb.harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
+      const ht = getStoreSnapshot().harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
       if (ht) {
         list.push({
           date: ht.intake_datetime,
@@ -962,7 +963,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
         });
       }
     }
-    mockDb.processPhaseInstances
+    getStoreSnapshot().phases
       .filter((p) => p.process_instance_id === lot.process_instance_id)
       .forEach((p) => {
         list.push({
@@ -982,7 +983,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
           });
         }
       });
-    mockDb.moistureLogs
+    getStoreSnapshot().moistureLogs
       .filter((m) => m.lot_id === lot.id)
       .forEach((m) =>
         list.push({
@@ -993,10 +994,10 @@ function HistorialTab({ lot }: { lot: Lot }) {
           tone: m.moisture_pct > 13 ? "warning" : "neutral",
         }),
       );
-    mockDb.variableLogs
+    getStoreSnapshot().variableLogs
       .filter((v) => v.lot_id === lot.id)
       .forEach((v) => {
-        const def = mockDb.variableDefinitions.find((d) => d.id === v.variable_id);
+        const def = getStoreSnapshot().variableDefinitions.find((d) => d.id === v.variable_id);
         list.push({
           date: v.measured_at,
           type: "Variable",
@@ -1005,7 +1006,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
           tone: "neutral",
         });
       });
-    mockDb.stockMovements
+    getStoreSnapshot().stockMovements
       .filter((s) => s.lot_id === lot.id)
       .forEach((s) =>
         list.push({
@@ -1016,10 +1017,10 @@ function HistorialTab({ lot }: { lot: Lot }) {
           tone: s.movement_type === "merma" ? "danger" : "info",
         }),
       );
-    mockDb.reservations
+    getStoreSnapshot().reservations
       .filter((r) => r.lot_id === lot.id)
       .forEach((r) => {
-        const customer = mockDb.customers.find((c) => c.id === r.customer_id);
+        const customer = getStoreSnapshot().customers.find((c) => c.id === r.customer_id);
         list.push({
           date: r.reserved_at,
           type: "Reserva",
@@ -1028,7 +1029,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
           tone: "info",
         });
       });
-    mockDb.qualitySamples
+    getQualitySamples()
       .filter((q) => q.lot_id === lot.id)
       .forEach((q) =>
         list.push({
@@ -1039,7 +1040,7 @@ function HistorialTab({ lot }: { lot: Lot }) {
           tone: q.status === "aprobado" ? "success" : "neutral",
         }),
       );
-    mockDb.alerts
+    getStoreSnapshot().alerts
       .filter((a) => a.lot_id === lot.id)
       .forEach((a) =>
         list.push({
