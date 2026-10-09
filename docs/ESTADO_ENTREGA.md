@@ -66,3 +66,15 @@ automatizadas y el CI de GitHub (`.github/workflows/ci.yml` existe; no consta qu
 **Ejecutado realmente (9 oct 2026):** `bash tests/db/run-local.sh` sobre PostgreSQL desechable con migraciones 0000–0006: 144 líneas `ok`, `ALL DB/CLOSING/AUDIT TESTS PASSED`, concurrencia de reservas `6/4/90 10`, carrera de vencimiento OK. `bunx vitest run`: 9 pruebas en 5 archivos. Revisión de tipos sin errores. En la base real se verificó por consulta que las 7 funciones usan la huella y que las políticas nuevas están activas.
 
 **Pendiente/no verificado:** alta de usuario con compensación no probada contra la base real (requiere crear cuenta); la huella usa la representación numérica enviada (`100` y `100.0` cuentan como datos distintos).
+
+
+## Entornos de evaluación (migración 0007)
+
+- `provision_evaluation` crea en una transacción y una sola vez (bloqueo + fila única) «en blanco» y «con datos de ejemplo»; la cuenta evaluadora queda como administradora solo de esos dos espacios. El autor no queda como miembro.
+- Datos de ejemplo generados con las RPC reales; únicas escrituras directas: retroceso de fechas para simular una reserva vencida y una fermentación de 22 días.
+- Bloqueos: los espacios no permiten gestionar miembros ni crear cuentas; `create_demo_environment` exige administrador de organización real.
+- UI: selector al iniciar sesión, franja permanente y «Cambiar entorno»; caché local separada por espacio; «Datos demo» locales ocultos para el evaluador.
+- Prueba `tests/db/evaluation.test.sql`: idempotencia, aislamiento (evaluador sin acceso a la organización original, sus clientes y su equipo), en blanco con cero operaciones y 4 plantillas/3 unidades, los 5 estados de reserva, USD+CRC, división/mezcla, bloqueo de calidad, alertas, proceso atrasado, saldos reservado/comprometido/vendido iguales a sus reservas, ficha pública sin contrato ni clientes, precio ponderado USD 6,80 y CRC 4000. Suite completa: 199 líneas `ok`. Vitest: 11 pruebas.
+- Verificado en el navegador: la tarjeta «Cuenta para profesores» aparece en Ajustes para el administrador.
+- **No verificado:** creación real de la cuenta y los espacios en la base real (espera a que el autor escriba la contraseña), subida de foto/certificado de ejemplo, selector con la cuenta real, tiempo real entre dos dispositivos.
+- Recorrido: `docs/RECORRIDO_EVALUACION.md`.
