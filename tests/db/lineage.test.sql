@@ -23,22 +23,22 @@ insert into public.farms (id, organization_id, name, region, country, owner_name
 
 do $$
 declare A uuid := '04000000-0000-0000-0000-0000000000a1'; F1 uuid := '24000000-0000-0000-0000-000000000001'; F2 uuid := '24000000-0000-0000-0000-000000000002';
-  a public.lots; b public.lots; c public.lots; m public.lots; ph public.process_phases; n int; v jsonb; tok text; kids uuid[];
+  la public.lots; lb public.lots; c public.lots; m public.lots; ph public.process_phases; n int; v jsonb; tok text; kids uuid[];
 begin
   perform pg_temp.as_user('14000000-0000-0000-0000-000000000001');
-  a := public.create_lot(A, 'Verde A', 20, F1, null, 'Caturra', 'lavado', 'verde');
-  b := public.create_lot(A, 'Húmedo B', 20, F2, null, 'Caturra', 'lavado', 'pergamino_humedo');
-  perform pg_temp.expect_fail(format('select public.merge_lots(array[%L,%L]::uuid[], %L)', a.id, b.id, 'X'), '%mismo estado físico%');
+  la := public.create_lot(A, 'Verde A', 20, F1, null, 'Caturra', 'lavado', 'verde');
+  lb := public.create_lot(A, 'Húmedo B', 20, F2, null, 'Caturra', 'lavado', 'pergamino_humedo');
+  perform pg_temp.expect_fail(format('select public.merge_lots(array[%L,%L]::uuid[], %L)', la.id, lb.id, 'X'), '%mismo estado físico%');
   select count(*) into n from public.lots where organization_id = A; perform pg_temp.eq('rejected merge creates no lot', n, 2);
-  select qty_current_kg into n from public.lots where id = a.id; perform pg_temp.eq('rejected merge leaves source untouched', n, 20);
+  select qty_current_kg into n from public.lots where id = la.id; perform pg_temp.eq('rejected merge leaves source untouched', n, 20);
 
   c := public.create_lot(A, 'Verde C', 30, F2, null, 'Geisha', 'natural', 'verde');
   ph := public.start_phase(c.id, 'Reposo', null, null, null, null);
-  perform pg_temp.expect_fail(format('select public.merge_lots(array[%L,%L]::uuid[], %L)', a.id, c.id, 'X'), '%fase abierta%');
+  perform pg_temp.expect_fail(format('select public.merge_lots(array[%L,%L]::uuid[], %L)', la.id, c.id, 'X'), '%fase abierta%');
   perform pg_temp.expect_fail(format('select public.split_lot(%L, %L::jsonb)', c.id, '[{"qty_kg":10},{"qty_kg":10}]'), '%fase abierta%');
   ph := public.close_phase(ph.id, 30, null, null, null);
 
-  m := public.merge_lots(array[a.id, c.id], 'Blend Norte-Sur');
+  m := public.merge_lots(array[la.id, c.id], 'Blend Norte-Sur');
   perform pg_temp.eq('different variety/process merge allowed with same state', m.qty_current_kg, 50);
   if m.variety <> 'Mezcla' or m.process_type <> 'mezcla' or m.physical_state <> 'verde' then raise exception 'FAIL blend labels %/%/%', m.variety, m.process_type, m.physical_state; end if;
   raise notice 'ok - blend keeps shared state, labels mixed variety/process';
