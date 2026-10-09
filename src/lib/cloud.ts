@@ -156,6 +156,7 @@ export async function cloudSaveFarms(next: Farm[], _prev?: Farm[]): Promise<Map<
 
 export async function cloudSaveParcels(next: Parcel[], _prev?: Parcel[], farmMap: Map<string, string> = farmIdMap) {
   const org = requireOrg();
+  const saved = new Set<string>();
   for (const p of next) {
     const id = isUuid(p.id) ? p.id : crypto.randomUUID();
     const farmId = farmMap.get(p.farm_id) ?? resolveFarmId(p.farm_id);
@@ -168,11 +169,10 @@ export async function cloudSaveParcels(next: Parcel[], _prev?: Parcel[], farmMap
       ? await supabase.from("parcels").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id)
       : await supabase.from("parcels").insert(row);
     if (res.error) throw friendly(res.error);
-    cloudParcelIds.add(id);
+    cloudParcelIds.add(id); saved.add(id);
   }
-  const kept = new Set(next.filter((p) => isUuid(p.id)).map((p) => p.id));
   for (const id of [...cloudParcelIds]) {
-    if (!kept.has(id) && !next.some((p) => p.id === id)) {
+    if (!saved.has(id)) {
       const res = await supabase.from("parcels").delete().eq("id", id);
       if (res.error) throw friendly(res.error);
       cloudParcelIds.delete(id);
