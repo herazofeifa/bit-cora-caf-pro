@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { useStore } from "@/lib/store";
 import { mockDb } from "@/data/mock-data";
+import { getStoreSnapshot, getQualitySamples } from "@/lib/store";
 import { useFarms } from "@/lib/app-config-store";
 import {
   commercialStateLabel,
@@ -209,9 +210,9 @@ function LotTraceabilityDetail({ lot }: { lot: Lot }) {
   const movements = useStore((s) => s.stockMovements.filter((m) => m.lot_id === lot.id));
   const reservations = useStore((s) => s.reservations.filter((r) => r.lot_id === lot.id));
   const customers = useStore((s) => s.customers);
-  const qualitySamples = mockDb.qualitySamples.filter((q) => q.lot_id === lot.id);
+  const qualitySamples = getQualitySamples().filter((q) => q.lot_id === lot.id);
   const farm = useFarms().find((f) => f.id === lot.farm_id);
-  const harvest = mockDb.harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
+  const harvest = getStoreSnapshot().harvestTickets.find((h) => h.id === lot.harvest_ticket_id);
 
   const parent = lot.parent_lot_id ? allLots.find((l) => l.id === lot.parent_lot_id) : null;
   const children = allLots.filter((l) => l.parent_lot_id === lot.id);
@@ -345,7 +346,7 @@ function LotTraceabilityDetail({ lot }: { lot: Lot }) {
         <Section title="Variables" icon={Beaker} count={variableLogs.length + moistureLogs.length}>
           <MiniTable rows={[
             ...moistureLogs.slice(0, 5).map((m) => ({ Variable: "Humedad", Valor: `${m.moisture_pct}%`, Fecha: new Date(m.measured_at).toLocaleDateString("es") })),
-            ...variableLogs.slice(0, 5).map((v) => ({ Variable: mockDb.variableDefinitions.find((d) => d.id === v.variable_id)?.name ?? v.variable_id, Valor: String(v.value_number ?? v.value_text ?? "—"), Fecha: new Date(v.measured_at).toLocaleDateString("es") })),
+            ...variableLogs.slice(0, 5).map((v) => ({ Variable: getStoreSnapshot().variableDefinitions.find((d) => d.id === v.variable_id)?.name ?? v.variable_id, Valor: String(v.value_number ?? v.value_text ?? "—"), Fecha: new Date(v.measured_at).toLocaleDateString("es") })),
           ]} />
         </Section>
         <Section title="Calidad" icon={Award} count={qualitySamples.length}>

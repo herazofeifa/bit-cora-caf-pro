@@ -35,6 +35,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 
 import { mockDb } from "@/data/mock-data";
+import { useOrganization } from "@/lib/app-config-store";
+import { useStore } from "@/lib/store";
 import {
   calcAvailableKg,
   commercialStateLabel,
@@ -74,8 +76,15 @@ const PHASE_GROUPS: { key: string; label: string; match: RegExp; icon: typeof Sp
 ];
 
 function DashboardPage() {
-  const { lots, reservations, customers, alerts, processPhaseInstances, processInstances, harvestTickets } = mockDb;
-  const org = mockDb.organizations[0];
+  const lots = useStore((s) => s.lots);
+  const reservations = useStore((s) => s.reservations);
+  const customers = useStore((s) => s.customers);
+  const alerts = useStore((s) => s.alerts);
+  const processPhaseInstances = useStore((s) => s.phases);
+  const harvestTickets = useStore((s) => s.harvestTickets);
+  const wasteLogs = useStore((s) => s.wasteLogs);
+  const processInstances = mockDb.processInstances;
+  const org = useOrganization();
   const navigate = useNavigate();
 
   // ───── Metrics ─────
@@ -87,7 +96,7 @@ function DashboardPage() {
     const reserved = lots.reduce((s, l) => s + l.qty_reserved_kg, 0);
     const committed = lots.reduce((s, l) => s + l.qty_committed_kg, 0);
     const blocked = lots.reduce((s, l) => s + l.qty_blocked_kg, 0);
-    const waste = mockDb.wasteLogs.reduce((s, w) => s + w.qty_kg, 0);
+    const waste = wasteLogs.reduce((s, w) => s + w.qty_kg, 0);
     const expiringSoon = reservations.filter((r) => {
       if (r.status !== "activa" || !r.expires_at) return false;
       const days = (new Date(r.expires_at).getTime() - Date.now()) / 86400000;
@@ -103,7 +112,7 @@ function DashboardPage() {
     const acc = new Map<PhysicalState, number>();
     PHYSICAL_ORDER.forEach((s) => acc.set(s, 0));
     lots.forEach((l) => acc.set(l.physical_state, (acc.get(l.physical_state) ?? 0) + l.qty_current_kg));
-    const wasteKg = mockDb.wasteLogs.reduce((s, w) => s + w.qty_kg, 0);
+    const wasteKg = wasteLogs.reduce((s, w) => s + w.qty_kg, 0);
     const items = Array.from(acc.entries())
       .filter(([, kg]) => kg > 0)
       .map(([state, kg]) => ({ key: state, label: physicalStateLabel[state], kg }));
