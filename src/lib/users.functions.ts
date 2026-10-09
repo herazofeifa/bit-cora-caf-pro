@@ -22,7 +22,7 @@ const newUser = z.object({
 
 /** Public but self-locking: only works while no administrator exists. */
 export const createFirstAdmin = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => newUser.parse(d))
+  .validator((d: unknown) => newUser.parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { count } = await supabaseAdmin
@@ -41,7 +41,7 @@ export const createFirstAdmin = createServerFn({ method: "POST" })
 /** Admin only: creates a team account with a role. */
 export const createTeamUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => newUser.extend({ role: z.enum(ROLES) }).parse(d))
+  .validator((d: unknown) => newUser.extend({ role: z.enum(ROLES) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: context.userId, _role: "administrador",
