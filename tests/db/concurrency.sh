@@ -15,7 +15,7 @@ insert into public.memberships (organization_id, user_id, role) values ('$ORG', 
 insert into public.customers (id, organization_id, name) values ('$CUST', '$ORG', 'Cliente');
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"$ADMIN","role":"authenticated"}', false);
-select public.create_lot('$ORG', 'Lote concurrente', 100);
+select public.release_lot_for_sale((public.create_lot('$ORG', 'Lote concurrente', 100)).id);
 SQL
 LOT=$(psql "$DATABASE_URL" -Atc "select id from public.lots where organization_id = '$ORG'")
 

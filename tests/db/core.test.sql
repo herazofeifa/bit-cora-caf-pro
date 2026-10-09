@@ -61,6 +61,8 @@ begin
   raise notice 'ok - unique lot codes % / %', l.lot_code, l2.lot_code;
   perform pg_temp.expect_fail(format('select public.create_lot(%L, %L, %L)', A, 'x', 'NaN'), '%inválida%');
   perform pg_temp.expect_fail(format('select public.create_lot(%L, %L, %L)', A, 'x', -5), '%inválida%');
+  perform public.release_lot_for_sale(l.id);
+  perform public.release_lot_for_sale(l2.id);
 
   -- Reservations: overselling rejected, derived availability
   perform pg_temp.as_user(com);
