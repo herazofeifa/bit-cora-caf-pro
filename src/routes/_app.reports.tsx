@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { useStore } from "@/lib/store";
+import { downloadCsv } from "@/lib/export-csv";
 import { mockDb } from "@/data/mock-data";
 import { useFarms, useParcels } from "@/lib/app-config-store";
 import {
@@ -314,12 +315,23 @@ function FiltersBar({ filters, setFilters, onClear }: { filters: Filters; setFil
 }
 
 function ExportBar() {
-  const placeholder = (kind: string) => () => toast.info(`${kind}: disponible próximamente.`);
+  const lots = useStore((s) => s.lots);
+  const exportCsv = () => {
+    const ok = downloadCsv(`reporte-lotes-${new Date().toISOString().slice(0, 10)}.csv`, lots.map((l) => ({
+      codigo: l.lot_code, nombre: l.friendly_name, variedad: l.variety, proceso: l.process_type,
+      estado_fisico: l.physical_state, estado_comercial: l.commercial_state, calidad: l.quality_status,
+      kg_actual: l.qty_current_kg, kg_libre: l.qty_free_kg, kg_reservado: l.qty_reserved_kg,
+      kg_comprometido: l.qty_committed_kg, kg_bloqueado: l.qty_blocked_kg, kg_vendido: l.qty_sold_kg,
+      humedad: l.current_moisture,
+    })));
+    if (ok) toast.success("Reporte descargado"); else toast.info("No hay datos para exportar");
+  };
+  const share = () => { navigator.clipboard?.writeText(window.location.href); toast.success("Enlace del reporte copiado"); };
   return (
     <div className="flex flex-wrap gap-2 mb-4">
-      <Button variant="outline" size="sm" onClick={placeholder("Exportar PDF")}><FileText className="h-4 w-4 mr-1" />Exportar PDF</Button>
-      <Button variant="outline" size="sm" onClick={placeholder("Exportar CSV")}><Download className="h-4 w-4 mr-1" />Exportar CSV</Button>
-      <Button variant="outline" size="sm" onClick={placeholder("Compartir")}><Share2 className="h-4 w-4 mr-1" />Compartir reporte</Button>
+      <Button variant="outline" size="sm" onClick={() => window.print()}><FileText className="h-4 w-4 mr-1" />Exportar PDF</Button>
+      <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Exportar CSV</Button>
+      <Button variant="outline" size="sm" onClick={share}><Share2 className="h-4 w-4 mr-1" />Compartir reporte</Button>
     </div>
   );
 }

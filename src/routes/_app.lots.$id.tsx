@@ -27,6 +27,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -320,8 +321,6 @@ function QuickActions({ lot, phase }: { lot: Lot; phase: ProcessPhaseInstance | 
 }
 
 // "Move" icon kept for compatibility with old imports
-const _movePlaceholder = Move;
-void _movePlaceholder;
 
 // ───────────── Resumen tab ─────────────
 
@@ -1155,7 +1154,7 @@ function LotChip({ lot, highlight }: { lot: Lot; highlight?: boolean }) {
 // ───────────── QR público tab ─────────────
 
 function QrTab({ lot }: { lot: Lot }) {
-  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${lot.lot_code}`;
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/public/lot/${lot.lot_code}`;
   return (
     <Card>
       <CardHeader>
@@ -1164,19 +1163,24 @@ function QrTab({ lot }: { lot: Lot }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="text-center space-y-4">
-        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/40">
-          <QrCode className="h-24 w-24 text-muted-foreground" />
+        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-2xl border border-border bg-card p-3">
+          <QRCodeSVG value={url} size={168} />
         </div>
         <div>
           <div className="text-xs text-muted-foreground">URL pública</div>
           <code className="text-sm break-all">{url}</code>
         </div>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Próximamente: comparte una ficha pública con la historia del lote para tostadores y consumidores finales.
+          Comparte esta ficha con tostadores y consumidores. Lo que se muestra se controla desde Trazabilidad.
         </p>
-        <Button disabled variant="secondary">
-          <AlertTriangle className="h-4 w-4 mr-2" /> Próximamente
-        </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button asChild>
+            <Link to="/public/lot/$code" params={{ code: lot.lot_code }} target="_blank">Abrir ficha pública</Link>
+          </Button>
+          <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(url); toast.success("Enlace copiado"); }}>
+            Copiar enlace
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
