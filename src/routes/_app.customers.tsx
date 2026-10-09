@@ -1,257 +1,69 @@
-import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Users, Plus, Search, Mail, Phone, Globe, Pencil, Trash2 } from "lucide-react";
-import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useStore } from "@/lib/store";
-import { cloudCreateCustomer, cloudDeleteCustomer, cloudUpdateCustomer, useCloudState } from "@/lib/cloud";
-import { customerTypeLabel } from "@/lib/helpers";
-import type { Customer, CustomerType } from "@/types/domain";
+import { Input } from "@/components/ui/input";
+import { LoadState, Section, SimpleTable, selectCls } from "@/components/ops-ui";
+import { ConfirmAction } from "@/components/confirm-action";
+import { fmtKg, sel, useOrgQuery } from "@/lib/org-data";
+import { supabase } from "@/integrations/supabase/client";
+import { friendlyError, requireOrg } from "@/lib/ops-cloud";
+import { useCurrentRole } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_app/customers")({
-  head: () => ({
-    meta: [
-      { title: "Clientes — Bitácora Café Pro" },
-      { name: "description", content: "Tus compradores y su historial." },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Clientes — Bitácora Café Pro" },
+    { name: "description", content: "Clientes de la organización con contacto y kilos reservados y entregados." },
+    { property: "og:title", content: "Clientes — Bitácora Café Pro" },
+    { property: "og:description", content: "Clientes y su historial de compras." },
+  ] }),
   component: CustomersPage,
 });
 
-const customerSchema = z.object({
-  name: z.string().trim().min(1, "El nombre es obligatorio").max(120),
-  type: z.enum(["tostador", "exportador", "cafeteria", "distribuidor", "consumidor", "otro"]),
-  contact_name: z.string().trim().max(120).optional(),
-  phone: z.string().trim().max(40).optional(),
-  email: z.string().trim().email("Email inválido").max(160).optional().or(z.literal("")),
-  country: z.string().trim().max(80).optional(),
-  notes: z.string().trim().max(1000).optional(),
-});
+type C = { id: string; name: string; type: string; contact_name: string | null; phone: string | null; email: string | null; country: string | null; notes: string | null };
+type R = { customer_id: string; qty_kg: number; status: string };
+const empty = { name: "", type: "tostador", contact_name: "", phone: "", email: "", country: "", notes: "" };
 
 function CustomersPage() {
-  const customers = useStore((s) => s.customers);
-  const reservations = useStore((s) => s.reservations);
-  const cloud = useCloudState();
-  const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<Customer | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.contact_name?.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q),
-    );
-  }, [customers, search]);
-
-  const reservationCount = (id: string) =>
-    reservations.filter((r) => r.customer_id === id).length;
-
+  const role = useCurrentRole(); const can = role === "administrador" || role === "comercial";
+  const cs = useOrgQuery<C[]>("cust", (o) => sel("customers", "*", o, "name", true), ["customers"], []);
+  const rs = useOrgQuery<R[]>("c-res", (o) => sel("reservations", "customer_id,qty_kg,status", o, "reserved_at"), ["reservations"], []);
+  const [f, setF] = useState<typeof empty & { id?: string }>(empty); const [busy, setBusy] = useState(false);
+  const kg = (id: string, st: string[]) => rs.data.filter((r) => r.customer_id === id && st.includes(r.status)).reduce((a, r) => a + Number(r.qty_kg), 0);
+  async function save() {
+    setBusy(true);
+    try {
+      const row = { name: f.name.trim(), type: f.type, contact_name: f.contact_name || null, phone: f.phone || null, email: f.email || null, country: f.country || null, notes: f.notes || null };
+      const { error } = f.id ? await supabase.from("customers").update(row).eq("id", f.id) : await supabase.from("customers").insert({ ...row, organization_id: requireOrg() });
+      if (error) throw error; toast.success("Cliente guardado"); setF(empty);
+    } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(false); }
+  }
   return (
     <>
-      <PageHeader
-        eyebrow="CLIENTES" title="Clientes"
-        subtitle="Las personas y empresas que compran tu café."
-        action={
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditing(null)}><Plus className="size-4" /> Nuevo cliente</Button>
-            </DialogTrigger>
-            <CustomerDialog initial={editing} onClose={() => setOpen(false)} />
-          </Dialog>
-        }
-      />
-
-      <div className="relative mb-4 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar cliente, contacto o email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <PageHeader eyebrow="CLIENTES" title="Clientes" subtitle="Tostadores, exportadores y compradores locales con sus reservas y entregas." />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Section title={`${cs.data.length} clientes`} className="lg:col-span-2">
+          <LoadState loading={cs.loading} error={cs.error} empty={!cs.data.length} emptyText="Aún no hay clientes." />
+          {cs.data.length > 0 && <SimpleTable head={["Nombre", "Tipo", "Contacto", "País", "Activo", "Entregado", ""]} rows={cs.data.map((c) => [
+            c.name, c.type, [c.contact_name, c.phone, c.email].filter(Boolean).join(" · ") || "—", c.country ?? "—",
+            fmtKg(kg(c.id, ["reservada", "confirmada"])), fmtKg(kg(c.id, ["entregada"])),
+            can ? <span className="flex gap-1"><Button size="sm" variant="outline" onClick={() => setF({ ...empty, ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v ?? ""])) } as never)}>Editar</Button>
+              <ConfirmAction destructive title="Eliminar cliente" description="Solo se puede si no tiene reservas." confirmLabel="Eliminar" trigger={<Button size="sm" variant="ghost">Eliminar</Button>}
+                onConfirm={async () => { const { error } = await supabase.from("customers").delete().eq("id", c.id); if (error) toast.error(friendlyError(error)); else toast.success("Cliente eliminado"); }} /></span> : null])} />}
+        </Section>
+        {can && <Section title={f.id ? "Editar cliente" : "Nuevo cliente"}>
+          <div className="grid gap-2">
+            <Input placeholder="Nombre" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+            <select className={selectCls} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>{["tostador", "exportador", "importador", "cafeteria", "local", "otro"].map((t) => <option key={t}>{t}</option>)}</select>
+            <Input placeholder="Contacto" value={f.contact_name} onChange={(e) => setF({ ...f, contact_name: e.target.value })} />
+            <Input placeholder="Teléfono" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+            <Input placeholder="Correo" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+            <Input placeholder="País" value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} />
+            <div className="flex gap-2"><Button disabled={busy || !f.name.trim()} onClick={save}>Guardar</Button>{f.id && <Button variant="ghost" onClick={() => setF(empty)}>Cancelar</Button>}</div>
+          </div>
+        </Section>}
       </div>
-
-      {cloud.status === "loading" ? (
-        <p className="text-sm text-muted-foreground">Cargando clientes…</p>
-      ) : cloud.status === "error" ? (
-        <p className="text-sm text-destructive">No se pudieron cargar los clientes: {cloud.error}</p>
-      ) : filtered.length === 0 ? (
-        <EmptyState icon={Users} title="Sin clientes aún" description="Agrega tu primer cliente para empezar a registrar reservas y ventas." />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((c) => (
-            <article key={c.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-semibold">{c.name}</div>
-                  <StatusBadge status="info" className="mt-1">{customerTypeLabel[c.type] ?? c.type}</StatusBadge>
-                </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }}>
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      if (reservations.some((r) => r.customer_id === c.id && (r.status === "reservada" || r.status === "confirmada" || r.status === "activa"))) {
-                        toast.error("Este cliente tiene reservas activas.");
-                        return;
-                      }
-                      cloudDeleteCustomer(c.id)
-                        .then(() => toast.success("Cliente eliminado."))
-                        .catch((e: Error) => toast.error(e.message));
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-              <dl className="mt-3 space-y-1 text-sm">
-                {c.contact_name && <Row icon={<Users className="size-3" />} value={c.contact_name} />}
-                {c.phone && <Row icon={<Phone className="size-3" />} value={c.phone} />}
-                {c.email && <Row icon={<Mail className="size-3" />} value={c.email} />}
-                {c.country && <Row icon={<Globe className="size-3" />} value={c.country} />}
-              </dl>
-              {c.notes && <p className="mt-3 text-xs text-muted-foreground">{c.notes}</p>}
-              <div className="mt-3 text-xs text-muted-foreground">
-                {reservationCount(c.id)} reserva(s)
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
     </>
-  );
-}
-
-function Row({ icon, value }: { icon: React.ReactNode; value: string }) {
-  return (
-    <div className="flex items-center gap-2 text-muted-foreground">
-      {icon}
-      <span className="text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function CustomerDialog({ initial, onClose }: { initial: Customer | null; onClose: () => void }) {
-  const [form, setForm] = useState({
-    name: initial?.name ?? "",
-    type: (initial?.type ?? "tostador") as CustomerType,
-    contact_name: initial?.contact_name ?? "",
-    phone: initial?.phone ?? "",
-    email: initial?.email ?? "",
-    country: initial?.country ?? "",
-    notes: initial?.notes ?? "",
-  });
-
-  const [saving, setSaving] = useState(false);
-  async function submit() {
-    const parsed = customerSchema.safeParse(form);
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Datos inválidos");
-      return;
-    }
-    const data = parsed.data;
-    const payload = {
-      name: data.name,
-      type: data.type,
-      contact_name: data.contact_name || null,
-      phone: data.phone || null,
-      email: data.email || null,
-      country: data.country || null,
-      notes: data.notes || null,
-    };
-    setSaving(true);
-    try {
-      if (initial) {
-        await cloudUpdateCustomer(initial.id, payload);
-        toast.success("Cliente actualizado");
-      } else {
-        await cloudCreateCustomer(payload);
-        toast.success("Cliente creado");
-      }
-      onClose();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{initial ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
-        <DialogDescription>Datos básicos para identificar al comprador.</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-3">
-        <div>
-          <Label>Nombre</Label>
-          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        </div>
-        <div>
-          <Label>Tipo</Label>
-          <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as CustomerType })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(customerTypeLabel).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Contacto</Label>
-            <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
-          </div>
-          <div>
-            <Label>WhatsApp / Teléfono</Label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Email</Label>
-            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </div>
-          <div>
-            <Label>País</Label>
-            <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-          </div>
-        </div>
-        <div>
-          <Label>Notas</Label>
-          <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button onClick={submit} disabled={saving}>{saving ? "Guardando…" : initial ? "Guardar" : "Crear"}</Button>
-      </DialogFooter>
-    </DialogContent>
   );
 }
