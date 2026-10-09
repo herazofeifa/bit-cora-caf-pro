@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -64,13 +65,18 @@ function CloudLotPage() {
     sources: { lot_code: string; kind: string; qty_kg: number }[];
     phases: { lot_code: string; inherited: boolean; name: string; status: string; started_at: string; ended_at: string | null; weight_in_kg: number | null; weight_out_kg: number | null }[] };
   const [lineage, setLineage] = useState<Lineage | null>(null);
-  const [lastQ, setLastQ] = useState<{ status: string; score: number | null; sampled_at: string; data: QualityData | null } | null>(null);
+  const [lastQ, setLastQ] = useState<QRow | null>(null);
+  const [allQ, setAllQ] = useState<QRow[]>([]);
   const load = useCallback(async () => {
     try {
       const l = await getLot(id); setLot(l); if (!l) return;
-      void supabase.from("quality_samples").select("status,score,sampled_at,data").eq("lot_id", id).order("sampled_at", { ascending: false }).limit(1).maybeSingle()
-        .then(({ data }) => setLastQ((data ?? null) as never));
-      void supabase.rpc("lot_lineage" as never, { _lot: id } as never).then(({ data }) => setLineage((data ?? null) as Lineage | null));
+      void (async () => {
+        const { data: lin } = await supabase.rpc("lot_lineage" as never, { _lot: id } as never);
+        setLineage((lin ?? null) as Lineage | null);
+        const qs = await lotQualityWithLineage({ id: l.id, organization_id: cloud.orgId ?? "" }, (lin ?? null) as Lineage | null);
+        setAllQ(qs);
+        setLastQ(qs.filter((x) => !x.source_code).at(-1) ?? qs.filter((x) => x.status === "aprobado").at(-1) ?? null);
+      })();
       const [p, v, r, f, s, t, c, pp] = await Promise.all([
         supabase.from("process_phases").select("*").eq("lot_id", id).order("started_at"),
         supabase.from("variable_logs").select("id,phase_id,value_number,value,measured_at").eq("lot_id", id).order("measured_at"),
@@ -86,7 +92,7 @@ function CloudLotPage() {
       setCustomers(c.data ?? []); setProfile(pp.data as never);
       if (pp.data) setPub((x) => ({ ...x, story: pp.data!.short_story ?? "", notes: pp.data!.tasting_notes ?? "" }));
     } catch (e) { toast.error(friendlyError(e)); }
-  }, [id]);
+  }, [id, cloud.orgId]);
   useEffect(() => {
     if (!cloud.orgId) return; void load();
     const ch = supabase.channel(`lot-${id}`)
@@ -119,10 +125,9 @@ function CloudLotPage() {
       <Link to="/lots" className="text-sm text-muted-foreground inline-flex items-center gap-1 mb-3"><ArrowLeft className="h-4 w-4" />Lotes</Link>
       <PageHeader eyebrow={lot.lot_code} title={lot.friendly_name} subtitle={`${lot.variety || "—"} · ${lot.process_type} · ${lot.physical_state}`}
         action={<Button variant="outline" disabled={busy} onClick={() => run(async () => {
-          const [farm, parcel, q] = await Promise.all([
+          const [farm, parcel] = await Promise.all([
             lot.farm_id ? supabase.from("farms").select("name,region,altitude_m").eq("id", lot.farm_id).maybeSingle() : Promise.resolve({ data: null }),
             lot.parcel_id ? supabase.from("parcels").select("name,altitude_m").eq("id", lot.parcel_id).maybeSingle() : Promise.resolve({ data: null }),
-            supabase.from("quality_samples").select("sampled_at,status,score,data").eq("lot_id", lot.id).order("sampled_at"),
           ]);
           const photos: { title: string; dataUrl: string }[] = [];
           for (const f of files.filter((x) => x.public_selected && x.mime_type.startsWith("image/") && x.mime_type !== "image/webp")) {
@@ -133,7 +138,7 @@ function CloudLotPage() {
           const pd = parcel.data as { name: string; altitude_m: number | null } | null;
           await lotSheetPdf({ lot: { ...lot, created_at: lot.created_at }, origin: { farm: fd?.name, region: fd?.region, parcel: pd?.name, altitude: pd?.altitude_m ?? fd?.altitude_m },
             origins: lineage?.origins, sources: lineage?.sources,
-            phases: [...(lineage?.phases ?? []).filter((x) => x.inherited).map((x) => ({ ...x, name: `${x.name} (de ${x.lot_code})` })), ...phases], quality: ((q.data ?? []) as { sampled_at: string; status: string; score: number | null; data: QualityData | null }[]).map((x) => ({ ...x, defects: qualitySummary(x.data).defects, notes: [qualitySummary(x.data).sca, x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
+            phases: [...(lineage?.phases ?? []).filter((x) => x.inherited).map((x) => ({ ...x, name: `${x.name} (de ${x.lot_code})` })), ...phases], quality: allQ.map((x) => ({ ...x, status: x.source_code ? `${x.status} (heredada de ${x.source_code})` : x.status, defects: qualitySummary(x.data).defects, notes: [qualitySummary(x.data).sca, x.data?.cupping, x.data?.notes].filter(Boolean).join(" · ") })),
             photos, story: profile?.short_story, tasting: profile?.tasting_notes, publicUrl: profile?.is_public ? publicUrl : null });
         }, "Ficha PDF generada")}><Download className="h-4 w-4 mr-1" />Ficha PDF</Button>} />
 
@@ -151,14 +156,14 @@ function CloudLotPage() {
             {lineage.origins.map((o) => [o.farm, o.parcel, o.region].filter(Boolean).join(" · ")).join(" / ")}</p>}
           {lineage.sources.length > 0 && <p>Viene de: {lineage.sources.map((x) => `${x.lot_code} (${x.kind === "merge" ? "mezcla" : "división"}, ${x.qty_kg} kg)`).join(", ")}</p>}
           {lineage.phases.filter((x) => x.inherited).length > 0 && <ul className="text-xs text-muted-foreground">
-            {lineage.phases.filter((x) => x.inherited).map((x, i) => <li key={i}>{x.name} · lote {x.lot_code} · {new Date(x.started_at).toLocaleDateString()}{x.ended_at ? ` – ${new Date(x.ended_at).toLocaleDateString()}` : ""}</li>)}</ul>}
+            {lineage.phases.filter((x) => x.inherited).map((x, i) => <li key={i}>{x.name} · lote {x.lot_code} · {fmtDay(x.started_at)}{x.ended_at ? ` – ${fmtDay(x.ended_at)}` : ""}</li>)}</ul>}
         </div>)}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Proceso">
           <ul className="text-sm space-y-2 mb-4">{phases.map((p) => (
             <li key={p.id} className="rounded-lg border border-border p-2">
               <div className="font-medium">{p.name} {p.status !== "finished" ? "· en curso" : ""}</div>
-              <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleString()} → {p.ended_at ? new Date(p.ended_at).toLocaleString() : "…"}
+              <div className="text-xs text-muted-foreground">{fmtDate(p.started_at)} → {p.ended_at ? fmtDate(p.ended_at) : "…"}
                 {p.weight_in_kg != null && ` · entra ${p.weight_in_kg} kg`}{p.weight_out_kg != null && ` · sale ${p.weight_out_kg} kg`}</div>
               {vars.filter((v) => v.phase_id === p.id).map((v) => (
                 <div key={v.id} className={"text-xs " + (v.value?.in_range === false ? "text-destructive" : "")}>{v.value?.label}: {v.value_number} {v.value?.unit} {v.value?.in_range === false && "(fuera de rango)"}</div>))}
@@ -210,7 +215,7 @@ function CloudLotPage() {
         </Card>
 
         <Card title="Calidad y liberación">
-          {lastQ && <p className="text-sm mb-2">Última evaluación ({new Date(lastQ.sampled_at).toLocaleDateString()}): {lastQ.status}{lastQ.score != null && ` · SCA ${lastQ.score}`} · Defectos: {qualitySummary(lastQ.data).defects}
+          {lastQ && <p className="text-sm mb-2">{lastQ.source_code ? `Calidad heredada del lote de origen ${lastQ.source_code} (sin muestra propia de este lote)` : "Última evaluación"} ({fmtDay(lastQ.sampled_at)}): {lastQ.status}{lastQ.score != null && ` · SCA ${lastQ.score}`} · Defectos: {qualitySummary(lastQ.data).defects}
             {qualitySummary(lastQ.data).sca && <span className="block text-xs text-muted-foreground">{qualitySummary(lastQ.data).sca}</span>}</p>}
           {canProcess && <details className="mb-3"><summary className="text-sm cursor-pointer font-medium">Registrar evaluación de calidad (SCA, defectos)</summary><div className="mt-2"><QualityForm fixedLot={lot.id} onSaved={() => void load()} /></div></details>}
           {canProcess ? (
@@ -287,7 +292,7 @@ function CloudLotPage() {
           ) : <p className="mt-3 text-sm text-muted-foreground">No publicada: el enlace responde “no encontrado”.</p>}
           {canSell && profile && (
             <div className="mt-3 grid gap-1">
-              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${new Date(profile.exported_at).toLocaleDateString()}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
+              <span className="text-xs text-muted-foreground">Fecha real de exportación (solo si ya se exportó). {profile.exported_at ? `Declarada: ${fmtDay(profile.exported_at)}` : "Sin declarar: la ficha no muestra fecha de exportación."}</span>
               <div className="flex gap-2">
                 <Input type="date" max={new Date().toISOString().slice(0, 10)} value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
                 <Button variant="outline" disabled={busy || !exportDate} onClick={() => run(() => declareLotExport(lot.id, new Date(`${exportDate}T12:00:00Z`).toISOString()), "Exportación declarada")}>Declarar</Button>
@@ -310,4 +315,14 @@ function CloudLotPage() {
       </div>
     </>
   );
+}
+
+type QRow = { status: string; score: number | null; sampled_at: string; data: QualityData | null; source_code?: string | null };
+/** Own samples plus samples of source lots (split/merge), each tagged with the source lot code. */
+async function lotQualityWithLineage(l: { id: string; organization_id: string }, lin: { sources?: { lot_code: string }[]; phases?: { lot_code: string; inherited: boolean }[] } | null): Promise<QRow[]> {
+  const codes = [...new Set([...(lin?.sources ?? []).map((x) => x.lot_code), ...(lin?.phases ?? []).filter((x) => x.inherited).map((x) => x.lot_code)])];
+  const anc = codes.length ? ((await supabase.from("lots").select("id,lot_code").eq("organization_id", l.organization_id).in("lot_code", codes)).data ?? []) : [];
+  const code = new Map(anc.map((a) => [a.id, a.lot_code]));
+  const { data } = await supabase.from("quality_samples").select("lot_id,status,score,sampled_at,data").in("lot_id", [l.id, ...code.keys()]).order("sampled_at");
+  return ((data ?? []) as (QRow & { lot_id: string })[]).map((x) => ({ ...x, source_code: x.lot_id === l.id ? null : code.get(x.lot_id) ?? null }));
 }

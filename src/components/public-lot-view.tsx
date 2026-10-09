@@ -1,3 +1,4 @@
+import { fmtDay, fmtDate } from "@/lib/org-data";
 import { Award, Calendar, Droplet, MapPin, Mountain, Sprout } from "lucide-react";
 
 export interface PublicLot {
@@ -10,7 +11,7 @@ export interface PublicLot {
   origins?: { farm: string | null; region: string | null; country: string; parcel: string | null; altitude_m: number | null; producer: string | null }[];
   is_blend?: boolean;
   measurements: { label: string; value: number; unit: string | null; at: string }[] | null;
-  moisture: number | null; quality: { score: number | null; notes: string | null; cupping?: string | null; at: string; sca?: Record<string, number> | null; defects?: { primary?: number | null; secondary?: number | null } | null } | null;
+  moisture: number | null; quality: { score: number | null; notes: string | null; cupping?: string | null; at: string; inherited?: boolean; source_lot_code?: string | null; sca?: Record<string, number> | null; defects?: { primary?: number | null; secondary?: number | null } | null } | null;
   files: { id: string; kind: string; title: string; mime: string; url?: string }[]; exported_at: string | null; generated_at?: string;
 }
 
@@ -39,9 +40,10 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
         <Row icon={Sprout} label="Parcela" value={lot.parcel?.name} />
         <Row icon={Mountain} label="Altitud" value={(lot.parcel?.altitude_m ?? lot.farm?.altitude_m) ? `${lot.parcel?.altitude_m ?? lot.farm?.altitude_m} m s. n. m.` : null} />
         <Row icon={Sprout} label="Productor" value={lot.producer} />
-        <Row icon={Calendar} label="Cosecha" value={lot.harvest?.first && `${lot.harvest.first}${lot.harvest.last && lot.harvest.last !== lot.harvest.first ? ` a ${lot.harvest.last}` : ""}${lot.harvest.season ? ` · temporada ${lot.harvest.season}` : ""}`} />
+        <Row icon={Calendar} label="Cosecha" value={lot.harvest?.first && `${fmtDay(lot.harvest.first)}${lot.harvest.last && lot.harvest.last !== lot.harvest.first ? ` a ${fmtDay(lot.harvest.last)}` : ""}${lot.harvest.season ? ` · temporada ${lot.harvest.season}` : ""}`} />
         <Row icon={Droplet} label="Humedad" value={lot.moisture != null ? `${lot.moisture}%` : null} />
         <Row icon={Award} label="Puntaje SCA" value={lot.quality?.score != null ? `${lot.quality.score}${lot.quality.notes ? ` · ${lot.quality.notes}` : ""}` : null} />
+        {lot.quality?.inherited && <p className="text-xs text-muted-foreground py-2 border-b border-border">Calidad heredada del lote de origen {lot.quality.source_lot_code} (evaluado el {fmtDay(lot.quality.at)}); este lote no tiene una muestra propia.</p>}
         <Row icon={Award} label="Perfil sensorial SCA" value={lot.quality?.sca ? SCA.filter(([k]) => lot.quality!.sca![k] != null).map(([k, l]) => `${l} ${lot.quality!.sca![k]}`).join(" · ") : null} />
         <Row icon={Award} label="Defectos" value={lot.quality?.defects && (lot.quality.defects.primary != null || lot.quality.defects.secondary != null) ? `${lot.quality.defects.primary ?? 0} primarios · ${lot.quality.defects.secondary ?? 0} secundarios` : null} />
         <Row icon={Award} label="Notas de taza" value={lot.tasting_notes ?? lot.quality?.cupping} />
@@ -50,7 +52,7 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
         <section><h2 className="font-serif text-xl mb-2">Proceso</h2>
           <ol className="border-l border-border ml-2 space-y-3">{lot.phases.map((p, i) => (
             <li key={i} className="pl-4"><div className="font-medium">{p.name}{p.inherited && <span className="text-xs text-muted-foreground"> · lote de origen</span>}</div>
-              <div className="text-xs text-muted-foreground">{new Date(p.started_at).toLocaleDateString()}{p.ended_at ? ` – ${new Date(p.ended_at).toLocaleDateString()}` : " · en curso"}</div></li>))}</ol>
+              <div className="text-xs text-muted-foreground">{fmtDay(p.started_at)}{p.ended_at ? ` – ${fmtDay(p.ended_at)}` : " · en curso"}</div></li>))}</ol>
         </section>)}
       {lot.measurements && lot.measurements.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Mediciones</h2>
@@ -58,8 +60,8 @@ export function PublicLotView({ lot }: { lot: PublicLot }) {
       {docs.length > 0 && (
         <section><h2 className="font-serif text-xl mb-2">Certificados y documentos</h2>
           <ul className="text-sm">{docs.map((d) => <li key={d.id}><a className="underline" href={d.url} target="_blank" rel="noreferrer">{d.title}</a></li>)}</ul></section>)}
-      {lot.exported_at && <p className="text-sm text-center">Exportado el {new Date(lot.exported_at).toLocaleDateString()}</p>}
-      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor{lot.generated_at ? ` · ficha generada ${new Date(lot.generated_at).toLocaleString()}` : ""}</p>
+      {lot.exported_at && <p className="text-sm text-center">Exportado el {fmtDay(lot.exported_at)}</p>}
+      <p className="text-xs text-muted-foreground text-center">Información publicada por el productor{lot.generated_at ? ` · ficha generada ${fmtDate(lot.generated_at)}` : ""}</p>
     </div>
   );
 }

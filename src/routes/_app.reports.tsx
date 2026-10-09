@@ -1,3 +1,4 @@
+import { fmtDay } from "@/lib/org-data";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -151,7 +152,7 @@ function CloudReports() {
           <ul className="space-y-1">{shares.map((s) => {
             const live = !s.revoked_at && new Date(s.expires_at) > new Date();
             return <li key={s.id} className="flex items-center justify-between gap-2">
-              <span>{s.title} · {live ? `vence ${new Date(s.expires_at).toLocaleDateString()}` : "inactivo"} {live && <Link to="/r/$token" params={{ token: s.token }} className="underline ml-1">abrir</Link>}</span>
+              <span>{s.title} · {live ? `vence ${fmtDay(s.expires_at)}` : "inactivo"} {live && <Link to="/r/$token" params={{ token: s.token }} className="underline ml-1">abrir</Link>}</span>
               {live && <Button size="sm" variant="ghost" onClick={async () => { try { await revokeReportSnapshot(s.id); void load(); } catch (e) { toast.error(friendlyError(e)); } }}><XCircle className="h-4 w-4 mr-1" />Revocar</Button>}
             </li>; })}</ul>
         </section>)}

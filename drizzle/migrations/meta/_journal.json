@@ -92,6 +92,13 @@
       "when": 1791588247681,
       "tag": "0012_quality_units_copilot_quota",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791588765419,
+      "tag": "0013_eval_settings_inherited_quality",
+      "breakpoints": true
     }
   ]
 }

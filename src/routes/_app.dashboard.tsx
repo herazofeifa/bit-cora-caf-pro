@@ -30,20 +30,24 @@ function Dashboard() {
   const tickets = useOrgQuery<Ticket[]>("d-tk", (o) => sel("harvest_tickets", "id,harvest_date,qty_kg,variety,lot_id,created_at", o, "created_at", false, 5), ["harvest_tickets"], []);
   const alerts = useOrgQuery<Alert[]>("d-al", async (o) => (await sel<(Alert & { resolved_at: string | null })[]>("alerts", "id,message,severity,created_at,lot_id,resolved_at", o, "created_at", false, 50)).filter((a) => !a.resolved_at), ["alerts"], []);
   const res = useOrgQuery<Res[]>("d-res", (o) => sel("reservations", "id,status,qty_kg", o, "reserved_at"), ["reservations"], []);
+  const openPh = useOrgQuery<{ lot_id: string }[]>("d-open", async (o) => (await sel<{ lot_id: string; status: string }[]>("process_phases", "lot_id,status", o, "started_at")).filter((p) => p.status !== "finished"), ["process_phases"], []);
   const overdue = useOrgQuery("d-ov", () => overduePhases(), ["process_phases"], [] as Awaited<ReturnType<typeof overduePhases>>);
 
   const L = lots.data; const sum = (f: (l: Lot) => number) => L.reduce((a, l) => a + Number(f(l) || 0), 0);
   const name = (session?.user.user_metadata?.full_name as string | undefined) || session?.user.email?.split("@")[0] || "";
-  const inProcess = L.filter((l) => !l.sale_released && l.qty_current_kg > 0);
+  const openLots = new Set(openPh.data.map((p) => p.lot_id));
+  const inProcess = L.filter((l) => openLots.has(l.id) && l.qty_current_kg > 0);
+  const waiting = L.filter((l) => !openLots.has(l.id) && !l.sale_released && l.qty_current_kg > 0);
   const active = res.data.filter((r) => r.status === "reservada" || r.status === "confirmada");
 
   return (
     <>
       <PageHeader eyebrow={(org?.organization_name ?? "Organización").toUpperCase()} title={`Hola${name ? `, ${name}` : ""}`}
         subtitle={`${org ? roleLabel[org.role] ?? role : ""} · lo más importante de hoy, con los datos guardados de tu organización.`} />
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mb-6">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-6">
         <Kpi label="Café libre" value={fmtKg(sum((l) => l.qty_free_kg))} hint="Listo para vender" />
-        <Kpi label="En proceso" value={fmtKg(inProcess.reduce((a, l) => a + Number(l.qty_current_kg), 0))} hint={`${inProcess.length} lotes`} />
+        <Kpi label="En proceso" value={fmtKg(inProcess.reduce((a, l) => a + Number(l.qty_current_kg), 0))} hint={`${inProcess.length} lotes con una fase abierta`} />
+        <Kpi label="Bloqueado sin fase abierta" value={fmtKg(waiting.reduce((a, l) => a + Number(l.qty_current_kg), 0))} hint={`${waiting.length} lotes: proceso terminado, pendientes de calidad o de liberar para venta`} />
         <Kpi label="Reservado / comprometido" value={fmtKg(sum((l) => l.qty_reserved_kg) + sum((l) => l.qty_committed_kg))} hint={`${active.length} reservas activas`} />
         <Kpi label="Alertas abiertas" value={alerts.data.length + overdue.data.length} tone={alerts.data.length + overdue.data.length ? "warn" : undefined} hint="Humedad, stock y procesos" />
       </div>
