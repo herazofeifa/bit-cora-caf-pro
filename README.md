@@ -8,7 +8,7 @@ Plataforma operativa para microbeneficios de café de especialidad: registra el 
 - **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Las evidencias se refieren a esa revisión, no a una futura rama de entrega.
 - **Repositorio público:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable. Settings confirma «This repository is currently public»: es accesible sin invitación. El cambio de visibilidad lo realizó el autor con autorización explícita y verificación humana; no altera la autenticación, RLS ni datos de la app.
 - **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos.
-- **App sin publicar.** La evaluación usa la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). El subdominio lo configurará el autor al finalizar; este cierre no publica ni cambia DNS.
+- **Demostración publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com). Acceso docente en [/login](https://cafepro.tastepuravida.com/login) con **profesores@bitacoracafe.example** y contraseña proporcionada por separado, nunca incluida aquí. Lovable es el entorno de edición y vista previa; la app publicada tiene una URL pública, pero su operación sigue siendo privada y autenticada. Esta actualización solo documenta la publicación comunicada por el autor: no publica, cambia DNS ni afirma nuevas pruebas de operación en el dominio definitivo.
 
 Estado y límites: [ESTADO_ENTREGA](docs/ESTADO_ENTREGA.md). Guía: [RECORRIDO_EVALUACION](docs/RECORRIDO_EVALUACION.md). Notas anteriores, no vigentes: [HISTORIAL_REVISION](docs/HISTORIAL_REVISION.md).
 
@@ -89,6 +89,8 @@ Para provisionar en una instalación nueva: administrador de la organización or
 
 El **comprador no tiene cuenta ni portal privado**: consulta QR y copias públicas de reportes. Es un ajuste aprobado por el autor frente a la memoria inicial para reducir la superficie de acceso y mostrar exclusivamente información autorizada.
 
+**Enlaces definitivos:** generar las fichas y etiquetas QR desde **https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable, para que usen el dominio definitivo. Las comprobaciones de fichas y reportes descritas abajo corresponden a la vista previa donde se realizaron; no se atribuyen nuevas pruebas al dominio publicado.
+
 **Crear/leer/revocar un reporte compartido desde la UI está aprobado:** el autor pulsó Revocar en el único reporte QA desde profesor/demo y la página anónima mostró **No encontrado** tras recarga. También abrió sin login la ficha del **saco #1 de 45 kg de LAV002**, con foto y calidad heredada SCA 86/defectos 0/3; esos 45 kg físicos son distintos de los 46 kg configurados para equivalentes.
 
 ## Copiloto OpenAI
@@ -106,3 +108,7 @@ En Chrome a 393 × 844 px, el resumen real de Barva respondió en **3,4 s**: ent
 Solo cosechas y mediciones se encolan con la **app ya abierta**, en IndexedDB por usuario/organización; cambios de entorno o cierre de sesión detienen la cola anterior y descartan respuestas tardías. Inventario, reservas y entregas requieren conexión. El service worker no guarda HTML: **no se soporta arranque desde cero sin conexión**.
 
 Quedan sin verificar: QR físico con cámara, dictado, arranque en frío offline y conexión rural. Realtime sí se comprobó con dos pestañas sin recargar y la navegación de ancho móvil con profesor en Chrome; no son pruebas de dispositivos físicos ni garantías de redes rurales. La revocación UI ya está aprobada. El tiempo para registrar el primer lote <5 minutos no fue cronometrado. Esta es una entrega académica con evidencia delimitada, no una garantía productiva.
+
+## Orientación de la memoria final local
+
+La memoria final local se organiza en **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. Esta estructura orienta la entrega; no reproduce diagramas conceptuales antiguos ni incorpora credenciales. Las referencias funcionales y los límites de evidencia anteriores se mantienen.

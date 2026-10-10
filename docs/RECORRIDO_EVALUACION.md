@@ -6,7 +6,7 @@
 
 La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se verificó el inicio de sesión real. Usar la contraseña recibida por canal privado; nunca incluirla en chat, documentación o repositorio. No recrear la cuenta ni cambiar su contraseña para repetir el recorrido.
 
-Abrir la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). La app **no está publicada** y este recorrido no requiere publicar ni configurar dominio.
+Abrir la demostración definitiva publicada por el autor en [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), o directamente [/login](https://cafepro.tastepuravida.com/login). Acceder con **profesores@bitacoracafe.example** y la contraseña proporcionada por separado. No hay publicación ni subdominio pendientes. Lovable es el entorno de edición y vista previa; la app tiene dirección pública, pero su operación sigue siendo privada y autenticada. Esta actualización no cambia accesos ni afirma nuevas pruebas operativas en el dominio definitivo.
 
 Al iniciar sesión, elegir **Bitácora Café Pro en blanco** o **Bitácora Café Pro con datos de ejemplo**. La franja «Entorno de evaluación» indica cuál está activo. **Cambiar entorno** vuelve al selector sin borrar ni reiniciar los registros. Son dos espacios persistentes separados entre sí y de la organización original.
 
@@ -53,10 +53,12 @@ Los balances cambian si se registran nuevas operaciones; no son valores que deba
 3. CSV: descarga real contrastada, **12 columnas** entre todas las secciones. Celdas no aplicables vacías, números/monedas conservados.
 4. Reporte PDF: **2 páginas** revisadas. Ficha PDF de lote: **1 página** con foto, QR y calidad heredada SCA 86/defectos 0/3, revisada visualmente.
 5. Abrir foto JPEG y certificado PDF seleccionados del lote; el contrato permanece privado.
-6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en esta vista previa: ficha sin cliente/contrato/precios; reporte sin clientes/reservas.
+6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en la vista previa utilizada durante la evaluación: ficha sin cliente/contrato/precios; reporte sin clientes/reservas. No se atribuyen nuevas pruebas al dominio publicado.
 7. Ficha de saco público ya comprobada sin login: **saco #1 de 45 kg de LAV002**, foto, **SCA 86, defectos 0/3 y calidad heredada**. Son 45 kg físicos, distintos de los 46 kg de Ajustes para equivalentes.
 
 No incluir tokens concretos de enlaces en documentos. **Crear/leer/revocar desde la UI está aprobado:** el autor pulsó **Revocar** en el único reporte QA con sesión real profesor/demo; al recargar la página anónima apareció **No encontrado**. No repetir el ensayo, crear otro QA ni limpiar el existente para este cierre. Leer el QR impreso con cámara sigue sin probarse.
+
+**Para las fichas y etiquetas definitivas, generar los QR desde https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable, para que el enlace use el dominio definitivo. Esta orientación no supone generar nuevos registros ni verificar un QR físico en esta edición.
 
 ## 5. Copiloto real
 
@@ -95,3 +97,5 @@ El conflicto de rol del trigger de alta está corregido y el autor completó el 
 ## 9. Referencias de evaluación
 
 El autor verificó GitHub público conectado —el repositorio es accesible sin invitación— y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
+
+La memoria final local organiza la entrega en objetivo general, objetivos específicos, arquitectura/reglas, funcionalidades/cumplimiento y manual de funcionamiento/evaluación. Esta guía orienta el último apartado, sin reproducir diagramas conceptuales antiguos ni incluir credenciales.

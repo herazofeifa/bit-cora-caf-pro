@@ -10,7 +10,7 @@ Existe una sola aplicación operativa con datos compartidos de la organización 
 
 El prototipo académico conecta cosecha, recibo, lote, procesos, calidad, disponibilidad y comercialización con trazabilidad. Conserva información original de unidades y origen, registra diferencias de peso como merma, separa reserva/compromiso/bloqueo/venta y facilita consulta pública autorizada por QR. No se presenta como sistema productivo certificado ni se prometen garantías de disponibilidad, latencia o funcionamiento rural.
 
-**App aún sin publicar.** Se usa la [vista previa estática actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). El autor configurará el subdominio al finalizar; no se publica ni se configura DNS en este cierre.
+**App ya publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), URL definitiva de demostración. Acceso docente en [/login](https://cafepro.tastepuravida.com/login), con **profesores@bitacoracafe.example** y contraseña proporcionada por separado. Lovable sigue siendo el entorno de edición y vista previa; la dirección de la app es pública, pero la operación continúa privada y autenticada, con las mismas reglas de acceso y RLS. Publicación y dominio ya no están pendientes. Esta actualización registra lo comunicado por el autor, sin ejecutar otra publicación, modificar DNS ni afirmar nuevas pruebas operativas en ese dominio.
 
 ## 2. Evidencias por origen: no sumar universos distintos
 
@@ -103,7 +103,9 @@ El autor verificó **dos pestañas reales**: reservar 1 kg cambió disponible/re
 
 ### Consulta pública sin login
 
-El autor abrió una **ficha pública de lote** y un **reporte compartido real**, sin iniciar sesión, en la vista previa estática actual. Ficha: sin clientes, contratos ni precios. Reporte: sin clientes ni reservas. No se publican en esta documentación tokens concretos de enlaces.
+El autor abrió una **ficha pública de lote** y un **reporte compartido real**, sin iniciar sesión, en la vista previa estática utilizada durante la evaluación. Ficha: sin clientes, contratos ni precios. Reporte: sin clientes ni reservas. No se publican en esta documentación tokens concretos de enlaces. Estas evidencias se conservan con su origen; no representan nuevas pruebas en el dominio definitivo.
+
+Para usar enlaces definitivos, **generar las fichas y etiquetas QR desde https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable. La generación debe partir de la app publicada; esta edición no genera etiquetas ni modifica registros.
 
 También abrió sin login la ficha del **saco #1 de 45 kg de LAV002**, con foto, **SCA 86, defectos 0/3 y calidad heredada**. El peso físico de ese saco (45 kg) no es el peso configurado de 46 kg para calcular equivalentes. La ficha pública a **393 px** se vio sin desbordamiento en navegador de ancho móvil.
 
@@ -178,8 +180,11 @@ Archivos `.sql` bajo `drizzle/migrations/`; metadatos versionados bajo `meta/`. 
 | Alta simultánea Auth/provisión de dos solicitudes reales | Revisada/compensación implementada, sin prueba simultánea real |
 | Agotar cuotas/deadline del copiloto manualmente con profesor | Sin evidencia manual completa |
 | Latencia <3 s / primer lote <5 min | Primera meta no lograda; segunda no cronometrada |
-| Publicación/subdominio | Sin publicar; a cargo del autor después, fuera de este cambio |
 
 **Offline real de alcance limitado:** cosechas y mediciones con la app ya abierta; cola persistente por usuario/org y aislamiento de envíos/generaciones. Inventario, reserva y entrega requieren conexión. No se afirma arranque desde cero sin conexión ni tolerancia garantizada de fallos prolongados.
 
 GitHub CI **ya no es un pendiente de esta versión funcional**: el run enlazado fue verificado Success por el autor. Esto no afirma éxito de una futura revisión documental ni reemplaza los pendientes manuales enumerados.
+
+## 10. Orientación de la memoria final local
+
+Organización prevista: **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. Es una orientación documental, sin reproducir aún diagramas conceptuales antiguos ni incluir credenciales. Se mantienen la referencia funcional 9c, la CI exitosa con 20 pruebas unitarias en 8 archivos, los 59 casos independientes no sumables, las muestras correctas de IA de 3,0–5,9 s y el alcance offline parcial; no se ejecutan nuevas pruebas en esta actualización.
