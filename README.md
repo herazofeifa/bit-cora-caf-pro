@@ -4,9 +4,9 @@ Plataforma operativa para microbeneficios de café de especialidad: registra el 
 
 ## Referencia de cierre
 
-- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado con evidencias del autor al 10 de octubre de 2026, 01:52 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`.
+- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado con evidencias del autor al 10 de octubre de 2026, 01:57 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`.
 - **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Las evidencias se refieren a esa revisión, no a una futura rama de entrega.
-- **Repositorio privado:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable según la verificación independiente del autor.
+- **Repositorio público:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable. Settings confirma «This repository is currently public»: es accesible sin invitación. El cambio de visibilidad lo realizó el autor con autorización explícita y verificación humana; no altera la autenticación, RLS ni datos de la app.
 - **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos.
 - **App sin publicar.** La evaluación usa la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). El subdominio lo configurará el autor al finalizar; este cierre no publica ni cambia DNS.
 
