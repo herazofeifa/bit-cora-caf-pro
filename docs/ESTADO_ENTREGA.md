@@ -1,6 +1,6 @@
 # Estado final de entrega académica — Bitácora Café Pro
 
-**Referencia documental:** `DOC-CIERRE-2026-10-10`. Fecha de consolidación: 10 de octubre de 2026 (UTC). **Versión funcional revisada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`.
+**Referencia documental:** `DOC-CIERRE-2026-10-10`. Evidencias actualizadas al 10 de octubre de 2026, 01:52 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`. **Versión funcional revisada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`.
 
 Este documento sustituye las notas incrementales como descripción vigente. El historial se conserva, expresamente no vigente, en [HISTORIAL_REVISION](HISTORIAL_REVISION.md). La consolidación es **solo documental**: no ejecuta pruebas sobre datos en uso ni modifica código, migraciones, base, cuentas, contraseñas, secretos, GitHub, publicación o DNS. No identifica ni anticipa una próxima rama de entrega.
 
@@ -26,13 +26,17 @@ Las comprobaciones nuevas que se consolidan a continuación fueron **comunicadas
 | Método de esos 59 | Identidad SQL simulada, datos de prueba revertidos; consulta posterior **0 organizaciones temporales**. No fueron 59 JWT reales ni 59 recorridos UI, y no se añaden a los casos de CI |
 | Autenticación humana | Cuenta evaluadora creada por el autor; login real y ambos entornos probados |
 | Realtime humano | Dos pestañas reales; cambio de reserva y cancelación visible sin recargar en la observadora |
-| Exportaciones y consulta anónima | CSV descargado, PDF y ficha PDF revisados; ficha pública y reporte compartido abiertos sin login |
+| Exportaciones y consulta anónima | CSV descargado, PDF y ficha PDF revisados; fichas de lote/saco y reporte compartido abiertos sin login |
+| Reporte QA: crear/leer/revocar desde UI | Aprobado: profesor/demo pulsó Revocar en el único reporte QA; página anónima tras recarga mostró **No encontrado** |
+| Navegación real de ancho móvil | Profesor en Chrome a **393 × 844 px**: selector con dos opciones, blanco con tablero 0 registros y regreso a demo conservado; ficha pública a 393 px sin desbordamiento. No dispositivos físicos |
 
 La suite `database` de CI trabaja sobre PostgreSQL desechable e incluye migraciones y concurrencia; no valida por sí sola la interfaz ni condiciones rurales. Los conteos históricos (108, 144, 199, 211, 227, 243, etc.) pertenecen a suites e incrementos anteriores: no se suman entre sí ni a los 59. No se declara un conteo SQL actual de CI que el autor no haya aportado.
 
 ## 3. Cuenta evaluadora y balance observado
 
 **profesores@bitacoracafe.example está creada por el autor y su login es real.** No es un pendiente, no se recrea ni se pide otra contraseña. Selector inicial, indicador permanente y **Cambiar entorno** permiten usar dos espacios persistentes aislados de la organización original y entre sí.
+
+El autor completó el recorrido real con profesor en **Chrome a 393 × 844 px**: selector completo con ambas opciones, cambio a blanco con tablero **0 registros** y vuelta a demo con los registros conservados. Es evidencia de navegador de ancho móvil; no implica teléfono físico, conexión rural ni cámara.
 
 - **En blanco:** sigue vacío de fincas, cosechas, lotes, reservas y muestras de calidad. La base de configuración incluye unidades, plantillas y ajustes; no implica datos operativos. El cambio de entorno no reinicia nada.
 - **Ejemplo:** 7 cosechas, 9 lotes y **9 reservas**. Dos reservas QA de 1 kg están canceladas y conservan el saldo; el conteo anterior de 7 era anterior a esas pruebas.
@@ -101,9 +105,11 @@ El autor verificó **dos pestañas reales**: reservar 1 kg cambió disponible/re
 
 El autor abrió una **ficha pública de lote** y un **reporte compartido real**, sin iniciar sesión, en la vista previa estática actual. Ficha: sin clientes, contratos ni precios. Reporte: sin clientes ni reservas. No se publican en esta documentación tokens concretos de enlaces.
 
+También abrió sin login la ficha del **saco #1 de 45 kg de LAV002**, con foto, **SCA 86, defectos 0/3 y calidad heredada**. El peso físico de ese saco (45 kg) no es el peso configurado de 46 kg para calcular equivalentes. La ficha pública a **393 px** se vio sin desbordamiento en navegador de ancho móvil.
+
 Las fichas de lote/saco usan tokens; desconocido y privado no revelan información. Finca/parcela/productor/mediciones/calidad se muestran solo cuando la publicación lo autoriza. Genealogía múltiple no atribuye una mezcla a una única finca y no expone archivos de orígenes privados, IDs internos, auditoría ni datos comerciales. `exported_at` es fecha de exportación explícitamente declarada o null; `generated_at` no la sustituye ni una venta local prueba exportación.
 
-Reportes compartidos son copias con caducidad y revocación. **Revocación probada en servidor; el recorrido de revocar desde la UI sigue pendiente.** No se declara aprobado por haber abierto el enlace ni por existir un diálogo. QR físico leído por cámara tampoco se ha probado.
+Reportes compartidos son copias con caducidad y revocación. **Recorrido UI de crear/leer/revocar aprobado:** desde sesión real profesor/demo, el autor pulsó **Revocar** en el único reporte QA y la página pública anónima mostró **No encontrado** tras recarga. Se incorpora esta evidencia real, además de la prueba de servidor; no se crea ni limpia otro QA en este cambio documental. QR físico leído por cámara sigue sin probarse.
 
 ## 6. Copiloto: evidencia correcta y límites
 
@@ -114,6 +120,7 @@ Proveedor: **OpenAI API directa**, secreto ya guardado por el autor, sesión RLS
 | Profesor/demo: café libre por variedad | **118 kg Caturra + 160 kg Mezcla = 278 kg** | **4,2 s** |
 | Profesor/demo: procesos >20 días y precio ponderado por moneda del año | Fermentación **22 días**; **USD 6,80/kg** sobre 30 kg y **CRC 4000/kg** sobre 20 kg | **3,4 s** |
 | Profesor/demo: sacos Caturra disponibles | **118 / 46 ≈ 2,56 sacos equivalentes**, separados de **2 sacos físicos** etiquetados | **3,0 s** |
+| Profesor/demo en Chrome a 393 × 844 px: resumen Barva | Entrega **20 kg a CRC 4000/kg**; reservas **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correcto según registros | **3,4 s** |
 | Administrador/organización original sin café libre | Cero lotes libres, coherente con base en la muestra | **5,9 s** |
 
 El peso de saco **46 kg** es configuración persistida de la demo y editable, no una equivalencia universal inventada. Sin peso configurado se informa en kg, sin fabricar un conteo físico.
@@ -163,12 +170,11 @@ Archivos `.sql` bajo `drizzle/migrations/`; metadatos versionados bajo `meta/`. 
 
 | Punto | Estado exacto |
 |---|---|
-| Revocar enlace desde la UI y comprobarlo anónimamente | **Pendiente UI**; servidor probado |
 | Leer QR físico con cámara | No probado |
 | Dictado por voz | No probado; depende del navegador |
 | Arranque en frío sin conexión | No soportado: service worker no guarda HTML; no probado como recorrido |
 | Capturas offline en dispositivo/red rural real | No probado en esas condiciones |
-| Conexión rural, dos dispositivos físicos | Sin evidencia; dos pestañas realtime sí probado |
+| Conexión rural, dos dispositivos físicos | Sin evidencia; dos pestañas realtime y navegador de ancho móvil 393 × 844 px sí probados, sin equivalencia a dispositivos físicos |
 | Alta simultánea Auth/provisión de dos solicitudes reales | Revisada/compensación implementada, sin prueba simultánea real |
 | Agotar cuotas/deadline del copiloto manualmente con profesor | Sin evidencia manual completa |
 | Latencia <3 s / primer lote <5 min | Primera meta no lograda; segunda no cronometrada |
