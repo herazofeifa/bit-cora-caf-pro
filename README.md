@@ -4,7 +4,7 @@ Plataforma operativa para microbeneficios de café de especialidad: registra el 
 
 ## Referencia de cierre
 
-- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado el 10 de octubre de 2026 (UTC).
+- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado con evidencias del autor al 10 de octubre de 2026, 01:52 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`.
 - **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Las evidencias se refieren a esa revisión, no a una futura rama de entrega.
 - **Repositorio privado:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable según la verificación independiente del autor.
 - **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos.
@@ -83,9 +83,13 @@ Aplicación privada, solo correo/contraseña; sin registro público ni Google. C
 
 La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se verificó con login real. Solo pertenece a «Bitácora Café Pro en blanco» y «Bitácora Café Pro con datos de ejemplo», aislados de la organización original y entre sí. «Cambiar entorno» conserva los registros de cada espacio. El evaluador no gestiona cuentas ni membresías.
 
+El autor verificó con la sesión real del profesor en Chrome a **393 × 844 px** el selector completo con ambas opciones, el cambio a blanco con tablero de **0 registros** y el regreso a demo con registros conservados. La ficha pública a 393 px no presentó desbordamiento. Son recorridos de navegador de ancho móvil, no pruebas en dispositivos físicos.
+
 Para provisionar en una instalación nueva: administrador de la organización original → Ajustes → Usuarios y roles → **Cuenta para profesores** → correo, nombre y contraseña de al menos 10 caracteres escrita únicamente en el formulario → **Crear cuenta y espacios**. La provisión es idempotente por organización fuente; no se repite en cada login. En el proyecto actual no hay que recrear la cuenta ni restablecerla. No guardar ni enviar contraseñas por chat, documentación o repositorio.
 
 El **comprador no tiene cuenta ni portal privado**: consulta QR y copias públicas de reportes. Es un ajuste aprobado por el autor frente a la memoria inicial para reducir la superficie de acceso y mostrar exclusivamente información autorizada.
+
+**Crear/leer/revocar un reporte compartido desde la UI está aprobado:** el autor pulsó Revocar en el único reporte QA desde profesor/demo y la página anónima mostró **No encontrado** tras recarga. También abrió sin login la ficha del **saco #1 de 45 kg de LAV002**, con foto y calidad heredada SCA 86/defectos 0/3; esos 45 kg físicos son distintos de los 46 kg configurados para equivalentes.
 
 ## Copiloto OpenAI
 
@@ -95,8 +99,10 @@ Control servidor: evaluación 20 solicitudes/hora y 100/día; otras cuentas 60/h
 
 Las muestras correctas del profesor tardaron 4,2 s, 3,4 s y 3,0 s; la organización original vacía, 5,9 s. **La meta <3 s no se logró** y no hay garantía de latencia.
 
+En Chrome a 393 × 844 px, el resumen real de Barva respondió en **3,4 s**: entrega de **20 kg a CRC 4000/kg** y reservas de **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correctas según los registros. Esta muestra tampoco cumple <3 s.
+
 ## Sin conexión y límites
 
 Solo cosechas y mediciones se encolan con la **app ya abierta**, en IndexedDB por usuario/organización; cambios de entorno o cierre de sesión detienen la cola anterior y descartan respuestas tardías. Inventario, reservas y entregas requieren conexión. El service worker no guarda HTML: **no se soporta arranque desde cero sin conexión**.
 
-Quedan sin verificar: revocar un enlace desde la UI (sí probado en servidor), QR físico con cámara, dictado, arranque en frío offline y conexión rural. Realtime sí se comprobó con dos pestañas sin recargar, no como garantía de redes rurales o dispositivos físicos. El tiempo para registrar el primer lote <5 minutos no fue cronometrado. Esta es una entrega académica con evidencia delimitada, no una garantía productiva.
+Quedan sin verificar: QR físico con cámara, dictado, arranque en frío offline y conexión rural. Realtime sí se comprobó con dos pestañas sin recargar y la navegación de ancho móvil con profesor en Chrome; no son pruebas de dispositivos físicos ni garantías de redes rurales. La revocación UI ya está aprobada. El tiempo para registrar el primer lote <5 minutos no fue cronometrado. Esta es una entrega académica con evidencia delimitada, no una garantía productiva.

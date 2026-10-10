@@ -1,6 +1,6 @@
 # Recorrido para profesores — Bitácora Café Pro
 
-**Cierre documental:** `DOC-CIERRE-2026-10-10`. Referencia funcional evaluada: `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Evidencias y límites: [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
+**Cierre documental:** `DOC-CIERRE-2026-10-10`. Evidencias al 10 oct 2026, 01:52 UTC; fecha local del autor: 9 oct 2026 en `America/Costa_Rica`. Referencia funcional evaluada: `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Evidencias y límites: [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
 
 ## 1. Acceso ya preparado
 
@@ -9,6 +9,8 @@ La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se ve
 Abrir la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). La app **no está publicada** y este recorrido no requiere publicar ni configurar dominio.
 
 Al iniciar sesión, elegir **Bitácora Café Pro en blanco** o **Bitácora Café Pro con datos de ejemplo**. La franja «Entorno de evaluación» indica cuál está activo. **Cambiar entorno** vuelve al selector sin borrar ni reiniciar los registros. Son dos espacios persistentes separados entre sí y de la organización original.
+
+El autor ya completó con profesor en **Chrome a 393 × 844 px** el selector completo con ambas opciones, el cambio a blanco con tablero de **0 registros** y el regreso a demo con registros conservados. La ficha pública a 393 px también se vio sin desbordamiento. Son recorridos reales de navegador de ancho móvil, **no pruebas en dispositivos físicos, red rural ni cámara**.
 
 ## 2. En blanco: comenzar desde cero
 
@@ -52,8 +54,9 @@ Los balances cambian si se registran nuevas operaciones; no son valores que deba
 4. Reporte PDF: **2 páginas** revisadas. Ficha PDF de lote: **1 página** con foto, QR y calidad heredada SCA 86/defectos 0/3, revisada visualmente.
 5. Abrir foto JPEG y certificado PDF seleccionados del lote; el contrato permanece privado.
 6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en esta vista previa: ficha sin cliente/contrato/precios; reporte sin clientes/reservas.
+7. Ficha de saco público ya comprobada sin login: **saco #1 de 45 kg de LAV002**, foto, **SCA 86, defectos 0/3 y calidad heredada**. Son 45 kg físicos, distintos de los 46 kg de Ajustes para equivalentes.
 
-No incluir tokens concretos de enlaces en documentos. La revocación está probada en servidor, pero **falta ejecutar revocación desde la UI y comprobar el enlace después**. No se da ese recorrido por aprobado. Leer el QR impreso con cámara tampoco se probó.
+No incluir tokens concretos de enlaces en documentos. **Crear/leer/revocar desde la UI está aprobado:** el autor pulsó **Revocar** en el único reporte QA con sesión real profesor/demo; al recargar la página anónima apareció **No encontrado**. No repetir el ensayo, crear otro QA ni limpiar el existente para este cierre. Leer el QR impreso con cámara sigue sin probarse.
 
 ## 5. Copiloto real
 
@@ -62,6 +65,7 @@ OpenAI ya está configurado: no hace falta otra clave. Consultas verificadas com
 - «¿Cuánto café libre tengo por variedad?» → **118 Caturra + 160 Mezcla**, **4,2 s**.
 - «¿Qué procesos llevan más de veinte días atrasados y cuál es el precio promedio ponderado por moneda este año?» → **22 días**, **USD 6,80/kg** y **CRC 4000/kg**, **3,4 s**.
 - Sacos Caturra → **118 kg / 46 kg ≈ 2,56 equivalentes**, separado de **2 sacos físicos**, **3,0 s**. Los 46 kg proceden de Ajustes, no de un supuesto universal.
+- Resumen Barva con profesor/demo en Chrome a **393 × 844 px** → entrega **20 kg a CRC 4000/kg** y reservas **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correcto según registros, **3,4 s**.
 
 Organización original sin café libre: cero lotes libres, **5,9 s**. **Meta <3 s no lograda**, sin garantía de latencia. Para evaluación: 20 solicitudes/hora, 100/día, 12 000 caracteres de entrada total, salida máxima de 900 tokens y plazo global de 40 s con todas las rondas. No se ha agotado manualmente toda la cuota con el profesor.
 
