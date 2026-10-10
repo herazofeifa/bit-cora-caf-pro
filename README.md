@@ -1,85 +1,102 @@
 # Bitácora Café Pro
 
-Plataforma operativa para microbeneficios de café de especialidad: cosecha, lotes,
-procesos, inventario, reservas, calidad, trazabilidad y auditoría.
+Plataforma operativa para microbeneficios de café de especialidad: registra el recorrido del café desde la cosecha hasta su procesamiento, calidad, inventario, reserva y entrega. Su propósito académico es sustituir registros dispersos por información compartida y trazable, reducir errores de disponibilidad y facilitar la consulta autorizada del origen por QR.
 
-Stack: TanStack Start (React 19, Vite 7), Tailwind v4, Lovable Cloud (PostgreSQL +
-Auth + Realtime), despliegue edge (Cloudflare Workers).
+## Referencia de cierre
 
-## Requisitos
-- Bun ≥ 1.1 (o Node 20 + npm)
-- PostgreSQL 17 (`initdb`, `pg_ctl`, `psql`) solo para las pruebas de base de datos
+- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado el 10 de octubre de 2026 (UTC).
+- **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Las evidencias se refieren a esa revisión, no a una futura rama de entrega.
+- **Repositorio privado:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable según la verificación independiente del autor.
+- **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos.
+- **App sin publicar.** La evaluación usa la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). El subdominio lo configurará el autor al finalizar; este cierre no publica ni cambia DNS.
 
-## Instalación
+Estado y límites: [ESTADO_ENTREGA](docs/ESTADO_ENTREGA.md). Guía: [RECORRIDO_EVALUACION](docs/RECORRIDO_EVALUACION.md). Notas anteriores, no vigentes: [HISTORIAL_REVISION](docs/HISTORIAL_REVISION.md).
+
+## Producto y arquitectura
+
+Una sola aplicación usa los registros persistidos de la organización activa. Incluye Inicio, Cosecha, Recibos, Lotes y ficha de lote, Procesos y editor de plantillas, Variables/humedad, Calidad, Mermas, Inventario, Café libre, Clientes, Reservas, Reportes, Trazabilidad, Alertas, Auditoría, Ajustes y Copiloto. Las direcciones antiguas redirigen a su vista equivalente; `legacy/` conserva referencias fuera de la compilación, no una segunda operación local.
+
+Stack: TanStack Start v1, React 19, Vite 7, Tailwind CSS v4 y Lovable Cloud (PostgreSQL, autenticación y actualización en tiempo real). El destino de ejecución es edge/Cloudflare Workers. Dependencias reproducibles en `bun.lock`; PDF con jsPDF 4.2.1 y AutoTable 5.0.8 según el lockfile de la revisión evaluada.
+
+- Datos operativos separados por `organization_id`, políticas RLS y roles comprobados en el servidor.
+- Lecturas por organización en `src/lib/org-data.ts`, operaciones en `src/lib/ops-cloud.ts` y acceso compartido en `src/lib/cloud.ts`.
+- Inventario, reservas y transformaciones mediante funciones transaccionales con bloqueo del lote. Disponible = físico − reservado − comprometido − bloqueado − seguridad.
+- Liberación explícita para venta; una aprobación de calidad no libera por sí sola café en proceso.
+- Idempotencia ligada a actor, operación y argumentos; auditoría append-only con actor y hora del servidor.
+- Mezclas solo con estado físico compatible; división y mezcla exigen cerrar fases abiertas. Genealogía e historia heredadas con controles de publicación.
+- Consultas anónimas por token en `/t/:token`, `/s/:token` y `/r/:token`; no lecturas abiertas de tablas privadas.
+
+## Requisitos y arranque local
+
+Usar **Bun con soporte para `bun.lock`**; Bun 1.4.2 fue usado en la revisión independiente. Para compatibilidad con TanStack Start, Vite 7 y Vitest 5, usar **Node.js 22.12 o posterior dentro de la rama 22, o Node.js 24**. No se recomienda el antiguo requisito genérico «Node 20»: no cubre todo el conjunto actual de dependencias.
+
+PostgreSQL **17**, con `initdb`, `pg_ctl` y `psql` en `PATH`, se necesita únicamente para la suite desechable de base de datos. Esa suite requiere un usuario no root.
+
 ```bash
-bun install
-cp .env.example .env   # completar con los valores del proyecto (sin secretos de servidor)
-bun run dev            # http://localhost:8080
+bun install --frozen-lockfile
+# Solo en una copia local nueva sin .env:
+cp .env.example .env
+# Completar la configuración pública/autorizada del entorno local antes de arrancar.
+bun run dev -- --port 8080
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` es solo de servidor: se configura en el entorno de
-despliegue y nunca se escribe en el repositorio.
+Abrir `http://localhost:8080`. No sobrescribir el `.env` gestionado de Lovable. Una copia del código no incluye la base de datos, cuentas ni secretos del entorno alojado. El arranque local requiere configuración de conexión autorizada; instalar dependencias no provisiona el servicio. `.env.example` conserva nombres de configuración, no credenciales. La clave privilegiada gestionada de Lovable Cloud no está disponible para exportarla: no se pide al autor ni se sustituye por una clave ficticia. No versionar archivos con secretos.
 
-## Base de datos
-Las migraciones versionadas están en `drizzle/migrations/` y se aplican en orden:
+## Comandos de comprobación
 
-| Migración | Contenido |
+| Comando | Alcance |
 |---|---|
-| `0000_migration.sql` | `profiles`, `user_roles`, `has_role`, trigger de alta |
-| `0001_shared_operational_core.sql` | organizaciones, membresías, catálogos, lotes, reservas, movimientos, calidad, auditoría append-only, RLS y funciones transaccionales |
-| `0002_fix_lot_links_policy.sql` | corrección de la política de lectura de genealogía |
-| `0003_harden_function_privileges.sql` | revoca ejecución pública de funciones internas, fija `search_path` |
-| `0004_closing_core_operations.sql` | liberación explícita para venta, entrega bloqueada por calidad, precio finito, referencias de la misma organización, idempotencia, cosecha transaccional, plantillas versionadas, fases/mediciones/alertas, archivos, QR público de lote y saco, enlaces de reporte, entorno demo |
-| `0005_lot_files_type_restriction.sql` | solo JPG/PNG/WEBP/PDF en el almacenamiento |
+| `bun run typecheck` | Revisión de tipos (`tsc --noEmit -p tsconfig.json`) |
+| `bun run test` | Vitest, una ejecución |
+| `bun run test:db` | PostgreSQL desechable, migraciones, suites SQL y concurrencia |
+| `bun run build` | Compilación de producción, no publicación |
+| `bun run preview` | Vista local de la compilación, no despliegue |
 
-Reglas clave (ver `docs/ESTADO_ENTREGA.md`):
-- Toda tabla operativa tiene `organization_id` y RLS por membresía.
-- Inventario y reservas solo se modifican mediante funciones `SECURITY DEFINER`
-  con bloqueo por lote (`SELECT … FOR UPDATE`).
-- Disponible = actual − reservado − comprometido − bloqueado − seguridad (columna generada).
-- `audit_log` es de solo agregado (trigger), con actor `auth.uid()` y hora del servidor.
+`tests/db/run-local.sh` crea y elimina su propia base temporal, sin credenciales ni cambios en la base real. Ejecuta `core`, `closing`, `audit`, `evaluation`, `unified`, `lineage` y `quality_harvest`, y luego `concurrency.sh`. No ejecutar `initdb` como root; en contenedores usar un usuario no privilegiado con acceso de lectura al proyecto. `PGPORT_TEST` permite cambiar el puerto temporal (por defecto 55432).
 
-## Scripts
-| Script | Qué hace |
+La CI ejecuta instalación congelada, tipos, Vitest y build en `app`, y migraciones/pruebas SQL/concurrencia con PostgreSQL 17 en `database`. Su éxito verificado no convierte los 59 casos independientes contra la base real en casos de CI ni en 59 sesiones JWT reales.
+
+## Migraciones existentes
+
+Los 14 archivos SQL de `drizzle/migrations/` se aplican en orden a una base destinada a ello, mediante el proceso autorizado de migración; no se recomienda reejecutarlos manualmente sobre la base en uso.
+
+| Archivo | Contenido |
 |---|---|
-| `bun run typecheck` | `tsc --noEmit` |
-| `bun run test` | pruebas unitarias (Vitest) |
-| `bun run test:db` | levanta un PostgreSQL desechable, aplica todas las migraciones, ejecuta `tests/db/core.test.sql`, `closing.test.sql`, `audit.test.sql` y las pruebas de concurrencia (reservas y vencimiento) |
-| `bun run build` | build de producción |
+| `0000_migration.sql` | Perfiles, roles iniciales y disparador de alta |
+| `0001_shared_operational_core.sql` | Organizaciones, membresías, catálogos, lotes, reservas, calidad, movimientos, auditoría, RLS y funciones transaccionales |
+| `0002_fix_lot_links_policy.sql` | Lectura de enlaces de genealogía |
+| `0003_harden_function_privileges.sql` | Privilegios de funciones internas y `search_path` |
+| `0004_closing_core_operations.sql` | Liberación, cosecha, procesos/plantillas versionadas, mediciones, archivos, QR y reportes compartidos |
+| `0005_lot_files_type_restriction.sql` | Restricción de archivos a JPG/PNG/WEBP/PDF |
+| `0006_audit_fixes.sql` | Idempotencia ligada a argumentos/actor, exportación explícita, vencimientos y visibilidad de equipo |
+| `0007_evaluation_spaces.sql` | Provisión idempotente de cuenta y dos espacios de evaluación aislados, ejemplo coherente |
+| `0008_unified_product_closing.sql` | Entrega pactada/condiciones, ubicación, alertas y ampliación de realtime |
+| `0009_alert_severity_fix.sql` | Alertas con severidades válidas (`info`, `warning`, `critical`) |
+| `0010_lineage_guards.sql` | Paso histórico sin cambios efectivos; sustituido por 0011 |
+| `0011_lineage_guards_apply.sql` | Compatibilidad física, bloqueo de transformaciones con fases abiertas e historia/procedencia heredadas |
+| `0012_quality_units_copilot_quota.sql` | Validación SCA/defectos, conversiones de servidor y cuotas del copiloto |
+| `0013_eval_settings_inherited_quality.sql` | Configuración base persistida de evaluación y calidad heredada autorizada |
 
-`test:db` no usa credenciales ni toca ninguna base real. `initdb` no puede ejecutarse como root (en un contenedor root: `setpriv --reuid=1000 --regid=1000 --clear-groups bash tests/db/run-local.sh`).
+## Acceso y evaluación
 
-## Configuración del copiloto (OpenAI)
-El copiloto (`/copiloto`) llama directamente a la API de OpenAI desde el servidor.
-1. Crear una clave en la cuenta de OpenAI del autor.
-2. Guardarla como secreto `OPENAI_API_KEY` en la configuración del proyecto (nunca en el código ni en `.env`).
-3. Opcional: `OPENAI_MODEL` (por defecto `gpt-4.1-mini`).
+Aplicación privada, solo correo/contraseña; sin registro público ni Google. Cinco roles internos: **Administrador, Encargado de beneficio, Productor/finca, Comercial y Consulta**. Los permisos se comprueban por organización, no por un rol elegido en el navegador.
 
-Costo: cada pregunta consume tokens de la cuenta OpenAI (instrucciones + resultados de herramientas,
-normalmente unos pocos miles de tokens por respuesta). Revise los precios vigentes en OpenAI. La latencia
-no está garantizada; la app corta a los 45 s y muestra el motivo (clave inválida, límite, error temporal).
+La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se verificó con login real. Solo pertenece a «Bitácora Café Pro en blanco» y «Bitácora Café Pro con datos de ejemplo», aislados de la organización original y entre sí. «Cambiar entorno» conserva los registros de cada espacio. El evaluador no gestiona cuentas ni membresías.
 
-## Uso sin conexión
-Solo **cosechas y mediciones** se guardan como borrador en el dispositivo (IndexedDB, por usuario y
-organización) y se envían cuando vuelve la señal; cada envío tiene clave única, así que nunca se duplica.
-Inventario, reservas y entregas requieren conexión para evitar vender dos veces el mismo café.
-Alcance real: funciona con la app ya abierta; el service worker no guarda las páginas, así que abrir la app desde cero sin conexión no está soportado. Al cambiar de entorno o cerrar sesión, la cola anterior se detiene y sus respuestas tardías se descartan.
+Para provisionar en una instalación nueva: administrador de la organización original → Ajustes → Usuarios y roles → **Cuenta para profesores** → correo, nombre y contraseña de al menos 10 caracteres escrita únicamente en el formulario → **Crear cuenta y espacios**. La provisión es idempotente por organización fuente; no se repite en cada login. En el proyecto actual no hay que recrear la cuenta ni restablecerla. No guardar ni enviar contraseñas por chat, documentación o repositorio.
 
-Migración `0012_quality_units_copilot_quota.sql`: calidad SCA/defectos validada, conversión de unidades solo del servidor, cuota del copiloto. Pruebas: `tests/db/quality_harvest.test.sql`.
+El **comprador no tiene cuenta ni portal privado**: consulta QR y copias públicas de reportes. Es un ajuste aprobado por el autor frente a la memoria inicial para reducir la superficie de acceso y mostrar exclusivamente información autorizada.
 
-## Accesos
-La app es privada: no hay registro público. Un administrador crea las cuentas
-desde Ajustes → Usuarios y roles. No se puede quitar al último administrador.
+## Copiloto OpenAI
 
-## CI
-`.github/workflows/ci.yml` define typecheck, pruebas, build y pruebas de base de
-datos. El repositorio debe conectarse a GitHub para que se ejecute.
+Usa la API de OpenAI directamente desde una función de servidor, sesión del usuario/RLS y herramientas de solo lectura limitadas a la organización seleccionada. **`OPENAI_API_KEY` ya está configurada y se verificaron respuestas reales**; no es un pendiente del cierre. En otra instalación se configura en Project Settings → Secrets, nunca en código, chat ni documentación. `OPENAI_MODEL` es opcional; la implementación contempla alternativas cuando un modelo no está disponible. El coste corresponde a la cuenta OpenAI del autor.
 
-## Estado actual (cierre)
-Una sola aplicación: todos los módulos usan los registros guardados de la organización elegida, con actualización en vivo. Las pantallas antiguas con datos locales se conservan solo como referencia en `legacy/` (no se compilan). Detalle de pruebas y limitaciones en `docs/ESTADO_ENTREGA.md`. Pruebas de base de datos: `bash tests/db/run-local.sh` (como usuario sin privilegios de root).
+Control servidor: evaluación 20 solicitudes/hora y 100/día; otras cuentas 60/hora y 300/día; entrada total 12 000 caracteres, `max_output_tokens` 900 y plazo **global de 40 segundos**, incluidas rondas de herramientas. No se almacenan prompts privados en los registros de cuota. Fechas inclusivas en hora de Costa Rica y precios ponderados separados por moneda. El peso de saco procede de Ajustes: equivalentes por peso y sacos físicos etiquetados se informan por separado.
 
-### Migraciones 0010–0011 (mezclas y procedencia)
-`0011_lineage_guards_apply.sql`: mezcla solo con el mismo estado físico, sin fases abiertas en mezcla/división, `lot_lineage` interna y procedencia heredada en la ficha pública. (`0010` está vacía.) Pruebas: `tests/db/lineage.test.sql`, incluida en `tests/db/run-local.sh`.
+Las muestras correctas del profesor tardaron 4,2 s, 3,4 s y 3,0 s; la organización original vacía, 5,9 s. **La meta <3 s no se logró** y no hay garantía de latencia.
 
-## Roles y comprador
-Cinco roles internos (Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta). El comprador no tiene cuenta ni portal privado: consulta el QR del lote o del saco y las copias públicas de reportes. Es un ajuste aprobado por el autor respecto a la memoria inicial.
+## Sin conexión y límites
+
+Solo cosechas y mediciones se encolan con la **app ya abierta**, en IndexedDB por usuario/organización; cambios de entorno o cierre de sesión detienen la cola anterior y descartan respuestas tardías. Inventario, reservas y entregas requieren conexión. El service worker no guarda HTML: **no se soporta arranque desde cero sin conexión**.
+
+Quedan sin verificar: revocar un enlace desde la UI (sí probado en servidor), QR físico con cámara, dictado, arranque en frío offline y conexión rural. Realtime sí se comprobó con dos pestañas sin recargar, no como garantía de redes rurales o dispositivos físicos. El tiempo para registrar el primer lote <5 minutos no fue cronometrado. Esta es una entrega académica con evidencia delimitada, no una garantía productiva.

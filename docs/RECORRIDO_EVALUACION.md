@@ -1,46 +1,93 @@
 # Recorrido para profesores — Bitácora Café Pro
 
-## Preparación (solo el autor)
-1. Inicia sesión con tu cuenta de administrador de la organización original.
-2. Ajustes → Usuarios y roles → tarjeta **Cuenta para profesores**.
-3. Escribe el correo, el nombre y una contraseña (mín. 10) y pulsa **Crear cuenta y espacios**.
-   Se crean, en una sola operación y una sola vez, dos organizaciones nuevas y la cuenta evaluadora.
-   Repetirlo no duplica nada. La contraseña no se guarda en el repositorio ni en la documentación; compártela por un canal privado.
-4. Si hace falta, la misma tarjeta permite **Cambiar contraseña**.
+**Cierre documental:** `DOC-CIERRE-2026-10-10`. Referencia funcional evaluada: `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Evidencias y límites: [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
 
-## Lo que ve el profesor
-- Al iniciar sesión elige **Bitácora Café Pro en blanco** o **Bitácora Café Pro con datos de ejemplo**.
-- Una franja permanente indica "Entorno de evaluación" y cuál está activo; el botón **Cambiar entorno** vuelve al selector.
-  Cambiar no reinicia nada: cada espacio conserva lo que se hizo en él.
-- Las pantallas con datos del servidor están en el menú **Operación (servidor)**.
+## 1. Acceso ya preparado
 
-## En blanco
-Solo unidades (kg, cajuela 12,5 kg, fanega 250 kg) y plantillas Lavado, Honey, Natural y Anaeróbico.
-Cero fincas, cosechas, lotes, movimientos, procesos, clientes, reservas y muestras. Sugerencia: crear finca/parcela en Ajustes,
-registrar una cosecha en Operación → Cosecha, iniciar y cerrar fases, liberar y reservar.
+La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se verificó el inicio de sesión real. Usar la contraseña recibida por canal privado; nunca incluirla en chat, documentación o repositorio. No recrear la cuenta ni cambiar su contraseña para repetir el recorrido.
 
-## Con datos de ejemplo (ficticios, generados con las mismas operaciones de la app)
-| Lote | Qué demuestra |
+Abrir la [vista previa actual](https://id-preview--fbcc9b68-7ecc-4206-8f7d-fd25606bf21e.lovable.app). La app **no está publicada** y este recorrido no requiere publicar ni configurar dominio.
+
+Al iniciar sesión, elegir **Bitácora Café Pro en blanco** o **Bitácora Café Pro con datos de ejemplo**. La franja «Entorno de evaluación» indica cuál está activo. **Cambiar entorno** vuelve al selector sin borrar ni reiniciar los registros. Son dos espacios persistentes separados entre sí y de la organización original.
+
+## 2. En blanco: comenzar desde cero
+
+En la revisión manual sigue sin fincas, cosechas, lotes, reservas ni calidad. Incluye configuración base: kg, cajuela 12,5 kg, fanega 250 kg; plantillas Lavado, Honey, Natural y Anaeróbico y ajustes de organización. No confundir configuración con registros operativos.
+
+Si se desea crear datos nuevos, hacerlo solo como prueba acordada con el autor: el entorno dejará de estar vacío y el cambio de espacio no lo restaurará.
+
+1. **Ajustes → Fincas/Parcelas:** Añadir finca, editar y **Guardar cambios**; añadir parcela asociada y guardar. No basta con añadir una fila al borrador.
+2. **Cosecha:** elegir finca/parcela, variedad, proceso y cantidad/unidad; guardar. La conversión procede de Ajustes en el servidor.
+3. **Recibos/Lotes:** abrir el recibo y su lote; recargar y comprobar persistencia.
+4. **Procesos/ficha del lote:** iniciar fases, registrar mediciones y cerrar con peso medido. La diferencia de peso se registra como merma.
+5. **Calidad:** registrar SCA, defectos, atributos y notas. Liberar para venta explícitamente cuando corresponda; calidad aprobada sola no libera un lote en proceso.
+6. **Inventario/Café libre:** comprobar el balance. Reservar únicamente si se ha acordado una prueba comercial nueva.
+
+El recorrido histórico de finca/parcela/cosecha y recarga fue probado por el administrador en Microbeneficio; **no se atribuye aquí una nueva ejecución de todo este flujo al profesor en blanco**. El tiempo de primer lote <5 minutos no fue cronometrado.
+
+## 3. Demo: inspección sin modificar registros
+
+Fotografía verificada por el autor: **7 cosechas, 9 lotes y 9 reservas**, incluidas **dos QA de 1 kg canceladas**, sin efecto sobre saldo. No borrar, confirmar ni recancelar reservas existentes para reproducir la fotografía.
+
+| Dónde mirar | Qué comprobar |
 |---|---|
-| Caturra lavado (500 kg = 40 cajuelas) | Ciclo completo despulpado→fermentación→lavado→secado, mermas automáticas por diferencia de peso, temperatura fuera de rango (alerta), calidad SCA 86 aprobada, liberación y división en dos lotes hijos |
-| Caturra lavado · exportación (120 kg) | Reservas entregada (USD 6,80), confirmada (USD 7,10), activa (CRC 4200), cancelada y vencida; 2 sacos con QR; ficha pública con foto y certificado ficticios (el contrato queda privado); exportación declarada |
-| Caturra lavado · local (90 kg) | Venta local en CRC y merma por manipulación |
-| Geisha natural (300 kg + 8 cajuelas al mismo lote) | Dos ingresos a un lote existente, secado con humedad 18 % fuera de rango |
-| Catuaí honey | Proceso terminado y bloqueado por calidad (SCA 78, defectos) |
-| Geisha anaeróbico | Fermentación de 22 días: aparece como proceso atrasado |
-| Blend Tarrazú-Dota (120 + 80 kg) | Mezcla de dos lotes, genealogía, calidad 82, reserva activa en CRC |
+| Inicio/Inventario | 1450 kg cosechados = 397 merma + 50 vendidos + 1003 físicos |
+| Disponibilidad | 1003 = 278 libres + 55 reservados + 25 comprometidos + 645 bloqueados |
+| Procesos/bloqueo | 535 kg con fase abierta y 110 kg bloqueados por calidad sin fase abierta (Catuaí honey) |
+| Café libre | 118 kg Caturra y 160 kg Mezcla |
+| Geisha anaeróbico | Fermentación de 22 días en la revisión |
+| Trazabilidad | Caturra dividido y mezcla con múltiples orígenes; no atribuir mezcla a una sola finca |
+| Calidad/ficha | Calidad heredada identificada; SCA 86, defectos primarios/secundarios 0/3 en el lote revisado |
+| Reservas | Estados y monedas separados; vencimiento y entrega pactada son distintos |
 
-Reportes muestran precios promedio ponderados separados en USD y CRC. El copiloto responde con estos datos si la clave de OpenAI está configurada.
+La QA2 conservó tras recarga vencimiento **19 oct 2026** y entrega pactada editada **3 nov 2026**. La QA `45a22973…` está cancelada y se conserva. Los clientes reales de la demo incluyen Cafetería Barva, Exportadora Pacífico y Nordic Roasters; no usar nombres inventados.
 
-## Límites de la cuenta evaluadora
-- Es administradora solo de esos dos espacios: no ve la organización original, sus datos ni su equipo.
-- No puede crear cuentas, cambiar roles ni crear otros entornos demo.
+Los balances cambian si se registran nuevas operaciones; no son valores que deba restaurar un login. Las duraciones avanzan con el tiempo: 22 días es la muestra evaluada, no un contador fijo.
 
-> Si un intento anterior mostró «duplicate key … user_roles», ya está corregido: vuelve a enviar el formulario «Cuenta de evaluación» con profesores@bitacoracafe.example (no quedó ninguna cuenta a medias).
+## 4. Reportes, fichas y archivos
 
-> Nota: el copiloto responde con OpenAI real; latencia medida 4–10 s (5,9 s en la última prueba del autor). No se promete <3 s.
+1. Abrir **Reportes** y revisar Producción, Inventario, Procesos, Rendimientos, Mermas, Calidad, Clientes y reservas, Alertas.
+2. Usar el año o rango deseado; primer y último día incluidos en hora de Costa Rica. Revisar **USD 6,80/kg sobre 30 kg** y **CRC 4000/kg sobre 20 kg** entregados en el año evaluado; no promediar monedas entre sí.
+3. CSV: descarga real contrastada, **12 columnas** entre todas las secciones. Celdas no aplicables vacías, números/monedas conservados.
+4. Reporte PDF: **2 páginas** revisadas. Ficha PDF de lote: **1 página** con foto, QR y calidad heredada SCA 86/defectos 0/3, revisada visualmente.
+5. Abrir foto JPEG y certificado PDF seleccionados del lote; el contrato permanece privado.
+6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en esta vista previa: ficha sin cliente/contrato/precios; reporte sin clientes/reservas.
 
-> Fechas en hora de Costa Rica. Un lote dividido sin muestra propia muestra la calidad del lote de origen, marcada como heredada.
+No incluir tokens concretos de enlaces en documentos. La revocación está probada en servidor, pero **falta ejecutar revocación desde la UI y comprobar el enlace después**. No se da ese recorrido por aprobado. Leer el QR impreso con cámara tampoco se probó.
 
-## Roles y comprador
-Cinco roles internos (Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta). El comprador no tiene cuenta ni portal privado: consulta el QR del lote o del saco y las copias públicas de reportes. Es un ajuste aprobado por el autor respecto a la memoria inicial.
+## 5. Copiloto real
+
+OpenAI ya está configurado: no hace falta otra clave. Consultas verificadas como profesor/demo:
+
+- «¿Cuánto café libre tengo por variedad?» → **118 Caturra + 160 Mezcla**, **4,2 s**.
+- «¿Qué procesos llevan más de veinte días atrasados y cuál es el precio promedio ponderado por moneda este año?» → **22 días**, **USD 6,80/kg** y **CRC 4000/kg**, **3,4 s**.
+- Sacos Caturra → **118 kg / 46 kg ≈ 2,56 equivalentes**, separado de **2 sacos físicos**, **3,0 s**. Los 46 kg proceden de Ajustes, no de un supuesto universal.
+
+Organización original sin café libre: cero lotes libres, **5,9 s**. **Meta <3 s no lograda**, sin garantía de latencia. Para evaluación: 20 solicitudes/hora, 100/día, 12 000 caracteres de entrada total, salida máxima de 900 tokens y plazo global de 40 s con todas las rondas. No se ha agotado manualmente toda la cuota con el profesor.
+
+## 6. Actualización en vivo y offline
+
+Realtime comprobado por el autor con dos pestañas reales: reserva 1 kg **50/15 → 49/16**, cancelación **→ 50/15**, visto en la observadora **sin recargar**. El ensayo ya concluyó; no repetirlo sobre reservas del profesor sin acuerdo. No equivale a prueba de dos teléfonos en una red rural.
+
+Offline: solo capturas de cosechas/mediciones **con la app ya abierta**, colas por usuario/organización y protección al cambiar de espacio o cerrar sesión. Inventario/reservas/entregas requieren conexión. **No hay arranque desde cero offline** porque no se guarda HTML. Dictado, QR físico, frío offline y conexión rural no probados.
+
+## 7. Permisos y comprador
+
+Cinco roles internos: Administrador, Encargado de beneficio, Productor/finca, Comercial, Consulta. La cuenta evaluadora administra operaciones solo en sus dos espacios; no ve la original ni su equipo y no crea cuentas, cambia membresías o genera otros demos.
+
+El comprador **no tiene cuenta ni portal privado**: consulta QR de lote/saco y reportes publicados. Ajuste aprobado por el autor respecto a la memoria inicial, para reducir accesos externos y mostrar solo información autorizada. No existe un sexto rol comprador.
+
+## 8. Provisión en otra instalación (solo administrador)
+
+En este proyecto la cuenta ya existe; **no repetir la provisión ni restablecerla**. Para una instalación nueva:
+
+1. Iniciar sesión como administrador de la organización original.
+2. Ajustes → Usuarios y roles → **Cuenta para profesores**.
+3. Escribir correo, nombre y contraseña de al menos 10 caracteres únicamente en el formulario; pulsar **Crear cuenta y espacios**.
+4. Provisión idempotente por organización fuente: los dos espacios no se duplican por login y conservan cambios. Compartir acceso únicamente por canal privado.
+
+El conflicto de rol del trigger de alta está corregido y el autor completó el alta real. No se afirma haber probado dos solicitudes de alta simultáneas reales.
+
+## 9. Referencias de evaluación
+
+El autor verificó GitHub privado conectado y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
