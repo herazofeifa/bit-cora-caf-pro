@@ -4,13 +4,13 @@ Plataforma operativa para microbeneficios de café de especialidad: registra el 
 
 ## Referencia de cierre
 
-- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado con evidencias del autor al 10 de octubre de 2026, 01:57 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`.
-- **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Las evidencias se refieren a esa revisión, no a una futura rama de entrega.
+- **Documento:** `DOC-CIERRE-2026-10-10`, actualizado con evidencias del autor al 10 de octubre de 2026, 02:33 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`.
+- **Versión funcional evaluada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Se conserva como referencia funcional anterior. La rama académica `entrega-academica-2026-10-09`, commit `68da1fa`, queda como referencia congelada de pruebas; `main` incorpora esta actualización documental, sin atribuirle nuevas ejecuciones.
 - **Repositorio público:** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente a Lovable. Settings confirma «This repository is currently public»: es accesible sin invitación. El cambio de visibilidad lo realizó el autor con autorización explícita y verificación humana; no altera la autenticación, RLS ni datos de la app.
-- **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos.
-- **Demostración publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com). Acceso docente en [/login](https://cafepro.tastepuravida.com/login) con **profesores@bitacoracafe.example** y contraseña proporcionada por separado, nunca incluida aquí. Lovable es el entorno de edición y vista previa; la app publicada tiene una URL pública, pero su operación sigue siendo privada y autenticada. Esta actualización solo documenta la publicación comunicada por el autor: no publica, cambia DNS ni afirma nuevas pruebas de operación en el dominio definitivo.
+- **CI verificado por el autor:** [run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Success**, trabajos `app` y `database`; 20/20 pruebas Vitest en 8 archivos. Además, el autor ya comprobó la CI de la rama académica `entrega-academica-2026-10-09`: [run 38015307882](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38015307882), commit `68da1fa`. Son referencias separadas: no se suman pruebas ni se afirma una nueva ejecución en este cierre.
+- **Demostración publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com). Acceso docente en [/login](https://cafepro.tastepuravida.com/login) con **profesores@bitacoracafe.example** y contraseña proporcionada por separado, nunca incluida aquí. Lovable es el entorno de edición y vista previa; la app publicada tiene una URL pública, pero su operación sigue siendo privada y autenticada. El autor ya comprobó en el dominio definitivo el login profesor, selector, blanco vacío, demo, inventario, reservas, reportes, ficha pública y copiloto. Esta actualización documenta su evidencia; no repite pruebas, publica ni cambia DNS.
 
-Estado y límites: [ESTADO_ENTREGA](docs/ESTADO_ENTREGA.md). Guía: [RECORRIDO_EVALUACION](docs/RECORRIDO_EVALUACION.md). Notas anteriores, no vigentes: [HISTORIAL_REVISION](docs/HISTORIAL_REVISION.md).
+Estado y límites: [ESTADO_ENTREGA](docs/ESTADO_ENTREGA.md). Guía: [RECORRIDO_EVALUACION](docs/RECORRIDO_EVALUACION.md). Notas anteriores, no vigentes: [HISTORIAL_REVISION](docs/HISTORIAL_REVISION.md). Arquitectura e interpretación de los diagramas adaptados al esquema actual: [ARQUITECTURA](docs/ARQUITECTURA.md).
 
 ## Producto y arquitectura
 
@@ -89,7 +89,7 @@ Para provisionar en una instalación nueva: administrador de la organización or
 
 El **comprador no tiene cuenta ni portal privado**: consulta QR y copias públicas de reportes. Es un ajuste aprobado por el autor frente a la memoria inicial para reducir la superficie de acceso y mostrar exclusivamente información autorizada.
 
-**Enlaces definitivos:** generar las fichas y etiquetas QR desde **https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable, para que usen el dominio definitivo. Las comprobaciones de fichas y reportes descritas abajo corresponden a la vista previa donde se realizaron; no se atribuyen nuevas pruebas al dominio publicado.
+**Enlaces definitivos:** generar las fichas y etiquetas QR desde **https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable, para que usen el dominio definitivo. Se conservan las comprobaciones anteriores de fichas y reportes en vista previa; por separado, el autor comunicó la comprobación de reportes y ficha pública en el dominio definitivo. No se atribuye a esta edición una nueva ejecución ni una nueva revocación en ese dominio.
 
 **Crear/leer/revocar un reporte compartido desde la UI está aprobado:** el autor pulsó Revocar en el único reporte QA desde profesor/demo y la página anónima mostró **No encontrado** tras recarga. También abrió sin login la ficha del **saco #1 de 45 kg de LAV002**, con foto y calidad heredada SCA 86/defectos 0/3; esos 45 kg físicos son distintos de los 46 kg configurados para equivalentes.
 
@@ -99,7 +99,7 @@ Usa la API de OpenAI directamente desde una función de servidor, sesión del us
 
 Control servidor: evaluación 20 solicitudes/hora y 100/día; otras cuentas 60/hora y 300/día; entrada total 12 000 caracteres, `max_output_tokens` 900 y plazo **global de 40 segundos**, incluidas rondas de herramientas. No se almacenan prompts privados en los registros de cuota. Fechas inclusivas en hora de Costa Rica y precios ponderados separados por moneda. El peso de saco procede de Ajustes: equivalentes por peso y sacos físicos etiquetados se informan por separado.
 
-Las muestras correctas del profesor tardaron 4,2 s, 3,4 s y 3,0 s; la organización original vacía, 5,9 s. **La meta <3 s no se logró** y no hay garantía de latencia.
+Las muestras correctas del profesor tardaron 4,2 s, 3,4 s y 3,0 s; la organización original vacía, 5,9 s. **Las muestras anteriores de 3,0–5,9 s no cumplieron la meta <3 s**; no hay garantía de latencia. Por separado, la nueva consulta del profesor/demo en el dominio definitivo devolvió correctamente **118 kg Caturra + 160 kg Mezcla = 278 kg** y mostró **2,8 s en la UI**, según comprobación del autor. Una muestra inferior a 3 s no acredita un límite general de respuesta.
 
 En Chrome a 393 × 844 px, el resumen real de Barva respondió en **3,4 s**: entrega de **20 kg a CRC 4000/kg** y reservas de **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correctas según los registros. Esta muestra tampoco cumple <3 s.
 
@@ -111,4 +111,4 @@ Quedan sin verificar: QR físico con cámara, dictado, arranque en frío offline
 
 ## Orientación de la memoria final local
 
-La memoria final local se organiza en **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. Esta estructura orienta la entrega; no reproduce diagramas conceptuales antiguos ni incorpora credenciales. Las referencias funcionales y los límites de evidencia anteriores se mantienen.
+La memoria final local se organiza en **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. Esta estructura orienta la entrega; no reproduce diagramas conceptuales antiguos ni incorpora credenciales. La memoria final local y las capturas se elaboran **fuera del repositorio**. Los diagramas de [ARQUITECTURA](docs/ARQUITECTURA.md) adaptan los esquemas conceptuales del autor al esquema actual; no son una copia de los modelos antiguos. Se mantienen las referencias funcionales, la rama congelada de pruebas y los límites de evidencia.

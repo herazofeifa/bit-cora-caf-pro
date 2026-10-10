@@ -1,12 +1,12 @@
 # Recorrido para profesores — Bitácora Café Pro
 
-**Cierre documental:** `DOC-CIERRE-2026-10-10`. Evidencias al 10 oct 2026, 01:52 UTC; fecha local del autor: 9 oct 2026 en `America/Costa_Rica`. Referencia funcional evaluada: `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Evidencias y límites: [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
+**Cierre documental:** `DOC-CIERRE-2026-10-10`. Evidencias al 10 oct 2026, 02:33 UTC; fecha local del autor: 9 oct 2026 en `America/Costa_Rica`. Referencia funcional evaluada: `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`. Evidencias y límites: [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
 
 ## 1. Acceso ya preparado
 
 La cuenta **profesores@bitacoracafe.example ya fue creada por el autor** y se verificó el inicio de sesión real. Usar la contraseña recibida por canal privado; nunca incluirla en chat, documentación o repositorio. No recrear la cuenta ni cambiar su contraseña para repetir el recorrido.
 
-Abrir la demostración definitiva publicada por el autor en [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), o directamente [/login](https://cafepro.tastepuravida.com/login). Acceder con **profesores@bitacoracafe.example** y la contraseña proporcionada por separado. No hay publicación ni subdominio pendientes. Lovable es el entorno de edición y vista previa; la app tiene dirección pública, pero su operación sigue siendo privada y autenticada. Esta actualización no cambia accesos ni afirma nuevas pruebas operativas en el dominio definitivo.
+Abrir la demostración definitiva publicada por el autor en [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), o directamente [/login](https://cafepro.tastepuravida.com/login). Acceder con **profesores@bitacoracafe.example** y la contraseña proporcionada por separado. No hay publicación ni subdominio pendientes. Lovable es el entorno de edición y vista previa; la app tiene dirección pública, pero su operación sigue siendo privada y autenticada. El autor ya comprobó en el dominio definitivo login profesor, selector, blanco vacío, demo, inventario, reservas, reportes, ficha pública y copiloto. Esta edición solo registra esa evidencia: no cambia accesos ni repite las comprobaciones.
 
 Al iniciar sesión, elegir **Bitácora Café Pro en blanco** o **Bitácora Café Pro con datos de ejemplo**. La franja «Entorno de evaluación» indica cuál está activo. **Cambiar entorno** vuelve al selector sin borrar ni reiniciar los registros. Son dos espacios persistentes separados entre sí y de la organización original.
 
@@ -28,6 +28,8 @@ Si se desea crear datos nuevos, hacerlo solo como prueba acordada con el autor: 
 El recorrido histórico de finca/parcela/cosecha y recarga fue probado por el administrador en Microbeneficio; **no se atribuye aquí una nueva ejecución de todo este flujo al profesor en blanco**. El tiempo de primer lote <5 minutos no fue cronometrado.
 
 ## 3. Demo: inspección sin modificar registros
+
+El autor confirmó en el dominio definitivo **1003 kg físicos / 278 libres / 55 reservados / 25 comprometidos / 645 bloqueados / 50 vendidos**. Los detalles históricos siguientes se conservan sin atribuir una nueva ejecución a cada uno.
 
 Fotografía verificada por el autor: **7 cosechas, 9 lotes y 9 reservas**, incluidas **dos QA de 1 kg canceladas**, sin efecto sobre saldo. No borrar, confirmar ni recancelar reservas existentes para reproducir la fotografía.
 
@@ -53,7 +55,7 @@ Los balances cambian si se registran nuevas operaciones; no son valores que deba
 3. CSV: descarga real contrastada, **12 columnas** entre todas las secciones. Celdas no aplicables vacías, números/monedas conservados.
 4. Reporte PDF: **2 páginas** revisadas. Ficha PDF de lote: **1 página** con foto, QR y calidad heredada SCA 86/defectos 0/3, revisada visualmente.
 5. Abrir foto JPEG y certificado PDF seleccionados del lote; el contrato permanece privado.
-6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en la vista previa utilizada durante la evaluación: ficha sin cliente/contrato/precios; reporte sin clientes/reservas. No se atribuyen nuevas pruebas al dominio publicado.
+6. Abrir una ficha pública o copia compartida autorizada en una ventana sin sesión. El autor ya comprobó ambos recorridos en la vista previa utilizada durante la evaluación: ficha sin cliente/contrato/precios; reporte sin clientes/reservas. Por separado, el autor comprobó reportes y ficha pública en el dominio definitivo; no se atribuyen nuevas descargas, revocaciones ni pruebas de reporte anónimo a ese dominio.
 7. Ficha de saco público ya comprobada sin login: **saco #1 de 45 kg de LAV002**, foto, **SCA 86, defectos 0/3 y calidad heredada**. Son 45 kg físicos, distintos de los 46 kg de Ajustes para equivalentes.
 
 No incluir tokens concretos de enlaces en documentos. **Crear/leer/revocar desde la UI está aprobado:** el autor pulsó **Revocar** en el único reporte QA con sesión real profesor/demo; al recargar la página anónima apareció **No encontrado**. No repetir el ensayo, crear otro QA ni limpiar el existente para este cierre. Leer el QR impreso con cámara sigue sin probarse.
@@ -69,7 +71,9 @@ OpenAI ya está configurado: no hace falta otra clave. Consultas verificadas com
 - Sacos Caturra → **118 kg / 46 kg ≈ 2,56 equivalentes**, separado de **2 sacos físicos**, **3,0 s**. Los 46 kg proceden de Ajustes, no de un supuesto universal.
 - Resumen Barva con profesor/demo en Chrome a **393 × 844 px** → entrega **20 kg a CRC 4000/kg** y reservas **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correcto según registros, **3,4 s**.
 
-Organización original sin café libre: cero lotes libres, **5,9 s**. **Meta <3 s no lograda**, sin garantía de latencia. Para evaluación: 20 solicitudes/hora, 100/día, 12 000 caracteres de entrada total, salida máxima de 900 tokens y plazo global de 40 s con todas las rondas. No se ha agotado manualmente toda la cuota con el profesor.
+Organización original sin café libre: cero lotes libres, **5,9 s**. **Las muestras anteriores de 3,0–5,9 s no cumplieron la meta <3 s**, sin garantía de latencia. Para evaluación: 20 solicitudes/hora, 100/día, 12 000 caracteres de entrada total, salida máxima de 900 tokens y plazo global de 40 s con todas las rondas. No se ha agotado manualmente toda la cuota con el profesor.
+
+**Nueva muestra separada en el dominio definitivo:** profesor/demo, **118 kg Caturra + 160 kg Mezcla = 278 kg**, respuesta correcta y **2,8 s mostrados en la UI**, según comprobación del autor. Una muestra inferior a 3 s no acredita un límite general de respuesta ni sustituye las muestras anteriores. Esta edición no ejecuta otra consulta.
 
 ## 6. Actualización en vivo y offline
 
@@ -96,6 +100,6 @@ El conflicto de rol del trigger de alta está corregido y el autor completó el 
 
 ## 9. Referencias de evaluación
 
-El autor verificó GitHub público conectado —el repositorio es accesible sin invitación— y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
+El autor verificó GitHub público conectado —el repositorio es accesible sin invitación— y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. También quedó previamente comprobada por el autor la CI de `entrega-academica-2026-10-09`, [run 38015307882](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38015307882), commit `68da1fa`. La rama queda como referencia congelada de pruebas; `main` incorpora esta actualización documental. No se suman pruebas ni se afirma una nueva ejecución de CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
 
-La memoria final local organiza la entrega en objetivo general, objetivos específicos, arquitectura/reglas, funcionalidades/cumplimiento y manual de funcionamiento/evaluación. Esta guía orienta el último apartado, sin reproducir diagramas conceptuales antiguos ni incluir credenciales.
+La memoria final local organiza la entrega en objetivo general, objetivos específicos, arquitectura/reglas, funcionalidades/cumplimiento y manual de funcionamiento/evaluación. Esta guía orienta el último apartado. La memoria final local y las capturas se elaboran **fuera del repositorio**, sin credenciales. [ARQUITECTURA](ARQUITECTURA.md) interpreta los diagramas conceptuales del autor adaptados al esquema actual.

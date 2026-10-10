@@ -1,0 +1,59 @@
+%% Esquema de datos de la entrega; Las tablas operativas pertenecen a una organización; lot_links la deriva de sus lotes.
+%% Las figuras de la memoria muestran las relaciones principales por grupos.
+%% profiles/memberships y audit_log/actor son relaciones lógicas de identidad; no FK de perfil.
+%% harvest_tickets.lot_id agrupa recibos; lots.harvest_ticket_id conserva un recibo inicial opcional.
+%% uom_original es texto; conversión por symbol dentro de la organización, no FK units.id.
+erDiagram
+  organizations ||--o{ memberships : "tiene"
+  organizations ||--o| org_settings : "configura"
+  farms ||--o{ parcels : "contiene"
+  farms ||--o{ harvest_tickets : "origen"
+  parcels o|--o{ harvest_tickets : "origen opcional"
+  lots o|--o{ harvest_tickets : "agrupa por lot_id"
+  lots ||--o{ lot_links : "padre y/o hijo"
+  lots ||--o{ process_phases : "ejecuta"
+  process_templates o|--o{ process_phases : "referencia versión"
+  variable_definitions o|--o{ variable_logs : "tipifica"
+  process_phases o|--o{ variable_logs : "contexto"
+  lots ||--o{ variable_logs : "mide"
+  lots ||--o{ moisture_logs : "humedad"
+  lots ||--o{ quality_samples : "calidad"
+  lots ||--o{ waste_logs : "merma"
+  lots ||--o{ stock_movements : "movimientos"
+  lots ||--o{ reservations : "compromete"
+  customers ||--o{ reservations : "acuerda"
+  lots o|--o{ files : "adjunta"
+  process_phases o|--o{ files : "contexto de archivo"
+  lots ||--o{ sacks : "etiqueta"
+  lots ||--o| lot_public_profiles : "publica"
+  lots o|--o{ alerts : "genera"
+  process_phases o|--o{ alerts : "contexto de alerta"
+  organizations ||--o{ farms : organiza
+  organizations ||--o{ parcels : organiza
+  organizations ||--o{ units : organiza
+  organizations ||--o{ customers : organiza
+  organizations ||--o{ harvest_tickets : organiza
+  organizations ||--o{ lots : organiza
+  organizations ||--o{ process_templates : organiza
+  organizations ||--o{ process_phases : organiza
+  organizations ||--o{ variable_definitions : organiza
+  organizations ||--o{ variable_logs : organiza
+  organizations ||--o{ moisture_logs : organiza
+  organizations ||--o{ quality_samples : organiza
+  organizations ||--o{ waste_logs : organiza
+  organizations ||--o{ stock_movements : organiza
+  organizations ||--o{ reservations : organiza
+  organizations ||--o{ files : organiza
+  organizations ||--o{ sacks : organiza
+  organizations ||--o{ lot_public_profiles : organiza
+  organizations ||--o{ report_shares : organiza
+  organizations ||--o{ alerts : organiza
+  organizations ||--o{ audit_log : organiza
+  organizations ||--o{ operation_keys : organiza
+  organizations ||--o{ lot_sequences : organiza
+  organizations ||--o{ copilot_usage : organiza
+  profiles ||..o{ memberships : identidad
+  profiles ||..o{ user_roles : rol_global_heredado
+  profiles o|..o{ audit_log : actor
+  lots o|--o{ lots : parent_lot_id
+  harvest_tickets o|--o{ lots : recibo_inicial
