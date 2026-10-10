@@ -94,4 +94,4 @@ El conflicto de rol del trigger de alta está corregido y el autor completó el 
 
 ## 9. Referencias de evaluación
 
-El autor verificó GitHub privado conectado y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).
+El autor verificó GitHub público conectado —el repositorio es accesible sin invitación— y [CI Success, run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), `app`/`database`, 20/20 Vitest en 8 archivos para 9c. Los 59 casos seleccionados contra base real usaron identidad SQL simulada y fixtures revertidos: son evidencia separada, no 59 JWT reales ni casos añadidos a CI. Límites completos en [ESTADO_ENTREGA](ESTADO_ENTREGA.md).

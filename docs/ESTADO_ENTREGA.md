@@ -18,7 +18,7 @@ Las comprobaciones nuevas que se consolidan a continuación fueron **comunicadas
 
 | Evidencia | Resultado y alcance |
 |---|---|
-| GitHub real | Repositorio **privado** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente; sin cambios de visibilidad por este cierre |
+| GitHub real | Repositorio **público** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente y accesible sin invitación; Settings confirma «This repository is currently public». La visibilidad la cambió el autor, con autorización explícita y verificación humana; este cierre solo la documenta |
 | CI de la revisión | [Run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Status Success**: trabajos `app` y `database` |
 | App en CI | Tipos, build y **20/20 Vitest en 8 archivos**, según evidencia independiente del autor |
 | Copia de fuente de 9c con `bun.lock` | Tipos y build aprobados; **20/20** unitarias. No se suma a CI como otro conjunto distinto de 20 reglas |
