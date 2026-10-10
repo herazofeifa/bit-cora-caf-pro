@@ -1,0 +1,17 @@
+%% Arquitectura por dominios ajustada al esquema de entrega.
+flowchart TD
+  acceso["Acceso y organización<br/>organizations · profiles · memberships<br/>user_roles · org_settings"]
+  catalogo["Catálogos y configuración<br/>farms · parcels · units · customers<br/>variable_definitions · process_templates"]
+  entrada["Cosecha y recibos<br/>harvest_tickets<br/>Cantidad original + conversión a kg"]
+  produccion["Producción y genealogía<br/>lots · lot_links · process_phases<br/>variable_logs · moisture_logs<br/>quality_samples · waste_logs"]
+  ventas["Inventario y comercialización<br/>stock_movements · reservations<br/>Clientes, disponibilidad y entregas"]
+  publicacion["Archivos y consulta autorizada<br/>files · sacks · lot_public_profiles<br/>report_shares · QR y copias compartidas"]
+  control["Control y observabilidad<br/>alerts · audit_log · operation_keys<br/>lot_sequences · copilot_usage<br/>Copiloto OpenAI de solo lectura"]
+  acceso -->|membresía y RLS| catalogo
+  catalogo -->|origen y unidades| entrada
+  entrada -->|crea o suma al lote| produccion
+  produccion -->|calidad y saldo| ventas
+  produccion -->|publicación selectiva| publicacion
+  ventas -->|operaciones auditadas| control
+  publicacion -->|acceso y cuota| control
+  catalogo -->|plantillas y rangos| produccion

@@ -1,8 +1,8 @@
 # Estado final de entrega académica — Bitácora Café Pro
 
-**Referencia documental:** `DOC-CIERRE-2026-10-10`. Evidencias actualizadas al 10 de octubre de 2026, 01:52 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`. **Versión funcional revisada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`.
+**Referencia documental:** `DOC-CIERRE-2026-10-10`. Evidencias actualizadas al 10 de octubre de 2026, 02:33 UTC; fecha local del autor: 9 de octubre de 2026 en `America/Costa_Rica`. **Versión funcional revisada:** `9c7576b0d72858c9d3d6f185b01e22f92bb4fb07`.
 
-Este documento sustituye las notas incrementales como descripción vigente. El historial se conserva, expresamente no vigente, en [HISTORIAL_REVISION](HISTORIAL_REVISION.md). La consolidación es **solo documental**: no ejecuta pruebas sobre datos en uso ni modifica código, migraciones, base, cuentas, contraseñas, secretos, GitHub, publicación o DNS. No identifica ni anticipa una próxima rama de entrega.
+Este documento sustituye las notas incrementales como descripción vigente. El historial se conserva, expresamente no vigente, en [HISTORIAL_REVISION](HISTORIAL_REVISION.md). La consolidación es **solo documental**: no ejecuta pruebas sobre datos en uso ni modifica código, migraciones, base, cuentas, contraseñas, secretos, GitHub, publicación o DNS. La rama `entrega-academica-2026-10-09`, commit `68da1fa`, queda como referencia congelada de pruebas; `main` incluye esta actualización documental. No se afirma una nueva ejecución de CI para esta actualización.
 
 ## 1. Resultado y alcance
 
@@ -10,16 +10,17 @@ Existe una sola aplicación operativa con datos compartidos de la organización 
 
 El prototipo académico conecta cosecha, recibo, lote, procesos, calidad, disponibilidad y comercialización con trazabilidad. Conserva información original de unidades y origen, registra diferencias de peso como merma, separa reserva/compromiso/bloqueo/venta y facilita consulta pública autorizada por QR. No se presenta como sistema productivo certificado ni se prometen garantías de disponibilidad, latencia o funcionamiento rural.
 
-**App ya publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), URL definitiva de demostración. Acceso docente en [/login](https://cafepro.tastepuravida.com/login), con **profesores@bitacoracafe.example** y contraseña proporcionada por separado. Lovable sigue siendo el entorno de edición y vista previa; la dirección de la app es pública, pero la operación continúa privada y autenticada, con las mismas reglas de acceso y RLS. Publicación y dominio ya no están pendientes. Esta actualización registra lo comunicado por el autor, sin ejecutar otra publicación, modificar DNS ni afirmar nuevas pruebas operativas en ese dominio.
+**App ya publicada por el autor:** [https://cafepro.tastepuravida.com](https://cafepro.tastepuravida.com), URL definitiva de demostración. Acceso docente en [/login](https://cafepro.tastepuravida.com/login), con **profesores@bitacoracafe.example** y contraseña proporcionada por separado. Lovable sigue siendo el entorno de edición y vista previa; la dirección de la app es pública, pero la operación continúa privada y autenticada, con las mismas reglas de acceso y RLS. Publicación y dominio ya no están pendientes. Esta actualización registra lo comunicado por el autor, sin ejecutar otra publicación ni modificar DNS. El autor ya comprobó en el dominio definitivo login profesor, selector, blanco vacío, demo, inventario, reservas, reportes, ficha pública y copiloto; esta edición registra esa evidencia, sin repetirla.
 
 ## 2. Evidencias por origen: no sumar universos distintos
 
-Las comprobaciones nuevas que se consolidan a continuación fueron **comunicadas por el autor como verificación independiente** de la revisión funcional indicada. Esta edición no pretende haberlas repetido.
+Las comprobaciones nuevas que se consolidan a continuación fueron **comunicadas por el autor como verificación independiente** con sus referencias respectivas (revisión funcional anterior, rama académica congelada y app publicada). Esta edición no pretende haberlas repetido.
 
 | Evidencia | Resultado y alcance |
 |---|---|
 | GitHub real | Repositorio **público** [herazofeifa/bit-cora-caf-pro](https://github.com/herazofeifa/bit-cora-caf-pro), conectado realmente y accesible sin invitación; Settings confirma «This repository is currently public». La visibilidad la cambió el autor, con autorización explícita y verificación humana; este cierre solo la documenta |
 | CI de la revisión | [Run 38006323596](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38006323596), **Status Success**: trabajos `app` y `database` |
+| CI académica previamente comprobada por el autor | Rama `entrega-academica-2026-10-09`, commit `68da1fa`, [run 38015307882](https://github.com/herazofeifa/bit-cora-caf-pro/actions/runs/38015307882). Referencia congelada de pruebas, no nueva ejecución de esta edición ni suma al conteo anterior |
 | App en CI | Tipos, build y **20/20 Vitest en 8 archivos**, según evidencia independiente del autor |
 | Copia de fuente de 9c con `bun.lock` | Tipos y build aprobados; **20/20** unitarias. No se suma a CI como otro conjunto distinto de 20 reglas |
 | Base real, casos seleccionados independientes | **59/59**: 30 inventario/RLS/QR + 15 cadena cosecha/procesos/calidad/reportes + 2 perfiles entre organizaciones + 12 vencimientos/transformaciones |
@@ -28,6 +29,7 @@ Las comprobaciones nuevas que se consolidan a continuación fueron **comunicadas
 | Realtime humano | Dos pestañas reales; cambio de reserva y cancelación visible sin recargar en la observadora |
 | Exportaciones y consulta anónima | CSV descargado, PDF y ficha PDF revisados; fichas de lote/saco y reporte compartido abiertos sin login |
 | Reporte QA: crear/leer/revocar desde UI | Aprobado: profesor/demo pulsó Revocar en el único reporte QA; página anónima tras recarga mostró **No encontrado** |
+| Dominio definitivo: comprobación del autor | Login profesor, selector, blanco vacío, demo, inventario **1003 físicos / 278 libres / 55 reservados / 25 comprometidos / 645 bloqueados / 50 vendidos**, reservas, reportes, ficha pública y copiloto correcto **118 Caturra + 160 Mezcla = 278 kg**; nueva muestra **2,8 s en la UI** |
 | Navegación real de ancho móvil | Profesor en Chrome a **393 × 844 px**: selector con dos opciones, blanco con tablero 0 registros y regreso a demo conservado; ficha pública a 393 px sin desbordamiento. No dispositivos físicos |
 
 La suite `database` de CI trabaja sobre PostgreSQL desechable e incluye migraciones y concurrencia; no valida por sí sola la interfaz ni condiciones rurales. Los conteos históricos (108, 144, 199, 211, 227, 243, etc.) pertenecen a suites e incrementos anteriores: no se suman entre sí ni a los 59. No se declara un conteo SQL actual de CI que el autor no haya aportado.
@@ -49,6 +51,8 @@ Balance observado en la demo real, en kg:
 645 bloqueados = 535 con fase abierta + 110 bloqueados por calidad sin fase abierta
 278 libres     = 118 Caturra + 160 Mezcla
 ```
+
+El autor volvió a comprobar en el dominio definitivo los totales de inventario de 1003 físicos, 278 libres, 55 reservados, 25 comprometidos, 645 bloqueados y 50 vendidos. Esta confirmación no atribuye una nueva prueba a cada detalle histórico del balance.
 
 El tablero diferencia café con fase abierta de café bloqueado sin fase abierta. Catuaí honey aporta los 110 kg bloqueados por calidad. Los balances son una **fotografía de la revisión**, no valores que la aplicación deba restablecer automáticamente tras nuevas operaciones.
 
@@ -103,7 +107,7 @@ El autor verificó **dos pestañas reales**: reservar 1 kg cambió disponible/re
 
 ### Consulta pública sin login
 
-El autor abrió una **ficha pública de lote** y un **reporte compartido real**, sin iniciar sesión, en la vista previa estática utilizada durante la evaluación. Ficha: sin clientes, contratos ni precios. Reporte: sin clientes ni reservas. No se publican en esta documentación tokens concretos de enlaces. Estas evidencias se conservan con su origen; no representan nuevas pruebas en el dominio definitivo.
+El autor abrió una **ficha pública de lote** y un **reporte compartido real**, sin iniciar sesión, en la vista previa estática utilizada durante la evaluación. Ficha: sin clientes, contratos ni precios. Reporte: sin clientes ni reservas. No se publican en esta documentación tokens concretos de enlaces. Estas evidencias se conservan con su origen. Por separado, el autor comunicó la comprobación de reportes y ficha pública en el dominio definitivo; no se afirma una nueva descarga PDF/CSV, revocación ni comprobación anónima de reporte en ese dominio.
 
 Para usar enlaces definitivos, **generar las fichas y etiquetas QR desde https://cafepro.tastepuravida.com**, no desde la vista previa de Lovable. La generación debe partir de la app publicada; esta edición no genera etiquetas ni modifica registros.
 
@@ -125,13 +129,15 @@ Proveedor: **OpenAI API directa**, secreto ya guardado por el autor, sesión RLS
 | Profesor/demo en Chrome a 393 × 844 px: resumen Barva | Entrega **20 kg a CRC 4000/kg**; reservas **15 kg a CRC 4200/kg** y **40 kg a CRC 3800/kg**, correcto según registros | **3,4 s** |
 | Administrador/organización original sin café libre | Cero lotes libres, coherente con base en la muestra | **5,9 s** |
 
+**Nueva muestra en el dominio definitivo, separada de las anteriores de 3,0–5,9 s:** el autor comprobó con profesor/demo la respuesta correcta **118 kg Caturra + 160 kg Mezcla = 278 kg**, con **2,8 s mostrados en la UI**. Es una observación concreta, no una medición repetida por esta edición ni una garantía general.
+
 El peso de saco **46 kg** es configuración persistida de la demo y editable, no una equivalencia universal inventada. Sin peso configurado se informa en kg, sin fabricar un conteo físico.
 
 Rangos `desde..hasta` inclusivos en **America/Costa_Rica**, convertidos a [inicio del primer día, inicio del día posterior al último). Evitan excluir entregas de hoy: el caso del 9 de octubre de 2026 a las 23:16 UTC queda dentro del día de Costa Rica. Los filtros de Reportes, CSV, PDF y copia compartida usan el mismo criterio. USD y CRC no se mezclan en un único precio medio.
 
 Límites de servidor: **20 solicitudes/hora y 100/día para evaluación**; 60/hora y 300/día para otras cuentas; entrada total **12 000 caracteres**; **900 `max_output_tokens`**; **40 segundos globales** mediante AbortSignal, incluidas rondas de herramientas. Quotas y deadline implementados/pruebas de servidor no equivalen a una prueba manual de agotar todas las cuotas con el profesor.
 
-**Meta <3 segundos NO lograda.** Una muestra de 3,0 s no es inferior a 3. No hay promesa de latencia. **Primer lote <5 minutos NO cronometrado.**
+**Límite general de respuesta <3 segundos NO acreditado.** Las muestras anteriores de 3,0–5,9 s no cumplieron la meta; una muestra de 3,0 s no es inferior a 3. La nueva muestra de 2,8 s sí es inferior a 3, pero una observación no acredita un límite general de respuesta. No hay promesa de latencia. **Primer lote <5 minutos NO cronometrado.**
 
 ## 7. Acceso, roles y provisión
 
@@ -179,12 +185,12 @@ Archivos `.sql` bajo `drizzle/migrations/`; metadatos versionados bajo `meta/`. 
 | Conexión rural, dos dispositivos físicos | Sin evidencia; dos pestañas realtime y navegador de ancho móvil 393 × 844 px sí probados, sin equivalencia a dispositivos físicos |
 | Alta simultánea Auth/provisión de dos solicitudes reales | Revisada/compensación implementada, sin prueba simultánea real |
 | Agotar cuotas/deadline del copiloto manualmente con profesor | Sin evidencia manual completa |
-| Latencia <3 s / primer lote <5 min | Primera meta no lograda; segunda no cronometrada |
+| Latencia <3 s / primer lote <5 min | Nueva muestra de 2,8 s en la UI; límite general <3 s no acreditado. Primer lote no cronometrado |
 
 **Offline real de alcance limitado:** cosechas y mediciones con la app ya abierta; cola persistente por usuario/org y aislamiento de envíos/generaciones. Inventario, reserva y entrega requieren conexión. No se afirma arranque desde cero sin conexión ni tolerancia garantizada de fallos prolongados.
 
-GitHub CI **ya no es un pendiente de esta versión funcional**: el run enlazado fue verificado Success por el autor. Esto no afirma éxito de una futura revisión documental ni reemplaza los pendientes manuales enumerados.
+GitHub CI **ya no es un pendiente de la referencia funcional anterior**: run 38006323596 verificado Success por el autor, con 20/20 pruebas unitarias en 8 archivos. Se conserva además la CI previamente comprobada de la rama académica congelada `entrega-academica-2026-10-09`, run 38015307882, commit `68da1fa`. `main` incluye la actualización documental; no se suman pruebas ni se afirma otra ejecución para ella. Estas referencias no reemplazan los pendientes manuales enumerados.
 
 ## 10. Orientación de la memoria final local
 
-Organización prevista: **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. Es una orientación documental, sin reproducir aún diagramas conceptuales antiguos ni incluir credenciales. Se mantienen la referencia funcional 9c, la CI exitosa con 20 pruebas unitarias en 8 archivos, los 59 casos independientes no sumables, las muestras correctas de IA de 3,0–5,9 s y el alcance offline parcial; no se ejecutan nuevas pruebas en esta actualización.
+Organización prevista: **objetivo general**, **objetivos específicos**, **arquitectura y reglas**, **funcionalidades y cumplimiento**, y **manual de funcionamiento y evaluación**. La memoria final local y las capturas se elaboran **fuera del repositorio**, sin credenciales. [ARQUITECTURA](ARQUITECTURA.md) interpreta los dos diagramas del autor adaptados al esquema actual, no reproduce sin ajuste los modelos conceptuales antiguos. Se mantienen la referencia funcional 9c, la CI anterior exitosa con 20 pruebas unitarias en 8 archivos, la rama académica congelada, los 59 casos independientes no sumables, las muestras anteriores de IA de 3,0–5,9 s y el alcance offline parcial. La nueva muestra de 2,8 s en el dominio definitivo se registra por separado; no acredita un límite general <3 s. No se ejecutan nuevas pruebas en esta actualización.
